@@ -1,0 +1,558 @@
+#para chamar: $scene = Scene_MonsterGuide.new
+
+module KGC
+$game_special_elements = {}
+$imported = {}
+$data_states = load_data("Data/States.rxdata")
+$data_system = load_data("Data/System.rxdata")
+end
+
+#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+#_/  ???????? - KGC_MonsterGuide?
+#_/----------------------------------------------------------------------------
+#_/ The monster picture book is drawn up?
+#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/__/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+
+#==============================================================================
+# ? Customization item ?
+#==============================================================================
+
+module KGC
+ # ????????????
+ #  ?????????ID??????
+ MG_HIDE_ENEMIES = [16]
+end
+
+class Window_MonsterGuideRight < Window_Base
+ # ???????????(??ID)
+ MG_ELEMENT_RANGE = 1..8
+
+ # ????????
+ MG_WEEK_COLOR = Color.new(255, 128, 128)
+ # ????????
+ MG_RESIST_COLOR = Color.new(128, 128, 255)
+end
+
+class Scene_MonsterGuide
+ # ??????????????
+ #  false ?????C ??????????????
+ #  (????????? true ????OK)
+ MG_MOVE_REFRESH = true
+end
+
+class Scene_Battle
+ # ?????????
+ #  false ??????????????????????
+ MG_ORIGINAL_DEFEAT = true
+end
+
+#???????????????????????????????????????
+
+$imported["Lista de Monstros"] = true
+
+class Object
+ include KGC
+end
+
+#???????????????????????????????????????
+
+#--------------------------------------------------------------------------
+# ? ???????????
+#--------------------------------------------------------------------------
+def call_monster_guide
+ # ???????????
+ $game_player.straighten
+ # ??????????????
+ $scene = Scene_MonsterGuide.new
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Game_System
+#==============================================================================
+
+class Game_System
+ #--------------------------------------------------------------------------
+ # ? ??????????
+ #--------------------------------------------------------------------------
+ attr_accessor :enemy_encountered        # ???????
+ attr_accessor :enemy_defeated           # ???????
+ #--------------------------------------------------------------------------
+ # ? ?????????
+ #--------------------------------------------------------------------------
+ alias initialize_KGC_MonsterGuide initialize
+ def initialize
+   # ???????
+   initialize_KGC_MonsterGuide
+
+   @enemy_encountered = []
+   @enemy_defeated = []
+ end
+ #--------------------------------------------------------------------------
+ # ? ??????????
+ #--------------------------------------------------------------------------
+ def enemy_exist?(enemy_id)
+   return $data_enemies[enemy_id] != nil && $data_enemies[enemy_id].name != ""
+ end
+ #--------------------------------------------------------------------------
+ # ? ???????????
+ #--------------------------------------------------------------------------
+ def all_enemies_count
+   n = 0
+   # ????????????
+   for i in 1...$data_enemies.size
+     next if !enemy_exist?(i) || MG_HIDE_ENEMIES.include?(i)
+     n += 1
+   end
+   return n
+ end
+ #--------------------------------------------------------------------------
+ # ? ???????????
+ #--------------------------------------------------------------------------
+ def defeated_enemies_count
+   n = 0
+   # ????????????
+   for i in 1...$data_enemies.size
+     next if !enemy_exist?(i) || !@enemy_encountered[i] ||
+       !@enemy_defeated[i] || MG_HIDE_ENEMIES.include?(i)
+     n += 1
+   end
+   return n
+ end
+ #--------------------------------------------------------------------------
+ # ? ?????????????
+ #--------------------------------------------------------------------------
+ def monster_guide_completion
+   return defeated_enemies_count * 100 / all_enemies_count
+ end
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Game_Enemy
+#==============================================================================
+
+class Game_Enemy < Game_Battler
+ #--------------------------------------------------------------------------
+ # ? ??????????
+ #--------------------------------------------------------------------------
+ attr_reader   :original_id              # ????ID
+ #--------------------------------------------------------------------------
+ # ? ?????????
+ #     troop_id     : ???? ID
+ #     member_index : ???????????????
+ #--------------------------------------------------------------------------
+ alias initialize_KGC_MonsterGuide initialize
+ def initialize(troop_id, member_index)
+   # ???????
+   initialize_KGC_MonsterGuide(troop_id, member_index)
+
+   @original_id = []
+   # ??????????
+   unless @hidden
+     $game_system.enemy_encountered[@enemy_id] = true
+   end
+ end
+ #--------------------------------------------------------------------------
+ # ? ??
+ #     enemy_id : ???????? ID
+ #--------------------------------------------------------------------------
+ alias transform_KGC_MonsterGuide transform
+ def transform(enemy_id)
+   # ????ID???
+   @original_id.push(@enemy_id)
+
+   # ???????
+   transform_KGC_MonsterGuide(enemy_id)
+
+   # ?????????????
+   $game_system.enemy_encountered[@enemy_id] = true
+ end
+ #--------------------------------------------------------------------------
+ # ? ??????
+ #--------------------------------------------------------------------------
+ def hidden=(value)
+   @hidden = value
+   # ?????????????????
+   unless @hidden
+     $game_system.enemy_encountered[@enemy_id] = true
+   end
+ end
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Window_MonsterGuideTop
+#------------------------------------------------------------------------------
+#  ???????????????????????????
+#==============================================================================
+
+class Window_MonsterGuideTop < Window_Base
+ #--------------------------------------------------------------------------
+ # ? ?????????
+ #--------------------------------------------------------------------------
+ def initialize
+   super(0, 0, 240, 96)
+   self.contents = Bitmap.new(width - 32, height - 32)
+   self.back_opacity = 160
+   refresh
+ end
+ #--------------------------------------------------------------------------
+ # ? ??????
+ #--------------------------------------------------------------------------
+ def refresh
+   self.contents.clear
+   text = "???:#{$game_system.defeated_enemies_count}/#{$game_system.all_enemies_count}"
+   self.contents.draw_text(0, 0, width - 32, 32, text)
+   text = "???:#{$game_system.monster_guide_completion}%"
+   self.contents.draw_text(0, 32, width - 32, 32, text)
+ end
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Window_MonsterGuideLeft
+#------------------------------------------------------------------------------
+#  ???????????????????????????????
+#==============================================================================
+
+class Window_MonsterGuideLeft < Window_Selectable
+ #--------------------------------------------------------------------------
+ # ? ?????????
+ #--------------------------------------------------------------------------
+ def initialize
+   super(0, 96, 240, 384)
+   self.index = 0
+   self.back_opacity = 160
+   refresh
+ end
+ #--------------------------------------------------------------------------
+ # ? ??????????
+ #--------------------------------------------------------------------------
+ def item
+   return @data[self.index]
+ end
+ #--------------------------------------------------------------------------
+ # ? ??????
+ #--------------------------------------------------------------------------
+ def refresh
+   if self.contents != nil
+     self.contents.dispose
+     self.contents = nil
+   end
+   @data = []
+   # ???????????
+   for i in 1...$data_enemies.size
+     next if !$game_system.enemy_exist?(i) || MG_HIDE_ENEMIES.include?(i)
+     @data.push($data_enemies[i])
+   end
+   # ???? 0 ??????????????????????
+   @item_max = @data.size
+   if @item_max > 0
+     self.contents = Bitmap.new(width - 32, row_max * 32)
+     for i in 0...@item_max
+       draw_item(i)
+     end
+   end
+ end
+ #--------------------------------------------------------------------------
+ # ? ?????
+ #     index : ????
+ #--------------------------------------------------------------------------
+ def draw_item(index)
+   enemy = @data[index]
+   # ?????????????????????????????
+   if $game_system.enemy_defeated[enemy.id]
+     self.contents.font.color = normal_color
+   else
+     self.contents.font.color = disabled_color
+   end
+   x = 4
+   y = index * 32
+   rect = Rect.new(x, y, self.width - 40, 32)
+   self.contents.fill_rect(rect, Color.new(0, 0, 0, 0))
+   # ???????????????????????
+   if $game_system.enemy_encountered[enemy.id]
+     self.contents.draw_text(x, y, self.width - 40, 32, enemy.name)
+   else
+     self.contents.draw_text(x, y, self.width - 40, 32, "? ? ? ? ? ? ? ?", 1)
+   end
+ end
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Window_MonsterGuideRight
+#------------------------------------------------------------------------------
+#  ?????????????????????????????
+#==============================================================================
+
+class Window_MonsterGuideRight < Window_Base
+ #--------------------------------------------------------------------------
+ # ? ?????????
+ #--------------------------------------------------------------------------
+ def initialize
+   super(240, 0, 400, 480)
+   self.contents = Bitmap.new(width - 32, height - 32)
+   self.back_opacity = 160
+ end
+ #--------------------------------------------------------------------------
+ # ? ??????
+ #     enemy       : ????
+ #     show_status : ???????
+ #--------------------------------------------------------------------------
+ def refresh(enemy, show_status = true)
+   self.contents.clear
+   # ??????????No data
+   unless $game_system.enemy_encountered[enemy.id]
+     self.contents.font.color = disabled_color
+     self.contents.draw_text(0, 208, 368, 32, "Sem Dados", 1)
+     return
+   end
+   # ?????????
+   bitmap = RPG::Cache.battler(enemy.battler_name, enemy.battler_hue)
+   cw = bitmap.width; ch = bitmap.height
+   src_rect = Rect.new(0, 0, cw, ch)
+   self.contents.blt(184 - cw / 2, 0, bitmap, src_rect)
+   # ??????????????
+   return unless show_status
+   # ???????????????
+   if $game_system.enemy_defeated[enemy.id]
+     # ????????
+     self.contents.font.color = system_color
+     self.contents.draw_text(0, 224, 64, 32, $data_system.words.hp)
+     self.contents.draw_text(122, 224, 64, 32, $data_system.words.sp)
+     self.contents.draw_text(244, 224, 64, 32, $data_system.words.str)
+     self.contents.draw_text(0, 256, 64, 32, $data_system.words.dex)
+     self.contents.draw_text(122, 256, 64, 32, $data_system.words.agi)
+     self.contents.draw_text(244, 256, 64, 32, $data_system.words.int)
+     self.contents.draw_text(0, 288, 64, 32, $data_system.words.atk)
+     self.contents.draw_text(122, 288, 64, 32, $data_system.words.pdef)
+     self.contents.draw_text(244, 288, 64, 32, $data_system.words.mdef)
+     self.contents.draw_text(0, 320, 96, 32, "Desvantagen a")
+     self.contents.draw_text(0, 352, 96, 32, "Vantagen a")
+     self.contents.draw_text(0, 384, 96, 32, "Exp ganhos")
+     self.contents.draw_text(184, 384, 384, 32, $data_system.words.gold)
+     self.contents.draw_text(0, 416, 64, 32, $data_system.words.item)
+     # ????
+     self.contents.font.color = normal_color
+     hp = enemy.maxhp; sp = enemy.maxsp
+     str = enemy.str; dex = enemy.dex; agi = enemy.agi; int = enemy.int
+     atk = enemy.atk; pdef = enemy.pdef; mdef = enemy.mdef
+     exp = enemy.exp; gold = enemy.gold
+     if $imported["LimitBreak"]
+       hp *= $maxhp_correct
+       sp *= $maxsp_correct
+     end
+     if $imported["BattleDifficulty"]
+       hp *= get_difficulty[1]
+       sp *= get_difficulty[2]
+       correct = get_difficulty[3]
+       str *= correct; dex *= correct; agi *= correct; int *= correct
+       atk *= correct; pdef *= correct; mdef *= correct
+       exp *= get_difficulty[4]; gold *= get_difficulty[5]
+     end
+     self.contents.draw_text(48, 224, 64, 32, Integer(hp).to_s, 2)
+     self.contents.draw_text(170, 224, 64, 32, Integer(sp).to_s, 2)
+     self.contents.draw_text(292, 224, 64, 32, Integer(str).to_s, 2)
+     self.contents.draw_text(48, 256, 64, 32, Integer(dex).to_s, 2)
+     self.contents.draw_text(170, 256, 64, 32, Integer(agi).to_s, 2)
+     self.contents.draw_text(292, 256, 64, 32, Integer(int).to_s, 2)
+     self.contents.draw_text(48, 288, 64, 32, Integer(atk).to_s, 2)
+     self.contents.draw_text(170, 288, 64, 32, Integer(pdef).to_s, 2)
+     self.contents.draw_text(292, 288, 64, 32, Integer(mdef).to_s, 2)
+     self.contents.draw_text(0, 384, 144, 32, Integer(exp).to_s, 2)
+     self.contents.draw_text(184, 384, 144, 32, Integer(gold).to_s, 2)
+     # ??????
+     text = ""
+     for i in MG_ELEMENT_RANGE
+       # ????3??(A,B)?????
+       if enemy.element_ranks[i] < 3
+         # ??????
+         text += "/" if text != ""
+         text += $data_system.elements[i]
+       end
+     end
+     self.contents.font.color = MG_WEEK_COLOR.dup
+     self.contents.draw_text(104, 320, 264, 32, text)
+     # ??????
+     text = ""
+     for i in MG_ELEMENT_RANGE
+       # ????3?????(D,E,F)?????
+       if enemy.element_ranks[i] > 3
+         # ??????
+         text += "/" if text != ""
+         text += $data_system.elements[i]
+       end
+     end
+     self.contents.font.color = MG_RESIST_COLOR.dup
+     self.contents.draw_text(104, 352, 264, 32, text)
+     self.contents.font.color = normal_color
+     # ??????
+     n = enemy.treasure_prob
+     n *= get_difficulty[6] if $imported["BattleDifficulty"]
+     prob = "#{Integer(n)}%"
+     if enemy.item_id > 0
+       icon = RPG::Cache.icon($data_items[enemy.item_id].icon_name)
+       text = $data_items[enemy.item_id].name
+     elsif enemy.weapon_id > 0
+       icon = RPG::Cache.icon($data_weapons[enemy.weapon_id].icon_name)
+       text = $data_weapons[enemy.weapon_id].name
+     elsif enemy.armor_id > 0
+       icon = RPG::Cache.icon($data_armors[enemy.armor_id].icon_name)
+       text = $data_armors[enemy.armor_id].name
+     else
+       icon = Bitmap.new(24, 24)
+       text = "Sem item"
+       prob = ""
+     end
+     self.contents.blt(70, 420, icon, Rect.new(0, 0, 24, 24))
+     self.contents.draw_text(92 , 416, 204, 32, text)
+     self.contents.draw_text(300, 416, 64, 32, prob)
+   # ?????????
+   else
+     self.contents.font.color = disabled_color
+     self.contents.draw_text(0, 280, 368, 32, "- Não derrotado -", 1)
+   end
+ end
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Scene_MonsterGuide
+#------------------------------------------------------------------------------
+#  ?????????????????????
+#==============================================================================
+
+class Scene_MonsterGuide
+ #--------------------------------------------------------------------------
+ # ? ?????
+ #--------------------------------------------------------------------------
+ def main
+   # ??????????
+   @spriteset = Spriteset_Map.new
+   # ??????????
+   @guide_top_window = Window_MonsterGuideTop.new
+   @guide_left_window = Window_MonsterGuideLeft.new
+   @guide_right_window = Window_MonsterGuideRight.new
+   # ???????
+   @show_status = true
+   # ?????????????
+   enemy = @guide_left_window.item
+   # ????
+   @guide_right_window.refresh(enemy, @show_status)
+   # ?????????
+   Graphics.transition
+   # ??????
+   loop do
+     # ????????
+     Graphics.update
+     # ???????
+     Input.update
+     # ??????
+     update
+     # ????????????????
+     if $scene != self
+       break
+     end
+   end
+   # ?????????
+   Graphics.freeze
+   # ????????
+   @spriteset.dispose
+   @guide_top_window.dispose
+   @guide_left_window.dispose
+   @guide_right_window.dispose
+ end
+ #--------------------------------------------------------------------------
+ # ? ??????
+ #--------------------------------------------------------------------------
+ def update
+   # ????????
+   @guide_top_window.update
+   @guide_left_window.update
+   @guide_right_window.update
+   # B ??????????
+   if Input.trigger?(Input::B)
+     # ????? SE ???
+     $game_system.se_play($data_system.cancel_se)
+     # ??????????
+     $scene = Scene_Menu.new
+     return
+   end
+   # A ??????????
+   if Input.trigger?(Input::A)
+     # ?? SE ???
+     $game_system.se_play($data_system.decision_se)
+     # ????????????
+     @show_status = !@show_status
+     # ?????????????
+     enemy = @guide_left_window.item
+     # ????
+     @guide_right_window.refresh(enemy, @show_status)
+     return
+   end
+   # C ??????????
+   if Input.trigger?(Input::C)
+     # ?? SE ???
+     $game_system.se_play($data_system.decision_se)
+     # ?????????????
+     enemy = @guide_left_window.item
+     # ????
+     @guide_right_window.refresh(enemy, @show_status)
+     return
+   end
+   if MG_MOVE_REFRESH
+     # ???????????
+     if @last_index != @guide_left_window.index
+       # ????????
+       @last_index = @guide_left_window.index
+       # ?????????????
+       enemy = @guide_left_window.item
+       # ????
+       @guide_right_window.refresh(enemy, @show_status)
+       return
+     end
+   end
+ end
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Scene_Battle (???? 2)
+#------------------------------------------------------------------------------
+#  ?????????????????
+#==============================================================================
+
+class Scene_Battle
+ #--------------------------------------------------------------------------
+ # ? ?????????????
+ #--------------------------------------------------------------------------
+ alias start_phase5_KGC_MonsterGuide start_phase5
+ def start_phase5
+   # ??????????
+   for enemy in $game_troop.enemies
+     # ???????????????
+     next if enemy.hidden
+     # ??????????
+     $game_system.enemy_defeated[enemy.id] = true
+     # ?????????????
+     if MG_ORIGINAL_DEFEAT
+       enemy.original_id.each do |id|
+         next if id == nil
+         $game_system.enemy_defeated[id] = true
+       end
+     end
+   end
+
+   # ???????
+   start_phase5_KGC_MonsterGuide
+ end
+end

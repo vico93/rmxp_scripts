@@ -1,0 +1,215 @@
+Características
+Adiciona um medidor de HP e SP na batalha.
+
+Utilização
+Procure estas linhas logo no começo do script.
+
+#-----------------------
+  HIDE = false
+#-----------------------
+Apresentar o medidor de HP
+
+#-----------------------
+  ALIGN = 1
+#-----------------------
+Definição da posição do medidor.
+
+#-----------------------
+  MAX = 4
+#-----------------------
+Definição do número de medidores por batalha.
+
+Copie o script acima do script Main.
+Codigo:
+#################################################################
+############################ XRXS ###############################
+#################################################################
+#Adiciona um medidor de HP e SP, apenas na batatha.
+#################################################################
+module XRXS_BP7
+  HIDE = false #Apresentar o medidor de HP.
+  ALIGN = 0    #Definição da posição do medidor.
+  MAX = 4      #Definição do número de medidores por batalha.
+end
+#________________________________________________________________
+
+class Window_BattleStatus < Window_Base
+  alias xrxs_bp7_initialize initialize
+  def initialize
+    @previous_hp = []
+    @previous_sp = []
+    @previous_states = []
+    xrxs_bp7_initialize
+    if XRXS_BP7::HIDE
+      self.opacity = 0
+      self.back_opacity = 0
+    end
+  end
+  def refresh
+    @item_max = $game_party.actors.size
+    bool = false
+    for i in 0...@item_max
+      actor = $game_party.actors[i]
+      if (@previous_hp[i] != actor.hp) or
+        (@previous_sp[i] != actor.sp) or
+        (@previous_states[i] != actor.states)
+        bool = true
+        @previous_hp[i] = actor.hp
+        @previous_sp[i] = actor.sp
+        @previous_states[i] = actor.states.dup
+      end
+    end
+    return unless bool
+    max = XRXS_BP7::MAX
+    @item_max = $game_party.actors.size
+    self.contents.clear
+    for i in 0...$game_party.actors.size
+      actor = $game_party.actors[i]
+      width = [self.width*3/4 / max, 80].max
+      space = self.width / max
+      case XRXS_BP7::ALIGN
+      when 0
+        actor_x = i * space + 4
+      when 1
+        actor_x = (space * ((max - $game_party.actors.size)/2.0 + i)).floor
+      when 2
+        actor_x = (i + max - $game_party.actors.size) * space + 4
+      end
+      actor_x += self.x
+      draw_battlestatus(i, actor_x, width)
+    end
+  end
+  def draw_battlestatus(i, x, width)
+    actor = $game_party.actors[i]
+    y = 58
+    draw_actor_graphic(actor, x + 10, 116)
+    draw_actor_hp_meter_line(actor, x+16, y+14, width*4/5, 12)
+    draw_actor_sp_meter_line(actor, x+16, y+46, width*4/5, 12)
+    self.contents.font.size = 24            # HP/SP”’l‚Ì•¶Žš‚Ì‘å‚«‚³
+    self.contents.font.color = Color.new(0,0,0,192)
+    self.contents.draw_text(x+16, y+2, width*3/4, 24, actor.hp.to_s, 2)
+    self.contents.font.color = actor.hp == 0 ? knockout_color :
+      actor.hp <= actor.maxhp / 4 ? crisis_color : normal_color
+    self.contents.draw_text(x+14, y  , width*3/4, 24, actor.hp.to_s, 2)
+    self.contents.font.color = Color.new(0,0,0,192)
+    self.contents.draw_text(x+16, y+34, width*3/4, 24, actor.sp.to_s, 2)
+    self.contents.font.color = actor.maxsp == 0 ? disabled_color :
+                              actor.sp == 0 ? knockout_color :
+                              actor.sp <= actor.maxsp / 4 ? crisis_color :
+                              normal_color
+    self.contents.draw_text(x+14, y+32, width*3/4, 24, actor.sp.to_s, 2)
+    self.contents.font.size = 12            # —pŒêuHP/SPv‚Ì•¶Žš‚Ì‘å‚«‚³
+    self.contents.font.color = Color.new(0,0,0,192)
+    self.contents.draw_text(x+18, y+4 , 96, 12, $data_system.words.hp)
+    self.contents.draw_text(x+18, y+36, 96, 12, $data_system.words.sp)
+    self.contents.font.color = system_color # —pŒêuHP/SPv‚Ì•¶Žš‚ÌF
+    self.contents.draw_text(x+16, y+2 , 96, 12, $data_system.words.hp)
+    self.contents.draw_text(x+16, y+34, 96, 12, $data_system.words.sp)
+    draw_actor_state(actor, x+16, y+42)
+  end
+end
+class Window_Base < Window
+  def draw_actor_hp_meter_line(actor, x, y, width = 156, height = 4)
+    w = width * actor.hp / actor.maxhp
+    color_0 = Color.new(  0,  0,  0, 128)
+    color_1 = Color.new(255,  0,  0, 192)
+    color_2 = Color.new(255, 255,  0, 192)
+    self.contents.fill_rect(x+8, y+4, width, (height/4).floor, color_0)
+    self.contents.draw_line(x, y, x + w, y, color_1, (height/4).floor, 
+color_2)
+    x -= 1
+    y += (height/4).floor
+    self.contents.fill_rect(x+8, y+4, width, (height/4).ceil, color_0)
+    self.contents.draw_line(x, y, x + w, y, color_1, (height/4).ceil , 
+color_2)
+    x -= 1
+    y += (height/4).ceil
+    self.contents.fill_rect(x+8, y+4, width, (height/4).ceil, color_0)
+    self.contents.draw_line(x, y, x + w, y, color_1, (height/4).ceil , 
+color_2)
+    x -= 1
+    y += (height/4).ceil
+    self.contents.fill_rect(x+8, y+4, width, (height/4).floor, color_0)
+    self.contents.draw_line(x, y, x + w, y, color_1, (height/4).floor, 
+color_2)
+  end
+  def draw_actor_sp_meter_line(actor, x, y, width = 156, height = 4)
+    return if actor.maxsp == 0
+    w = width * actor.sp / actor.maxsp
+    color_0 = Color.new(  0,  0,  0, 128)
+    color_1 = Color.new(  0,  0, 255, 192)
+    color_2 = Color.new(  0, 255, 255, 192)
+    self.contents.fill_rect(x+8, y+4, width, (height/4).floor, color_0)
+    self.contents.draw_line(x, y, x + w, y, color_1, (height/4).floor, 
+color_2)
+    x -= 1
+    y += (height/4).floor
+    self.contents.fill_rect(x+8, y+4, width, (height/4).ceil , color_0)
+    self.contents.draw_line(x, y, x + w, y, color_1, (height/4).ceil , 
+color_2)
+    x -= 1
+    y += (height/4).ceil
+    self.contents.fill_rect(x+8, y+4, width, (height/4).ceil , color_0)
+    self.contents.draw_line(x, y, x + w, y, color_1, (height/4).ceil , 
+color_2)
+    x -= 1
+    y += (height/4).ceil
+    self.contents.fill_rect(x+8, y+4, width, (height/4).floor, color_0)
+    self.contents.draw_line(x, y, x + w, y, color_1, (height/4).floor, 
+color_2)
+  end
+  alias xrxs_bp7_draw_actor_name draw_actor_name
+  def draw_actor_name(actor, x, y)
+    xrxs_bp7_draw_actor_name(actor, x, y) if @draw_ban != true
+  end
+  alias xrxs_bp7_draw_actor_state draw_actor_state
+  def draw_actor_state(actor, x, y, width = 120)
+    xrxs_bp7_draw_actor_state(actor, x, y, width) if @draw_ban != true
+  end
+  alias xrxs_bp7_draw_actor_hp draw_actor_hp
+  def draw_actor_hp(actor, x, y, width = 144)
+    xrxs_bp7_draw_actor_hp(actor, x, y, width) if @draw_ban != true
+  end
+  alias xrxs_bp7_draw_actor_sp draw_actor_sp
+  def draw_actor_sp(actor, x, y, width = 144)
+    xrxs_bp7_draw_actor_sp(actor, x, y, width) if @draw_ban != true
+  end
+end
+class Bitmap
+  def draw_line(start_x, start_y, end_x, end_y, start_color, width = 1, 
+end_color = start_color)
+    distance = (start_x - end_x).abs + (start_y - end_y).abs
+    if end_color == start_color
+      for i in 1..distance
+        x = (start_x + 1.0 * (end_x - start_x) * i / distance).to_i
+        y = (start_y + 1.0 * (end_y - start_y) * i / distance).to_i
+        if width == 1
+          self.set_pixel(x, y, start_color)
+        else
+          self.fill_rect(x, y, width, width, start_color)
+        end
+      end
+    else
+      for i in 1..distance
+        x = (start_x + 1.0 * (end_x - start_x) * i / distance).to_i
+        y = (start_y + 1.0 * (end_y - start_y) * i / distance).to_i
+        r = start_color.red  * (distance-i)/distance + end_color.red  * 
+i/distance
+        g = start_color.green * (distance-i)/distance + end_color.green * 
+i/distance
+        b = start_color.blue  * (distance-i)/distance + end_color.blue  * 
+i/distance
+        a = start_color.alpha * (distance-i)/distance + end_color.alpha * 
+i/distance
+        if width == 1
+          self.set_pixel(x, y, Color.new(r, g, b, a))
+        else
+          self.fill_rect(x, y, width, width, Color.new(r, g, b, a))
+        end
+      end
+    end
+  end
+end
+
+
+

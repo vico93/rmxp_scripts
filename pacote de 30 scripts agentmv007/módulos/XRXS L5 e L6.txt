@@ -1,0 +1,119 @@
+#################################################################
+################### Modulo XRXS L5 e L6 #########################
+#################################################################
+#Script necessário para usar alguns outros scripts do XRXS ######
+#################################################################
+
+module XRXS
+  def XRXS.element_check(set, element_name)
+    returnar = [false, 0, 0, []] 
+    return returnar if !set.is_a?(Array) or set.size == 0 or element_name == ""
+    for i in set
+      if $data_system.elements[i] =~ /^#{element_name}([+-]?[0-9]+)?(%)?/
+        returnar[0] = true
+        if $2 == nil
+          returnar[1] += $1.to_i
+          returnar[3].push($1.to_i)
+        else
+          returnar[2] += $1.to_i
+        end
+      end
+    end
+    return returnar
+  end
+  def XRXS.element_include?(set, element_name)
+    return element_check(set, element_name)[0]
+  end
+  def XRXS.element_amount(set, element_name)
+    return element_check(set, element_name)[1]
+  end
+  def XRXS.element_percent(set, element_name)
+    return element_check(set, element_name)[2]
+  end
+  def XRXS.element_numbers(set, element_name)
+    return element_check(set, element_name)[3]
+  end
+end
+
+
+#==============================================================================
+# --- XRXS. ???????? ---
+#==============================================================================
+class Game_Battler
+  #--------------------------------------------------------------------------
+  # ? ????????
+  #--------------------------------------------------------------------------
+  def skill_element_set(skill)
+    return skill.nil? ? [] : skill.element_set
+  end
+  #--------------------------------------------------------------------------
+  # ? ????????
+  #--------------------------------------------------------------------------
+  def equip_element_set
+    return self.element_set + self.guard_element_set
+  end
+  #--------------------------------------------------------------------------
+  # ? ????????
+  #--------------------------------------------------------------------------
+  def guard_element_set
+    return []
+  end
+end
+class Game_Actor < Game_Battler
+  def guard_element_set
+    set = []
+    for id in self.armor_ids
+      next if id.nil?
+      armor = $data_armors[id]
+      set += (armor != nil ? armor.guard_element_set : [])
+    end
+    return set
+  end
+  #--------------------------------------------------------------------------
+  # ? ?? ID??
+  #--------------------------------------------------------------------------
+  def weapon_ids
+    unless self.is_a?(Game_Actor)
+      return []
+    end
+    ids    = @weapon_ids != nil ? @weapon_ids : []
+    ids[0] = @weapon_id
+    return ids
+  end
+  #--------------------------------------------------------------------------
+  # ? ?? ID??
+  #--------------------------------------------------------------------------
+  def armor_ids
+    unless self.is_a?(Game_Actor)
+      return []
+    end
+    ids    = @armor_ids != nil ? @armor_ids : []
+    ids[0] = @armor1_id
+    ids[1] = @armor2_id
+    ids[2] = @armor3_id
+    ids[3] = @armor4_id
+    return ids
+  end
+  #--------------------------------------------------------------------------
+  # ? ???????
+  #--------------------------------------------------------------------------
+  def equipments
+    equipments = []
+    self.weapon_ids.each {|id| equipments.push($data_weapons[id])}
+    self.armor_ids.each {|id| equipments.push($data_armors[id])}
+    return equipments
+  end
+  #--------------------------------------------------------------------------
+  # ? ????
+  #--------------------------------------------------------------------------
+  def equiping?(item)
+    case item
+    when RPG::Weapon
+      return self.weapon_ids.include?(item.id)
+    when RPG::Armor
+      return self.armor_ids.include?(item.id)
+    else
+      return false
+    end    
+  end
+end

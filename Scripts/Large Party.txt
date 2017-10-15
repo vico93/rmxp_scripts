@@ -1,0 +1,1192 @@
+#Script Criado por KGC e pouco explicado Moglayer 
+#O script permite que você adicione a janela de Grupo, na qual você 
+#pode adicionar ou remover personagens do seu jogo, igual ao PHS 
+#de Final Fantasy 7. 
+#Crie uma classe acima de Main e coloque o codigo abaixo. 
+
+[code:1:bd93ca54cd]################################################################# 
+#Script criado por KGC e pouco explicado por Mogslayer 
+################################################################## 
+#O script permite que você adicione a janela de Grupo, na qual você 
+#pode adicionar ou remover personagens do seu jogo, igual ao PHS 
+#de Final Fantasy 7. 
+################################################################## 
+
+module KGC 
+# Limite de quantos Battlers irão para a batalha. 
+LP_MAX_MEMBER = 4 
+BATTIE_AUTO_POSITION = false 
+LP_INDISPENSABLE_JOIN = true 
+LP_BLANK_TEXT = "-EMPTY-" 
+LP_ENTER_TEXT = "-ENTER-" 
+LP_SELECT_COLOR = Color.new(64, 255, 128, 128) 
+LP_CONFIRM_COMMANDS = ["Aceitar", "Sair", "Cancelar"] 
+LP_STAND_BY_EXP = 500 
+LP_BATTLE_PARTYFORM = true 
+LP_BATTLE_PARTYFORM_BUTTON_ACB = Input::F6 
+end 
+
+$imported["LargeParty"] = true 
+
+def call_partyform 
+$game_player.straighten 
+$scene = Scene_PartyForm.new(1) 
+end 
+
+
+#============================================================================== 
+# ¦ Game_System 
+#============================================================================== 
+
+class Game_System 
+#-------------------------------------------------------------------------- 
+# ? ?????????? 
+#-------------------------------------------------------------------------- 
+attr_accessor :partyform_permit # ???????? 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+alias initialize_KGC_LargeParty initialize 
+def initialize 
+# ??????? 
+initialize_KGC_LargeParty 
+
+@partyform_permit = true 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Game_Actor 
+#============================================================================== 
+
+class Game_Actor < Game_Battler 
+#-------------------------------------------------------------------------- 
+# ? ????? X ????? 
+#-------------------------------------------------------------------------- 
+def screen_x 
+# ??????????? X ????????? 
+if self.index != nil 
+if KGC::BATTIE_AUTO_POSITION 
+if $imported["HPSPAlter"] && !KGC::HPSP_DRAW_NAME_LUMP 
+return 80 + self.index * 592 / $game_party.actors.size 
+else 
+return 80 + self.index * 580 / $game_party.actors.size 
+end 
+else 
+return 80 + self.index * (312 - KGC::LP_MAX_MEMBER * 39) 
+end 
+else 
+return 0 
+end 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Game_Party 
+#============================================================================== 
+
+class Game_Party 
+#-------------------------------------------------------------------------- 
+# ? ?????????? 
+#-------------------------------------------------------------------------- 
+attr_accessor :battle_actors # ?????? 
+attr_accessor :party_actors # ??????????? 
+attr_accessor :indispensable_actors # ???????(??)???? 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+alias initialize_KGC_LargeParty initialize 
+def initialize 
+# ??????? 
+initialize_KGC_LargeParty 
+
+# ?????????????? 
+@battle_actors, @party_actors, @indispensable_actors = [], [], [] 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????????????? 
+#-------------------------------------------------------------------------- 
+def setup_starting_members 
+@battle_actors, @party_actors, @indispensable_actors = [], [], [] 
+for i in $data_system.party_members 
+@battle_actors.push($game_actors[i]) 
+@party_actors.push($game_actors[i]) 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????????????????? 
+#-------------------------------------------------------------------------- 
+def setup_battle_test_members 
+@battle_actors, @party_actors, @indispensable_actors = [], [], [] 
+for battler in $data_system.test_battlers 
+actor = $game_actors[battler.actor_id] 
+actor.level = battler.level 
+gain_weapon(battler.weapon_id, 1) 
+gain_armor(battler.armor1_id, 1) 
+gain_armor(battler.armor2_id, 1) 
+gain_armor(battler.armor3_id, 1) 
+gain_armor(battler.armor4_id, 1) 
+actor.equip(0, battler.weapon_id) 
+actor.equip(1, battler.armor1_id) 
+actor.equip(2, battler.armor2_id) 
+actor.equip(3, battler.armor3_id) 
+actor.equip(4, battler.armor4_id) 
+actor.recover_all 
+@battle_actors.push(actor) 
+@party_actors.push(actor) 
+end 
+@items = {} 
+for i in 1...$data_items.size 
+next if $data_items[i].name == "" 
+occasion = $data_items[i].occasion 
+@items[i] = 99 if occasion == 0 || occasion == 1 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????????????? 
+#-------------------------------------------------------------------------- 
+def refresh 
+# ?????????????????????????? 
+# $game_actors ????????????? 
+# ???????????????????????????? 
+new_battle_actors, new_party_actors, new_indispensable_actors = [], [], [] 
+for i in 0...@battle_actors.size 
+if $data_actors[@battle_actors[i].id] != nil 
+new_battle_actors.push($game_actors[@battle_actors[i].id]) 
+end 
+end 
+for i in 0...@party_actors.size 
+if $data_actors[@party_actors[i].id] != nil 
+new_party_actors.push($game_actors[@party_actors[i].id]) 
+end 
+end 
+for i in 0...@indispensable_actors.size 
+if $data_actors[@indispensable_actors[i].id] != nil 
+new_indispensable_actors.push($game_actors[@indispensable_actors[i].id]) 
+end 
+end 
+@battle_actors = new_battle_actors 
+@party_actors = new_party_actors 
+@indispensable_actors = new_indispensable_actors 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????? 
+#-------------------------------------------------------------------------- 
+def actors 
+return $game_temp.in_battle ? @battle_actors : @party_actors 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???????? 
+#-------------------------------------------------------------------------- 
+def max_level 
+# ??????? 0 ???? 
+return 0 if self.actors.size == 0 
+level = 0 
+# ?????????????????? 
+self.actors.each { |actor| level = [level, actor.level].max } 
+return level 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???????? 
+# actor_id : ???? ID 
+#-------------------------------------------------------------------------- 
+def add_actor(actor_id) 
+# ??????? 
+actor = $game_actors[actor_id] 
+# ????????????????????????????????? 
+if @battle_actors.size < KGC::LP_MAX_MEMBER && !@battle_actors.include?(actor) 
+# ??????????????????? 
+@battle_actors << actor 
+@party_actors << actor 
+else 
+# ?????????????????? 
+@party_actors << actor 
+end 
+# ???????????? 
+$game_player.refresh 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????? 
+# actor_id : ???? ID 
+#-------------------------------------------------------------------------- 
+def remove_actor(actor_id) 
+actor = $game_actors[actor_id] 
+# ????????????? 
+@party_actors.delete(actor) 
+# ?????????????? 
+@indispensable_actors.delete(actor) 
+# ???????????????? 
+if @battle_actors.include?(actor) 
+# ??????????????? 
+@battle_actors.delete(actor) 
+# ???????????1?????? 
+for i in 0...@party_actors.size 
+actor = @party_actors[i] 
+# ?????????????? 
+unless @battle_actors.include?(actor) 
+# ????????? 
+@battle_actors << actor 
+break 
+end 
+end 
+end 
+# ???????????? 
+$game_player.refresh 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????????????? 
+# actor_id : ???? ID 
+# permission : ?????(???:true) 
+#-------------------------------------------------------------------------- 
+def changeable(actor_id, permission = true) 
+# ??????? 
+actor = $game_actors[actor_id] 
+# ??????????????????? 
+return unless @party_actors.include?(actor) 
+if permission 
+# ???????????????????? 
+@indispensable_actors.delete(actor) 
+else 
+# ??????????????????? 
+@indispensable_actors << actor 
+# ???????????????????????????? 
+if KGC::LP_INDISPENSABLE_JOIN && !@battle_actors.include?(actor) 
+# ?????????????????????????? 
+for i in 0...@battle_actors.size 
+b_actor = @battle_actors.reverse[i] 
+# ???????????? 
+next if @indispensable_actors.include?(b_actor) 
+# ?????????????? 
+@battle_actors.delete(b_actor) 
+@battle_actors.push(actor) 
+# ??????????? 
+party_buf = @party_actors.dup 
+@party_actors = [] 
+for p_actor in @battle_actors 
+@party_actors.push(p_actor) 
+end 
+for p_actor in party_buf - @battle_actors 
+@party_actors.push(p_actor) 
+end 
+break 
+end 
+end 
+end 
+# ???????????? 
+$game_player.refresh 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+def sort_member 
+# ?????ID???? 
+@battle_actors.sort! {|a, b| a.id - b.id } 
+@party_actors.sort! {|a, b| a.id - b.id } 
+# ??????????? 
+party_buf = @party_actors.dup 
+@party_actors = [] 
+for i in 0...@battle_actors.size 
+actor = @battle_actors[i] 
+@party_actors.push(actor) 
+end 
+party_buf -= @battle_actors 
+for i in 0...party_buf.size 
+actor = party_buf[i] 
+@party_actors.push(actor) 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????????? 
+#-------------------------------------------------------------------------- 
+def clear_actions 
+# ???????????????? 
+self.actors.each { |actor| actor.current_action.clear } 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????????? 
+#-------------------------------------------------------------------------- 
+def inputable? 
+# ?????????????? true ??? 
+self.actors.each { |actor| 
+return true if actor.inputable? 
+} 
+return false 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???? 
+#-------------------------------------------------------------------------- 
+def all_dead? 
+# ??????? 0 ???? 
+return false if $game_party.actors.size == 0 
+# HP 0 ????????????????? 
+self.actors.each { |actor| 
+return false if actor.hp > 0 
+} 
+# ?? 
+return true 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???????????? (????) 
+#-------------------------------------------------------------------------- 
+def check_map_slip_damage 
+self.actors.each { |actor| 
+next if actor.hp == 0 || !actor.slip_damage? 
+actor.hp -= [actor.maxhp / 100, 1].max 
+$game_system.se_play($data_system.actor_collapse_se) if actor.hp == 0 
+$game_screen.start_flash(Color.new(255,0,0,128), 4) 
+$game_temp.gameover = $game_party.all_dead? 
+} 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????????????? 
+# hp0 : HP 0 ???????? 
+#-------------------------------------------------------------------------- 
+def random_target_actor(hp0 = false) 
+# ????????? 
+roulette = [] 
+# ??? 
+for actor in self.actors 
+# ????????? 
+if (!hp0 && actor.exist?) || (hp0 && actor.hp0?) 
+# ????????? [??] ??? 
+position = $data_classes[actor.class_id].position 
+# ????? n = 4?????? n = 3?????? n = 2 
+n = 4 - position 
+# ??????????? n ??? 
+n.times { roulette.push(actor) } 
+end 
+end 
+# ?????????? 0 ??? 
+return nil if roulette.size == 0 
+# ???????????????? 
+return roulette[rand(roulette.size)] 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????????????? 
+# actor_index : ?????????? 
+#-------------------------------------------------------------------------- 
+def smooth_target_actor(actor_index) 
+# ??????? 
+actor = self.actors[actor_index] 
+# ??????????? 
+return actor if actor != nil && actor.exist? 
+# ??? 
+for actor in self.actors 
+# ??????????? 
+return actor if actor.exist? 
+end 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Sprite_Battler 
+#============================================================================== 
+
+class Sprite_Battler < RPG::Sprite 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+alias update_KGC_LargeParty update 
+def update 
+# ????? nil ??? 
+if @battler == nil 
+@battler_name = nil 
+@battler_hue = nil 
+end 
+
+update_KGC_LargeParty 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Spriteset_Battle 
+#============================================================================== 
+
+class Spriteset_Battle 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+alias update_KGC_LargeParty update 
+def update 
+# ???????????? 
+unless @actor_sprites_created 
+@actor_sprites = [] 
+for i in 0...[KGC::LP_MAX_MEMBER, 4].max 
+@actor_sprites.push(Sprite_Battler.new(@viewport2)) 
+end 
+# ?????????? 
+@actor_sprites_created = true 
+end 
+
+# ??????? 
+update_KGC_LargeParty 
+
+# ??????????????? (????????????) 
+(0...@actor_sprites.size).each { |i| 
+@actor_sprites[i].battler = $game_party.actors[i] 
+} 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Window_MenuStatus 
+#============================================================================== 
+
+unless $imported["MenuAlter"] 
+class Window_MenuStatus < Window_Selectable 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+def refresh 
+@item_max = $game_party.actors.size 
+self.contents.dispose 
+self.contents = Bitmap.new(width - 32, @item_max * 112) 
+for i in 0...@item_max 
+x, y = 64, i * 112 
+# ?????????????????? 
+if i >= $game_party.battle_actors.size 
+self.contents.fill_rect(x - 64, y, 448, 112, Color.new(0, 0, 0, 96)) 
+end 
+actor = $game_party.actors[i] 
+draw_actor_graphic(actor, x - 40, y + 80) 
+draw_actor_name(actor, x, y) 
+draw_actor_class(actor, x + 144, y) 
+draw_actor_level(actor, x, y + 32) 
+draw_actor_state(actor, x + 90, y + 32) 
+draw_actor_exp(actor, x, y + 64) 
+draw_actor_hp(actor, x + 236, y + 32) 
+draw_actor_sp(actor, x + 236, y + 64) 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????? 
+#-------------------------------------------------------------------------- 
+def row_max 
+# ?????????? 
+return @item_max - 1 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????? 
+#-------------------------------------------------------------------------- 
+def top_row 
+# ??????????? Y ????1 ???? 112 ??? 
+return self.oy / 112 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????? 
+# row : ???????? 
+#-------------------------------------------------------------------------- 
+def top_row=(row) 
+# row ? 0 ~ row_max - 1 ??? 
+row = [[row, 0].max, row_max - 1].min 
+# row ? 1 ???? 112 ??????????????? Y ????? 
+self.oy = row * 112 
+end 
+#-------------------------------------------------------------------------- 
+# ? 1 ?????????????? 
+#-------------------------------------------------------------------------- 
+def page_row_max 
+return (self.height - 32) / 112 
+end 
+#-------------------------------------------------------------------------- 
+# ? 1 ??????????????? 
+#-------------------------------------------------------------------------- 
+def page_item_max 
+return page_row_max 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+def update_cursor_rect 
+if @index < 0 
+self.cursor_rect.empty 
+return 
+end 
+# ??????? 
+row = @index 
+# ??????????????????????? 
+if row < self.top_row 
+# ?????????????????? 
+self.top_row = row 
+end 
+# ????????????????????????? 
+if row > self.top_row + (self.page_row_max - 1) 
+# ??????????????????? 
+self.top_row = row - (self.page_row_max - 1) 
+end 
+# ????????? 
+cursor_width = self.width - 32 
+# ?????????? 
+y = @index * 112 - self.oy 
+# ?????????? 
+self.cursor_rect.set(0, y, cursor_width, 112) 
+end 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Window_BattleStatus 
+#============================================================================== 
+
+class Window_BattleStatus < Window_Base 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+alias initialize_KGC_LargeParty initialize 
+def initialize 
+# ??????? 
+initialize_KGC_LargeParty 
+
+# ????????????? 
+@level_up_flags = [] 
+for i in 0...[KGC::LP_MAX_MEMBER, 4].max 
+@level_up_flags[i] = false 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+alias refresh_KGC_LargeParty refresh 
+def refresh 
+@dw = 120 - (KGC::LP_MAX_MEMBER - 4) * 12 
+
+# ??????? 
+refresh_KGC_LargeParty 
+
+# ???????? 
+Graphics.frame_reset 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????? 
+# actor : ???? 
+# x : ??? X ?? 
+# y : ??? Y ?? 
+#-------------------------------------------------------------------------- 
+alias draw_actor_name_KGC_LargeParty draw_actor_name 
+def draw_actor_name(actor, x, y) 
+unless $imported["HPSPAlter"] 
+x2 = actor.screen_x - 64 
+end 
+
+# ??????? 
+draw_actor_name_KGC_LargeParty(actor, x2, y) 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????? 
+#-------------------------------------------------------------------------- 
+alias draw_actor_state_KGC_LargeParty draw_actor_state 
+def draw_actor_state(actor, x, y, width = 120) 
+unless $imported["HPSPAlter"] 
+x2 = actor.screen_x - 64 
+end 
+
+# ??????? 
+draw_actor_state_KGC_LargeParty(actor, x2, y, width) 
+end 
+#-------------------------------------------------------------------------- 
+# ? HP ??? 
+# actor : ???? 
+# x : ??? X ?? 
+# y : ??? Y ?? 
+# width : ????? 
+#-------------------------------------------------------------------------- 
+alias draw_actor_hp_KGC_LargeParty draw_actor_hp 
+def draw_actor_hp(actor, x, y, width = 120) 
+unless $imported["HPSPAlter"] 
+x = actor.screen_x - 64 
+end 
+
+# ??????? 
+draw_actor_hp_KGC_LargeParty(actor, x, y, @dw) 
+end 
+#-------------------------------------------------------------------------- 
+# ? SP ??? 
+# actor : ???? 
+# x : ??? X ?? 
+# y : ??? Y ?? 
+# width : ????? 
+#-------------------------------------------------------------------------- 
+alias draw_actor_sp_KGC_LargeParty draw_actor_sp 
+def draw_actor_sp(actor, x, y, width = 120) 
+unless $imported["HPSPAlter"] 
+x = actor.screen_x - 64 
+end 
+
+# ??????? 
+draw_actor_sp_KGC_LargeParty(actor, x, y, @dw) 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Window_BattleMember 
+#------------------------------------------------------------------------------ 
+#  ???????????????????? 
+#============================================================================== 
+
+class Window_BattleMember < Window_Selectable 
+#-------------------------------------------------------------------------- 
+# ? ?????????? 
+#-------------------------------------------------------------------------- 
+attr_accessor :selected_index # ?????????? 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+def initialize 
+super(0, 0, 640, 224) 
+@column_max = 4 
+@actors = $game_party.battle_actors 
+@item_max = KGC::LP_MAX_MEMBER 
+@selected_index = nil 
+bw = 152 * @column_max 
+bh = ((@item_max - 1) / @column_max + 1) * 192 
+self.contents = Bitmap.new(bw, bh) 
+refresh 
+self.active = true 
+self.index = 0 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???????? 
+#-------------------------------------------------------------------------- 
+def actor 
+return @actors[self.index] 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+def refresh 
+self.contents.clear 
+self.contents.font.size = 20 
+@actors = $game_party.battle_actors 
+for i in 0...@item_max 
+x = i % @column_max * 152 + 8 
+y = i / @column_max * 192 + 64 
+# ??????????? 
+if i < @actors.size 
+# ???????????? 
+if i == @selected_index 
+self.contents.fill_rect(x - 8, y - 64, 152, 192, KGC::LP_SELECT_COLOR) 
+end 
+actor = @actors[i] 
+# draw_actor_graphic ??????? 
+bitmap = RPG::Cache.battler(actor.battler_name, actor.battler_hue) 
+cw = bitmap.width; ch = bitmap.height 
+ch = 192 if ch > 192 
+src_rect = Rect.new(0, 0, cw, ch) 
+self.contents.blt(x, y - 64, bitmap, src_rect) 
+# ?????? 
+draw_actor_name(actor, x, y) 
+draw_actor_class(actor, x, y + 20) 
+draw_actor_level(actor, x, y + 44) 
+draw_actor_state(actor, x + 64, y + 44) 
+draw_actor_hp(actor, x, y + 68) 
+draw_actor_sp(actor, x, y + 92) 
+else 
+self.contents.font.color = system_color 
+if $imported["FrameShadowText"] 
+self.contents.draw_frame_text(x - 8, y, 152, 32, KGC::LP_BLANK_TEXT, 1) 
+else 
+self.contents.draw_text(x - 8, y, 152, 32, KGC::LP_BLANK_TEXT, 1) 
+end 
+end 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???????? 
+#-------------------------------------------------------------------------- 
+def update_cursor_rect 
+# ??????? 0 ????? 
+if @index < 0 
+self.cursor_rect.empty 
+return 
+end 
+# ????????? 
+cursor_width = 152 
+# ?????????? 
+x = @index % @column_max * 152 
+y = @index / @column_max * 192 - self.oy 
+# ?????????? 
+self.cursor_rect.set(x, y, cursor_width, 192) 
+self.oy = @index / @column_max * 192 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Window_PartyMember 
+#------------------------------------------------------------------------------ 
+#  ????????????????????? 
+#============================================================================== 
+
+class Window_PartyMember < Window_Selectable 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+def initialize 
+super(0, 224, 640, 256) 
+@column_max = 4 
+@actors = $game_party.party_actors 
+bw = 152 * @column_max 
+bh = ((@actors.size - 1) / @column_max + 1) * 112 
+self.contents = Bitmap.new(bw, bh) 
+refresh 
+self.active = false 
+self.index = -1 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????? 
+#-------------------------------------------------------------------------- 
+def actor 
+return @data[self.index] 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+def refresh 
+self.contents.clear 
+self.contents.font.size = 16 
+@actors = $game_party.party_actors 
+@item_max = @actors.size 
+@data = [] 
+for i in 0...@actors.size 
+x = i % @column_max * 152 + 8 
+y = i / @column_max * 112 + 16 
+actor = @actors[i] 
+@data.push(actor) 
+# ???????????????? 
+if $game_party.battle_actors.include?(actor) 
+self.contents.font.color = system_color 
+self.contents.draw_shadow_text(x, y - 16, 148, 32, KGC::LP_ENTER_TEXT, 1) 
+else 
+# draw_actor_graphic ?????(?)?? 
+bitmap = RPG::Cache.battler(actor.battler_name, actor.battler_hue) 
+cw = bitmap.width; ch = bitmap.height 
+src_rect = Rect.new(0, 0, cw, ch) 
+dest_rect = Rect.new(x + 144 - cw / 2, y - 16, cw / 2, ch / 2) 
+self.contents.stretch_blt(dest_rect, bitmap, src_rect) 
+end 
+draw_actor_name(actor, x, y) 
+draw_actor_class(actor, x, y + 16) 
+draw_actor_level(actor, x, y + 32) 
+draw_actor_state(actor, x + 64, y + 32) 
+draw_actor_hp(actor, x, y + 48) 
+draw_actor_sp(actor, x, y + 64) 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? HP ??? 
+#-------------------------------------------------------------------------- 
+def draw_actor_hp(actor, x, y, width = 144) 
+# ??? "HP" ??? 
+self.contents.font.color = system_color 
+self.contents.draw_shadow_text(x, y, 32, 32, $data_system.words.hp) 
+hp_x = x + width - 108 
+# HP ??? 
+self.contents.font.color = actor.hp == 0 ? knockout_color : 
+actor.hp <= actor.maxhp / 4 ? crisis_color : normal_color 
+self.contents.draw_shadow_text(hp_x, y, 48, 32, actor.hp.to_s, 2) 
+# MaxHP ??? 
+self.contents.font.color = normal_color 
+self.contents.draw_shadow_text(hp_x + 48, y, 12, 32, "/", 1) 
+self.contents.draw_shadow_text(hp_x + 60, y, 48, 32, actor.maxhp.to_s) 
+end 
+#-------------------------------------------------------------------------- 
+# ? SP ??? 
+#-------------------------------------------------------------------------- 
+def draw_actor_sp(actor, x, y, width = 144) 
+# ??? "SP" ??? 
+self.contents.font.color = system_color 
+self.contents.draw_shadow_text(x, y, 32, 32, $data_system.words.sp) 
+sp_x = x + width - 108 
+# SP ??? 
+self.contents.font.color = actor.sp == 0 ? knockout_color : 
+actor.sp <= actor.maxsp / 4 ? crisis_color : normal_color 
+self.contents.draw_shadow_text(sp_x, y, 48, 32, actor.sp.to_s, 2) 
+# MaxSP ??? 
+self.contents.font.color = normal_color 
+self.contents.draw_shadow_text(sp_x + 48, y, 12, 32, "/", 1) 
+self.contents.draw_shadow_text(sp_x + 60, y, 48, 32, actor.maxsp.to_s) 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???????? 
+#-------------------------------------------------------------------------- 
+def update_cursor_rect 
+# ??????? 0 ????? 
+if @index < 0 
+self.cursor_rect.empty 
+return 
+end 
+# ????????? 
+cursor_width = 152 
+# ?????????? 
+x = @index % @column_max * 152 
+y = 0 
+# ?????????? 
+self.cursor_rect.set(x, y, cursor_width, 112) 
+self.oy = @index / @column_max * 112 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Window_Target 
+#============================================================================== 
+
+class Window_Target < Window_Selectable 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+def initialize 
+super(0, 0, 336, 480) 
+self.contents = Bitmap.new(width - 32, 
+$game_party.party_actors.size * 116 - 16) 
+self.z += 10 
+@item_max = $game_party.party_actors.size 
+refresh 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+def refresh 
+self.contents.clear 
+for i in 0...$game_party.party_actors.size 
+x = 4 
+y = i * 116 
+# ??????????????? 
+if i >= $game_party.battle_actors.size 
+self.contents.fill_rect(0, y, width - 32, 116, Color.new(0, 0, 0, 96)) 
+end 
+actor = $game_party.party_actors[i] 
+draw_actor_name(actor, x, y) 
+draw_actor_class(actor, x + 144, y) 
+draw_actor_level(actor, x + 8, y + 32) 
+draw_actor_state(actor, x + 8, y + 64) 
+draw_actor_hp(actor, x + 152, y + 32) 
+draw_actor_sp(actor, x + 152, y + 64) 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???????? 
+#-------------------------------------------------------------------------- 
+def update_cursor_rect 
+# ?????? -1 ???? 
+if @index < 0 
+self.cursor_rect.set(0, 0, self.width - 32, @item_max * 116 - 20) 
+return 
+end 
+# ??????? 
+row = @index 
+# ??????????????????????? 
+if row < self.top_row 
+# ?????????????????? 
+self.top_row = row 
+end 
+# ????????????????????????? 
+if row > self.top_row + (self.page_row_max - 1) 
+# ??????????????????? 
+self.top_row = row - (self.page_row_max - 1) 
+end 
+# ????????? 
+cursor_width = self.width - 32 
+# ?????????? 
+x = @index % @column_max * (cursor_width + 32) 
+y = @index / @column_max * 116 - self.oy 
+# ?????????? 
+self.cursor_rect.set(x, y, self.width - 32, 96) 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????? 
+#-------------------------------------------------------------------------- 
+def top_row 
+# ??????????? Y ????1 ???? 116 ??? 
+return self.oy / 116 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????? 
+# row : ???????? 
+#-------------------------------------------------------------------------- 
+def top_row=(row) 
+# row ? 0 ~ row_max - 1 ??? 
+row = [[row, 0].max, row_max - 1].min 
+# row ? 1 ???? 116 ??????????????? Y ????? 
+self.oy = row * 116 
+end 
+#-------------------------------------------------------------------------- 
+# ? 1 ?????????????? 
+#-------------------------------------------------------------------------- 
+def page_row_max 
+return 4 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????? 
+#-------------------------------------------------------------------------- 
+def row_max 
+return $game_party.party_actors.size 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Window_PartyCommand 
+#============================================================================== 
+
+if KGC::LP_BATTLE_PARTYFORM 
+class Window_PartyCommand < Window_Selectable 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+def initialize 
+super(0, 0, 640, 64) 
+self.contents = Bitmap.new(width - 32, height - 32) 
+self.back_opacity = 160 
+@commands = ["??", "???", "??????"] 
+@item_max = 3 
+@column_max = 3 
+draw_item(0, normal_color) 
+draw_item(1, $game_temp.battle_can_escape ? normal_color : disabled_color) 
+draw_item(2, $game_system.partyform_permit ? normal_color : disabled_color) 
+self.active = false 
+self.visible = false 
+self.index = 0 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????? 
+# index : ???? 
+# color : ??? 
+#-------------------------------------------------------------------------- 
+def draw_item(index, color) 
+self.contents.font.color = color 
+rect = Rect.new(80 + index * 160 + 4, 0, 128 - 10, 32) 
+self.contents.fill_rect(rect, Color.new(0, 0, 0, 0)) 
+self.contents.draw_text(rect, @commands[index], 1) 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+def update_cursor_rect 
+self.cursor_rect.set(80 + index * 160, 0, 128, 32) 
+end 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Window_ShopStatus 
+#============================================================================== 
+
+class Window_ShopStatus < Window_Base 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+unless $imported["EquipExtension"] 
+def refresh 
+self.contents.clear 
+return if @item == nil 
+case @item 
+when RPG::Item 
+number = $game_party.item_number(@item.id) 
+when RPG::Weapon 
+number = $game_party.weapon_number(@item.id) 
+when RPG::Armor 
+number = $game_party.armor_number(@item.id) 
+end 
+self.contents.font.size = 22 
+self.contents.font.color = system_color 
+self.contents.draw_text(4, 0, 200, 32, "??????") 
+self.contents.font.color = normal_color 
+self.contents.draw_text(204, 0, 32, 32, number.to_s, 2) 
+return if @item.is_a?(RPG::Item) 
+self.contents.font.size = 18 
+# ??????? 
+for i in 0...$game_party.actors.size 
+# ??????? 
+actor = $game_party.actors[i] 
+# ?????????????????????????? 
+if actor.equippable?(@item) 
+self.contents.font.color = normal_color 
+else 
+self.contents.font.color = disabled_color 
+end 
+# ?????????? 
+self.contents.draw_text(4, 32 + 44 * i, 120, 32, actor.name) 
+# ????????? 
+if @item.is_a?(RPG::Weapon) 
+item1 = $data_weapons[actor.weapon_id] 
+elsif @item.kind == 0 
+item1 = $data_armors[actor.armor1_id] 
+elsif @item.kind == 1 
+item1 = $data_armors[actor.armor2_id] 
+elsif @item.kind == 2 
+item1 = $data_armors[actor.armor3_id] 
+else 
+item1 = $data_armors[actor.armor4_id] 
+end 
+# ??????? 
+if actor.equippable?(@item) 
+# ????? 
+if @item.is_a?(RPG::Weapon) 
+atk1 = item1 != nil ? item1.atk : 0 
+atk2 = @item != nil ? @item.atk : 0 
+change = atk2 - atk1 
+end 
+# ????? 
+if @item.is_a?(RPG::Armor) 
+pdef1 = item1 != nil ? item1.pdef : 0 
+mdef1 = item1 != nil ? item1.mdef : 0 
+pdef2 = @item != nil ? @item.pdef : 0 
+mdef2 = @item != nil ? @item.mdef : 0 
+change = pdef2 - pdef1 + mdef2 - mdef1 
+end 
+# ???????????? 
+self.contents.draw_text(124, 32 + 44 * i, 112, 32, sprintf("%+d", change), 2) 
+end 
+# ??????? 
+if item1 != nil 
+x = 4 
+y = 32 + 44 * i + 22 
+bitmap = RPG::Cache.icon(item1.icon_name) 
+opacity = self.contents.font.color == normal_color ? 255 : 128 
+self.contents.blt(x, y + 4, bitmap, Rect.new(0, 0, 24, 24), opacity) 
+self.contents.draw_text(x + 28, y, 212, 32, item1.name) 
+end 
+end 
+end 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Scene_Menu 
+#============================================================================== 
+
+class Scene_Menu 
+#-------------------------------------------------------------------------- 
+# ? ?????? (??????????????????) 
+#-------------------------------------------------------------------------- 
+alias update_command_KGC_LargeParty update_command 
+def update_command 
+# A ?????????? 
+if Input.trigger?(Input::A) 
+# ??????? 
+unless $game_system.partyform_permit 
+# ??? SE ??? 
+$game_system.se_play($data_system.buzzer_se) 
+return 
+end 
+# ?? SE ??? 
+$game_system.se_play($data_system.decision_se) 
+# ????????????? 
+$scene = Scene_PartyForm.new(false, @command_window.index) 
+return 
+end 
+
+# ??????? 
+update_command_KGC_LargeParty 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????? (???????????????????) 
+#-------------------------------------------------------------------------- 
+alias update_status_KGC_LargeParty update_status 
+def update_status 
+# A ?????????? 
+if Input.trigger?(Input::A) 
+# ??????? 
+unless $game_system.partyform_permit 
+# ??? SE ??? 
+$game_system.se_play($data_system.buzzer_se) 
+return 
+end 
+# ?? SE ??? 
+$game_system.se_play($data_system.decision_se) 
+# ????????????? 
+$scene = Scene_PartyForm.new(false, @command_window.index) 
+return 
+end 
+
+# ??????? 
+update_status_KGC_LargeParty 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Scene_PartyForm 
+#------------------------------------------------------------------------------ 
+#  ??????????????? 
+#============================================================================== 
+
+class Scene_PartyForm 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+# call_scene : ????? (0..???? 1..??? 2..??) 
+# menu_index : ????????INDEX 
+#-------------------------------------------------------------------------- 
+def initialize(call_scene = 0, menu_index = 0) 
+@call_scene = call_scene 
+@menu_index = menu_index 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????? 
+#-------------------------------------------------------------------------- 
+def main 
+# ??????????? 
+if $imported["MenuAlter"] && KGC::MA_MENU_TRANSPARENT && @call_scene != 2 
+@spriteset = Spriteset_Map.new 
+end 
+# ???????????? 
+@battle_window = Window_BattleMember.new 
+@party_window = Window_PartyMember.new 
+####Mogslayer Edit##### 
+@party_window.x = 750 
+@battle_window.x = -750 
+######################## 
+# ?????????? 
+commands = KGC::LP_CONFIRM_COMMANDS 
+@check_window = Window_Command.new(160, commands) 
+@check_window.back_opacity = 160 
+@check_window.x = (640 - @check_window.width) / 2 
+@check_window.y = (480 - @check_window.height) / 2 
+@check_window.z = 2000 
+@check_window.visible = false 
+@check_window.active = false 
+if $imported["MenuAlter"] && KGC::MA_MENU_TRANSPARENT 
+@battle_window.back_opacity = 160 
+@party_window.back_opacity = 160 
+end 
+# ??????????? 
+@battle_actors = $game_party.battle_actors.dup 
+@party_actors = $game_party.party_actors.dup 
+if @call_scene == 2 
+@battle_window.z += 5000 
+@party_window.z += 5000 
+@check_window.z += 5000 
+end 
+# ????????? 
+Graphics.transition 
+# ?????? 
+loop { 
+Graphics.update 
+Input.update 
+###Mogslayer Edit###### 
+if @party_window.x > 0 
+@party_window.x -= 30 
+end 

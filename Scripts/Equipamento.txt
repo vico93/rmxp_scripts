@@ -1,0 +1,213 @@
+################################################################# 
+############################ XRXS ############################### 
+################################################################# 
+# Script permite adicionar o comando Equipamento no menu de 
+#batalha. 
+################################################################# 
+
+
+class Spriteset_Battle 
+  attr_reader  :viewport3              
+  attr_reader  :viewport4              
+end 
+class Scene_Battle 
+  alias xrxs_bp16_update update 
+  def update 
+    if @interrupt_scene != nil 
+      save_scene = $scene 
+      @interrupt_scene.update 
+      next_scene = nil 
+      if $scene.is_a?(Scene_Menu) 
+        next_scene = nil 
+        $scene = save_scene 
+        @interrupt_scene.dispose 
+      elsif $scene != save_scene 
+        next_scene = $scene 
+        $scene = save_scene 
+      end 
+      if next_scene != nil 
+        @interrupt_scene = next_scene 
+      elsif @interrupt_scene.disposed? 
+        @interrupt_scene = nil 
+        @spriteset.viewport1.visible = true 
+        @spriteset.viewport2.visible = true 
+        @spriteset.viewport3.visible = true 
+        @spriteset.viewport4.visible = true 
+        @actor_command_window.visible= @actor_command_window_visible 
+        @status_window.visible      = true 
+        $game_temp.in_battle        = true 
+      end 
+      return 
+    end 
+    xrxs_bp16_update 
+  end 
+  def set_interrupt_scene(scene) 
+    @interrupt_scene = scene 
+    @spriteset.viewport1.visible = false 
+    @spriteset.viewport2.visible = false 
+    @spriteset.viewport3.visible = false 
+    @spriteset.viewport4.visible = false 
+    @actor_command_window_visible=@actor_command_window.visible 
+    @actor_command_window.visible= false 
+    @status_window.visible      = false 
+  end 
+  def call_menu_skill(index) 
+    $game_temp.in_battle        = false    
+    set_interrupt_scene(BattleInterruptScene_Skill.new(index)) 
+  end 
+  def call_menu_equip(index) 
+    set_interrupt_scene(BattleInterruptScene_Equip.new(index)) 
+  end 
+end 
+class Scene_Skill 
+  attr_reader  :actor_index            
+end 
+class Scene_Equip 
+  attr_reader  :actor_index            
+end 
+class BattleInterruptScene_Skill < Scene_Skill 
+  attr_reader  :next_scene                    
+  def initialize(actor_index = 0, equip_index = 0) 
+    super(actor_index, equip_index) 
+    @next_scene = nil 
+    @actor = $game_party.actors[@actor_index] 
+    @help_window = Window_Help.new 
+    @status_window = Window_SkillStatus.new(@actor) 
+    @skill_window = Window_Skill.new(@actor) 
+    @skill_window.help_window = @help_window 
+    @target_window = Window_Target.new 
+    @target_window.visible = false 
+    @target_window.active = false 
+  end 
+  def update 
+    if Input.trigger?(Input::R) 
+      $game_system.se_play($data_system.buzzer_se) 
+      return 
+    end 
+    if Input.trigger?(Input::L) 
+      $game_system.se_play($data_system.buzzer_se) 
+      return 
+    end 
+    super 
+  end 
+  def disposed? 
+    return @disposed 
+  end 
+  def dispose 
+    @disposed = true 
+    @help_window.dispose 
+    @status_window.dispose 
+    @skill_window.dispose 
+    @target_window.dispose 
+  end 
+end 
+class BattleInterruptScene_Equip < Scene_Equip 
+  attr_reader  :next_scene                
+  def initialize(actor_index = 0, equip_index = 0) 
+    super(actor_index, equip_index) 
+    @next_scene = nil 
+    @actor = $game_party.actors[@actor_index] 
+    @help_window = Window_Help.new 
+    @left_window = Window_EquipLeft.new(@actor) 
+    @right_window = Window_EquipRight.new(@actor) 
+    @item_window1 = Window_EquipItem.new(@actor, 0) 
+    @item_window2 = Window_EquipItem.new(@actor, 1) 
+    @item_window3 = Window_EquipItem.new(@actor, 2) 
+    @item_window4 = Window_EquipItem.new(@actor, 3) 
+    @item_window5 = Window_EquipItem.new(@actor, 4) 
+    @right_window.help_window = @help_window 
+    @item_window1.help_window = @help_window 
+    @item_window2.help_window = @help_window 
+    @item_window3.help_window = @help_window 
+    @item_window4.help_window = @help_window 
+    @item_window5.help_window = @help_window 
+    @right_window.index = @equip_index 
+    @disposed = false 
+    refresh 
+  end 
+  def update 
+    if Input.trigger?(Input::R) 
+      $game_system.se_play($data_system.buzzer_se) 
+      return 
+    end 
+    if Input.trigger?(Input::L) 
+      $game_system.se_play($data_system.buzzer_se) 
+      return 
+    end 
+    super 
+  end 
+  def disposed? 
+    return @disposed 
+  end 
+  def dispose 
+    @disposed = true 
+    @help_window.dispose 
+    @left_window.dispose 
+    @right_window.dispose 
+    @item_window1.dispose 
+    @item_window2.dispose 
+    @item_window3.dispose 
+    @item_window4.dispose 
+    @item_window5.dispose 
+  end 
+end 
+
+module XRXS_Window_Command_Add_Command 
+  def add_command(command) 
+    if @disabled == nil 
+      @disabled = [] 
+    end 
+    if @commands.size != @disabled.size 
+      for i in 0...@commands.size 
+        @disabled[i] = false 
+      end 
+    end 
+    @commands.push(command) 
+    @disabled.push(false) 
+    @item_max = @commands.size 
+    self.y -= 32 
+    self.height += 32 
+    self.contents.dispose 
+    self.contents = nil 
+    self.contents = Bitmap.new(self.width - 32, @item_max * 32) 
+    refresh 
+    for i in 0...@commands.size 
+      if @disabled[i] 
+        disable_item(i) 
+      end 
+    end 
+  end 
+  def disable_item(index) 
+    if @disabled == nil 
+      @disabled = [] 
+    end 
+    @disabled[index] = true 
+    draw_item(index, disabled_color) 
+  end 
+end 
+class Window_Command < Window_Selectable 
+  include XRXS_Window_Command_Add_Command 
+  def disable_item(index) 
+    super 
+  end 
+end 
+class Scene_Battle 
+  alias xrxs_bp16_ax_start_phase1 start_phase1 
+  def start_phase1 
+    @bis_equip_actor_command_index = @actor_command_window.height/32 - 1 
+    s5 = $data_system.words.equip 
+    @actor_command_window.add_command(s5) 
+    xrxs_bp16_ax_start_phase1 
+  end 
+  alias xrxs_bp16_ax_update_phase3_basic_command update_phase3_basic_command 
+  def update_phase3_basic_command 
+    xrxs_bp16_ax_update_phase3_basic_command 
+    if Input.trigger?(Input::C) 
+      case @actor_command_window.index 
+      when @bis_equip_actor_command_index 
+        $game_system.se_play($data_system.decision_se) 
+        call_menu_equip(@actor_index) 
+      end 
+    end 
+  end 
+end 

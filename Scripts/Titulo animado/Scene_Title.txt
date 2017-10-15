@@ -1,0 +1,238 @@
+#==============================================================================
+#  ¡ Scene_Title
+#------------------------------------------------------------------------------
+#  @ƒ^ƒCƒgƒ‹‰æ–Ê‚Ì ˆ— ‚ğ s‚¤ƒNƒ‰ƒX‚Å‚· B
+#==============================================================================
+
+class Scene_Title
+#--------------------------------------------------------------------------
+#  œ ƒ ƒCƒ“ ˆ— 
+#--------------------------------------------------------------------------
+ def main
+   # ??
+   if $BTEST
+     battle_test
+     return
+   end
+# ƒf [ƒ^ƒx [ƒX‚ğƒ  [ƒh
+$data_actors = load_data("Data/Actors.rxdata")
+$data_classes = load_data("Data/Classes.rxdata")
+$data_skills = load_data("Data/Skills.rxdata")
+$data_items = load_data("Data/Items.rxdata")
+$data_weapons = load_data("Data/Weapons.rxdata")
+$data_armors = load_data("Data/Armors.rxdata")
+$data_enemies = load_data("Data/Enemies.rxdata")
+$data_troops = load_data("Data/Troops.rxdata")
+$data_states = load_data("Data/States.rxdata")
+$data_animations = load_data("Data/Animations.rxdata")
+$data_tilesets = load_data("Data/Tilesets.rxdata")
+$data_common_events = load_data("Data/CommonEvents.rxdata")
+$data_system = load_data("Data/System.rxdata")
+# ƒVƒXƒeƒ€ƒIƒuƒWƒFƒNƒg‚ğ ì ¬
+$game_system = Game_System.new
+# ƒ^ƒCƒgƒ‹ƒOƒ‰ƒtƒBƒbƒN‚ğ ì ¬
+@viewport1 = Viewport.new(0, 240, 640, 240)
+@viewport5 = Viewport.new(0, 0, 640, 480)
+@characters = Plane.new(@viewport5)
+@characters.bitmap = RPG::Cache.title("Title-Characters")
+@bg1 = Plane.new(@viewport3)
+@bg1.bitmap = RPG::Cache.title("Title-Background")
+@meteor = Plane.new(@viewport3)
+@meteor.bitmap = RPG::Cache.title("Title-Meteor")
+@viewport2 = Viewport.new(0, - 40, 640, 240)
+@viewport3 = Viewport.new(0, - 94, 640, 240)
+@viewport4 = Viewport.new(0, 40, 640, 240)
+@bg1.opacity = @meteor.opacity  = 200
+@characters.opacity = 60
+@title = Sprite.new
+@title.bitmap = RPG::Cache.title("Title-Text")
+@title.x = 0
+@title.y = 0
+@scene = Sprite.new
+@scene.opacity = 0
+@scene.zoom_x = @scene.zoom_y = 10
+# ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ğ ì ¬
+s1 = "Start Story"
+s2 = "Continue"
+s3 = "Exit"
+@command_window = Window_Command.new(192, [s1, s2, s3])
+@command_window.back_opacity = 160
+@command_window.x = 330 - @command_window.width / 2
+@command_window.y = 250
+# ƒRƒ“ƒeƒBƒjƒ… [—LŒø”»’è
+# ƒZ [ƒuƒtƒ@ƒCƒ‹‚ª‚Ğ‚Æ‚Â‚Å‚à‘¶ İ‚·‚é‚©‚Ç‚¤‚©‚ğ’²‚×‚é
+# —LŒø‚È‚ç @continue_enabled ‚ğ true A–³Œø‚È‚ç false ‚É‚·‚é
+@continue_enabled = false
+for i in 0..3
+if FileTest.exist?("Save#{i+1}.sav")
+@continue_enabled = true
+end
+end
+# ƒ^ƒCƒgƒ‹ BGM ‚ğ‰‰‘t
+$game_system.bgm_play($data_system.title_bgm)
+# ME ABGS ‚Ì‰‰‘t‚ğ’â~
+Audio.me_stop
+Audio.bgs_stop
+# ƒgƒ‰ƒ“ƒWƒVƒ‡ƒ“À s
+Graphics.transition
+# ƒ ƒCƒ“ƒ‹ [ƒv
+loop do
+# ƒQ [ƒ€‰æ–Ê‚ğ X V
+Graphics.update
+# “ü—Í î•ñ‚ğ X V
+Input.update
+# ƒtƒŒ [ƒ€ X V
+update
+# ‰æ–Ê‚ª Ø‚è‘Ö‚í‚Á‚½‚çƒ‹ [ƒv‚ğ’†’f
+if $scene != self
+break
+end
+end
+# ƒgƒ‰ƒ“ƒWƒVƒ‡ƒ“ €”õ
+Graphics.freeze
+# ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ğ‰ğ•ú
+@command_window.dispose
+# ƒ^ƒCƒgƒ‹ƒOƒ‰ƒtƒBƒbƒN‚ğ‰ğ•ú
+@title.dispose
+@bg1.dispose
+@meteor.dispose
+@characters.dispose
+@scene.dispose
+end
+#--------------------------------------------------------------------------
+#  œ ƒtƒŒ [ƒ€ X V
+#--------------------------------------------------------------------------
+def update
+if @command_window.active
+update_command
+else
+update_start
+end
+end
+#--------------------------------------------------------------------------
+#  œ ƒtƒŒ [ƒ€ X V (ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ªƒAƒNƒeƒBƒu‚Ì ê ‡)
+#--------------------------------------------------------------------------
+def update_command
+@characters.oy += 1
+@bg1.ox += 1
+@meteor.ox -=1
+@meteor.oy -=1
+# ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ğ X V
+@command_window.update
+# C ƒ{ƒ^ƒ“‚ª‰Ÿ‚³‚ê‚½ ê ‡
+if Input.trigger?(Input::C)
+# ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ÌƒJ [ƒ\ƒ‹ˆÊ’u‚Å•ªŠò
+case @command_window.index
+when 0 # ƒjƒ… [ƒQ [ƒ€
+command_new_game
+when 1 # ƒRƒ“ƒeƒBƒjƒ… [
+command_continue
+when 2 # ƒVƒƒƒbƒgƒ_ƒEƒ“
+command_shutdown
+end
+end
+end
+#--------------------------------------------------------------------------
+#  œ ƒRƒ}ƒ“ƒh : ƒjƒ… [ƒQ [ƒ€
+#--------------------------------------------------------------------------
+def command_new_game
+# Œˆ’è SE ‚ğ‰‰‘t
+$game_system.se_play($data_system.decision_se)
+# BGM ‚ğ’â~
+Audio.bgm_stop
+# ƒvƒŒƒCŠÔŒv‘ª—p‚ÌƒtƒŒ [ƒ€ƒJƒEƒ“ƒg‚ğƒŠƒZƒbƒg
+Graphics.frame_count = 0
+# ŠeíƒQ [ƒ€ƒIƒuƒWƒFƒNƒg‚ğ ì ¬
+$game_temp = Game_Temp.new
+$game_system = Game_System.new
+$game_switches = Game_Switches.new
+$game_variables = Game_Variables.new
+$game_self_switches = Game_SelfSwitches.new
+$game_screen = Game_Screen.new
+$game_actors = Game_Actors.new
+$game_party = Game_Party.new
+$game_troop = Game_Troop.new
+$game_map = Game_Map.new
+$game_player = Game_Player.new
+#  ‰Šúƒp [ƒeƒB‚ğƒZƒbƒgƒAƒbƒv
+$game_party.setup_starting_members
+#  ‰ŠúˆÊ’u‚Ìƒ}ƒbƒv‚ğƒZƒbƒgƒAƒbƒv
+$game_map.setup($data_system.start_map_id)
+# ƒvƒŒƒCƒ„ [‚ğ ‰ŠúˆÊ’u‚ÉˆÚ“®
+$game_player.moveto($data_system.start_x, $data_system.start_y)
+# ƒvƒŒƒCƒ„ [‚ğƒŠƒtƒŒƒbƒVƒ…
+$game_player.refresh
+# ƒ}ƒbƒv‚É İ’è‚³‚ê‚Ä‚¢‚é BGM ‚Æ BGS ‚Ì©“® Ø‚è‘Ö‚¦‚ğÀ s
+$game_map.autoplay
+# ƒ}ƒbƒv‚ğ X V (•À—ñƒCƒxƒ“ƒgÀ s)
+$game_map.update
+# ƒ}ƒbƒv‰æ–Ê‚É Ø‚è‘Ö‚¦
+$scene = Scene_Map.new
+end
+#--------------------------------------------------------------------------
+#  œ ƒRƒ}ƒ“ƒh : ƒRƒ“ƒeƒBƒjƒ… [
+#--------------------------------------------------------------------------
+def command_continue
+# ƒRƒ“ƒeƒBƒjƒ… [‚ª–³Œø‚Ì ê ‡
+     # ??? SE ???
+         $game_system.se_play($data_system.decision_se)
+   # ?
+   $scene = Scene_Load.new
+     end
+#--------------------------------------------------------------------------
+#  œ ƒRƒ}ƒ“ƒh : ƒVƒƒƒbƒgƒ_ƒEƒ“
+#--------------------------------------------------------------------------
+def command_shutdown
+# Œˆ’è SE ‚ğ‰‰‘t
+$game_system.se_play($data_system.decision_se)
+# BGM ABGS AME ‚ğƒtƒF [ƒhƒAƒEƒg
+Audio.bgm_fade(800)
+Audio.bgs_fade(800)
+Audio.me_fade(800)
+# ƒVƒƒƒbƒgƒ_ƒEƒ“
+$scene = nil
+end
+#---------------------BattleTEST---------------------------------------
+def battle_test
+   # ??? (???) ?
+   $data_actors        = load_data("Data/BT_Actors.rxdata")
+   $data_classes       = load_data("Data/BT_Classes.rxdata")
+   $data_skills        = load_data("Data/BT_Skills.rxdata")
+   $data_items         = load_data("Data/BT_Items.rxdata")
+   $data_weapons       = load_data("Data/BT_Weapons.rxdata")
+   $data_armors        = load_data("Data/BT_Armors.rxdata")
+   $data_enemies       = load_data("Data/BT_Enemies.rxdata")
+   $data_troops        = load_data("Data/BT_Troops.rxdata")
+   $data_states        = load_data("Data/BT_States.rxdata")
+   $data_animations    = load_data("Data/BT_Animations.rxdata")
+   $data_tilesets      = load_data("Data/BT_Tilesets.rxdata")
+   $data_common_events = load_data("Data/BT_CommonEvents.rxdata")
+   $data_system        = load_data("Data/BT_System.rxdata")
+   # ?
+   Graphics.frame_count = 0
+   # ??
+   $game_temp          = Game_Temp.new
+   $game_system        = Game_System.new
+   $game_switches      = Game_Switches.new
+   $game_variables     = Game_Variables.new
+   $game_self_switches = Game_SelfSwitches.new
+   $game_screen        = Game_Screen.new
+   $game_actors        = Game_Actors.new
+   $game_party         = Game_Party.new
+   $game_troop         = Game_Troop.new
+   $game_map           = Game_Map.new
+   $game_player        = Game_Player.new
+   # ???
+   $game_party.setup_battle_test_members
+   # ? ID???
+   $game_temp.battle_troop_id = $data_system.test_troop_id
+   $game_temp.battle_can_escape = true
+   $game_map.battleback_name = $data_system.battleback_name
+   # ?? SE ???
+   $game_system.se_play($data_system.battle_start_se)
+   # ??? BGM ???
+   $game_system.bgm_play($game_system.battle_bgm)
+   # ?
+   $scene = Scene_Battle.new
+ end
+end

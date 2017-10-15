@@ -1,0 +1,290 @@
+Este Script foi criado por Momo, créditos ao Momo.
+O Script permite que você troque o menu de texto da batalha, por um menu de ícone com animação em zoom.
+O script é bem simples ,coloque-o acima do script Main. 
+Agora o Script
+###########################################################
+# SCRIPT criado por Momo
+module Momo_IconCommand
+
+ATTACK_ICON_NAME = "001-Weapon01" 
+SKILL_ICON_NAME = "044-Skill01" 
+GUARD_ICON_NAME = "009-Shield01" 
+ITEM_ICON_NAME = "032-Item01" 
+
+X_PLUS = -40
+
+Y_PLUS = -180
+
+SELECT_TYPE = 1
+
+FLASH_COLOR = Color.new(255, 255, 255, 128)
+
+FLASH_DURATION = 10
+
+FLASH_INTERVAL = 20
+
+COM_NAME_DROW = true
+
+COM_NAME_MOVE = true
+
+ATTACK_NAME = "??" 
+SKILL_NAME = "???" 
+GUARD_NAME = "??" 
+ITEM_NAME = "????" 
+
+COM_NAME_COLOR = Color.new(255, 255, 255, 255)
+
+COM_NAME_X_PLUS = 0
+COM_NAME_Y_PLUS = 0
+end
+
+class Window_CommandIcon < Window_Selectable
+attr_accessor :last_index
+
+def initialize(x, y, commands)
+super(x, y, 32, 32)
+self.windowskin = RPG::Cache.windowskin("")
+@item_max = commands.size
+@commands = commands
+@column_max = commands.size
+@index = 0
+@last_index = nil
+@name_sprite = nil
+@sprite = []
+refresh
+end
+def dispose
+super
+for sprite in @sprite
+sprite.dispose unless sprite.nil?
+end
+@name_sprite.dispose unless @name_sprite.nil?
+end
+
+def refresh
+@name_sprite.dispose unless @name_sprite.nil?
+for sprite in @sprite
+sprite.dispose unless sprite.nil?
+end
+@name_sprite = nil
+draw_com_name if Momo_IconCommand::COM_NAME_DROW
+@sprite = []
+for i in 0...@item_max
+draw_item(i)
+end
+end
+
+def draw_item(index)
+@sprite[index] = Sprite_Icon.new(nil, @commands[index])
+@sprite[index].z = self.z + 1
+end
+def draw_com_name
+@name_sprite = Sprite_Comm_Name.new(nil, get_com_name)
+
+end
+
+
+def update
+super
+icon_update
+com_name_update if Momo_IconCommand::COM_NAME_DROW
+if move_index?
+@last_index = self.index
+end
+end
+
+def icon_update
+for i in 0...@sprite.size
+@sprite[i].active = (self.index == i)
+@sprite[i].x = self.x + i * 24
+@sprite[i].y = self.y + 0
+@sprite[i].z = (self.index == i) ? self.z + 2 : self.z + 1
+@sprite[i].visible = self.visible
+@sprite[i].update
+end
+end
+
+def com_name_update
+if move_index?
+@name_sprite.name = get_com_name
+end
+@name_sprite.x = self.x - 12 + Momo_IconCommand::COM_NAME_X_PLUS
+@name_sprite.y = self.y - 40 + Momo_IconCommand::COM_NAME_Y_PLUS
+@name_sprite.z = self.z + 1
+@name_sprite.active = self.active
+@name_sprite.visible = self.visible
+@name_sprite.update
+end
+def get_com_name
+make_name_set if @name_set.nil?
+name = @name_set[self.index]
+name = "" if name.nil?
+return name
+end
+def make_name_set
+@name_set = []
+@name_set[0] = Momo_IconCommand::ATTACK_NAME
+@name_set[1] = Momo_IconCommand::SKILL_NAME
+@name_set[2] = Momo_IconCommand::GUARD_NAME
+@name_set[3] = Momo_IconCommand::ITEM_NAME
+end
+def move_index?
+return self.index != @last_index
+end
+def need_reset
+@name_sprite.need_reset = true if Momo_IconCommand::COM_NAME_DROW
+end
+end
+
+
+class Sprite_Icon < Sprite
+attr_accessor :active
+attr_accessor :icon_name
+
+def initialize(viewport, icon_name)
+super(viewport)
+@icon_name = icon_name
+@last_icon = @icon_name
+@count = 0
+self.bitmap = RPG::Cache.icon(@icon_name)
+self.ox = self.bitmap.width / 2
+self.oy = self.bitmap.height / 2
+@active = false
+end
+
+def dispose
+if self.bitmap != nil
+self.bitmap.dispose
+end
+super
+end
+
+def update
+super
+if @icon_name != @last_icon
+@last_icon = @icon_name
+self.bitmap = RPG::Cache.icon(@icon_name)
+end
+if @active
+@count += 1
+case Momo_IconCommand::SELECT_TYPE
+when 0
+icon_flash
+when 1
+icon_zoom
+end
+@count = 0 if @count == 20
+else
+icon_reset
+end
+end
+def icon_flash
+if @count % Momo_IconCommand::FLASH_INTERVAL == 0 or @count == 1
+self.flash(Momo_IconCommand::FLASH_COLOR, Momo_IconCommand::FLASH_DURATION)
+end
+end
+def icon_zoom
+case @count
+when 1..10
+zoom = 1.0 + @count / 10.0
+when 11..20
+zoom = 2.0 - (@count - 10) / 10.0
+end
+self.zoom_x = zoom
+self.zoom_y = zoom
+end
+def icon_reset
+@count = 0
+self.zoom_x = 1.0
+self.zoom_y = 1.0
+end
+end
+
+
+class Sprite_Comm_Name < Sprite
+attr_accessor :active
+attr_accessor :name
+attr_accessor :need_reset
+
+def initialize(viewport, name)
+super(viewport)
+@name = name
+@last_name = nil
+@count = 0
+@x_plus = 0
+@opa_plus = 0
+@need_reset = false
+@active = false
+self.bitmap = Bitmap.new(160, 32)
+end
+
+def dispose
+if self.bitmap != nil
+self.bitmap.dispose
+end
+super
+end
+
+def update
+super
+if @active
+if need_reset?
+@need_reset = false
+@last_name = @name
+text_reset
+end
+move_text if Momo_IconCommand::COM_NAME_MOVE
+end
+end
+def move_text
+@count += 1
+@x_plus = [@count * 8, 80].min 
+self.x = self.x - 80 + @x_plus
+self.opacity = @count * 25
+end
+def text_reset
+@count = 0
+@x_plus = 0
+self.bitmap.clear
+self.bitmap.font.color = Momo_IconCommand::COM_NAME_COLOR
+self.bitmap.draw_text(0, 0, 160, 32, @name)
+end
+def need_reset?
+return (@name != @last_name or @need_reset)
+end
+end
+
+class Scene_Battle
+
+alias scene_battle_icon_command_start_phase1 start_phase1
+def start_phase1
+com1 = Momo_IconCommand::ATTACK_ICON_NAME
+com2 = Momo_IconCommand::SKILL_ICON_NAME
+com3 = Momo_IconCommand::GUARD_ICON_NAME
+com4 = Momo_IconCommand::ITEM_ICON_NAME
+@actor_command_window = Window_CommandIcon.new(0, 0, [com1, com2, com3, com4])
+@actor_command_window.y = 160
+@actor_command_window.back_opacity = 160
+@actor_command_window.active = false
+@actor_command_window.visible = false
+@actor_command_window.update
+scene_battle_icon_command_start_phase1
+end
+
+alias scene_battle_icon_command_phase3_setup_command_window phase3_setup_command_window
+def phase3_setup_command_window
+scene_battle_icon_command_phase3_setup_command_window
+@actor_command_window.x = command_window_actor_x(@actor_index)
+@actor_command_window.y = command_window_actor_y(@actor_index)
+@actor_command_window.need_reset
+end
+def command_window_actor_x(index)
+$game_party.actors[index].screen_x + Momo_IconCommand::X_PLUS
+end
+def command_window_actor_y(index)
+$game_party.actors[index].screen_y + Momo_IconCommand::Y_PLUS
+end
+end
+
+###################################################################
+

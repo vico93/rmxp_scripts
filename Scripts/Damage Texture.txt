@@ -1,0 +1,104 @@
+###################################
+#Script retirado  do site Cogwheel#
+##################################################################
+# O script permite que os danos fiquem com textura, certifique-se
+#o diretório strings esteja no diretório graphics
+##################################################################
+
+class Bitmap
+  WIDE = 160                  
+  FILE_WIDTH = 26            
+  FILE_HEIGHT = 36            
+  WIDTH = 18                 
+  HEIGHT = 12                
+  def draw_damage(value, element)
+    if value.is_a?(Numeric)
+      value = value.abs
+      if value > 0
+        fig = Math.log10(value).to_i
+      else
+        fig = 0
+      end
+      filename = "num_"
+      if element == 1
+        file = RPG::Cache.numeric("critical")
+        blt(WIDE / 2 - file.rect.width / 2, 0, file, file.rect)
+      end
+      file = RPG::Cache.numeric("num")
+      x = WIDE / 2 - FILE_WIDTH / 2 - WIDTH / 2 * (fig)
+      while fig >= 0
+        blt(x, HEIGHT, file, Rect.new((value / (10 ** fig)) * FILE_WIDTH,
+          element * FILE_HEIGHT, 26, 36))
+        x += WIDTH
+        value %= 10 ** fig
+        fig -= 1
+      end
+    else
+      case value
+      when ""
+        return
+      when "Miss"
+        file = RPG::Cache.numeric("miss")
+      else
+        file = RPG::Cache.numeric(value)
+      end
+        x = WIDE / 2 - file.rect.width / 2
+      blt(x, HEIGHT, file, file.rect)
+    end
+  end
+end
+
+class Scene_Battle
+  alias :main_damage :main
+  def main
+    for path in ["num", "critical", "miss"]
+      RPG::Cache.numeric(path)
+    end
+    main_damage
+  end
+end
+
+module RPG
+  class Sprite < ::Sprite
+    def damage(value, critical)
+      dispose_damage
+      if value.is_a?(Numeric)
+        damage_string = value.abs.to_s
+      else
+        damage_string = value.to_s
+      end
+      if value.is_a?(Numeric)
+        damage_string = value.abs.to_s
+      else
+        damage_string = value.to_s
+      end
+      bitmap = Bitmap.new(Bitmap::WIDE, Bitmap::FILE_HEIGHT + Bitmap::HEIGHT)
+      if value.is_a?(Numeric)
+        if value >= 0
+          if critical
+            bitmap.draw_damage(value, 1)
+          else
+            bitmap.draw_damage(value, 0)
+          end
+        else
+          bitmap.draw_damage(value, 2)
+        end
+      else
+        bitmap.draw_damage(value, 3)
+      end
+      @_damage_sprite = ::Sprite.new
+      @_damage_sprite.bitmap = bitmap
+      @_damage_sprite.ox = bitmap.width / 2 + self.viewport.ox
+      @_damage_sprite.oy = Bitmap::HEIGHT + Bitmap::FILE_HEIGHT / 2
+      @_damage_sprite.x = self.x + self.viewport.rect.x
+      @_damage_sprite.y = self.y - self.oy / 2 + self.viewport.rect.y
+      @_damage_sprite.z = 3000
+      @_damage_duration = 40
+    end
+  end
+  module Cache
+    def self.numeric(filename)
+      self.load_bitmap("Graphics/String/", filename)
+    end
+  end
+end

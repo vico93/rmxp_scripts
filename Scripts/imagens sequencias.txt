@@ -1,0 +1,90 @@
+#=================================================================== 
+#  * CGI Movies 
+#------------------------------------------------------------------------------------------------------------ 
+# Create cutscenes and movies using images, like what Square-Enix is doing for Final Fantasy 12 
+#------------------------------------------------------------------------------------------------------------ 
+# Tsunokiette 
+# Version 3 
+# 11.22.05 
+#======================================================================= 
+
+#********************** 
+# Create RPG::Cache.CGI 
+#********************** 
+module RPG 
+   module Cache 
+       def self.CGI(filename) 
+         self.play_movie("Data/CGI/", filename) 
+         end 
+   end 
+end 
+
+#************************ 
+# Start CGI Movies Script 
+#************************ 
+class Scene_CGI
+   attr_accessor   :cgi_over
+    
+   #------------------------------------------------------------------------- 
+   # Initialize the CGI Movie 
+   #------------------------------------------------------------------------- 
+   # cgi_folder = folder containing CGI images 
+   # scene = the scene to return to after CGI plays 
+   # skip = set to true if you want to be able to skip movie by pressing esc. 
+   #------------------------------------------------------------------------- 
+    
+   def initialize(cgi_folder, scene, skip = false) 
+      @folder = cgi_folder 
+      @scene = scene 
+      @folder_size = Dir.entries("Data/CGI/#{@folder}").size 
+      @skip = skip
+      @cgi_over = false
+      play_cgi
+    end 
+
+   #------------------- 
+   # Main Processing 
+   #------------------- 
+   def main
+      loop do
+         if @cgi_over == true
+            break
+         end
+      end
+      @cgi_over = false
+      $scene = @scene
+   end 
+
+   #------------------- 
+   # Play the CGI Movie 
+   #------------------- 
+   def play_cgi 
+      for i in 1..(@folder_size - 3) 
+          unless @skip == false 
+            if Input.trigger?(Input::B) 
+               break 
+            end 
+         end 
+         @cgi = Sprite.new 
+         @cgi.movie = RPG::Cache.CGI("#{@folder}/#{i}") 
+         @cgi.x = ((640 - @cgi.movie.width) / 2) 
+         @cgi.y = ((480 - @cgi.movie.height) / 2) 
+         delay(1) 
+         @cgi.dispose 
+      end 
+      @cgi_over = true 
+   end 
+
+   #------ 
+   # Delay 
+   #------ 
+   def delay(wait) 
+      count = Graphics.frame_count 
+      while wait + count >= Graphics.frame_count 
+         Graphics.update 
+      end 
+   end 
+end 
+#********************** 
+# End CGI Movies Script 
+#**********************

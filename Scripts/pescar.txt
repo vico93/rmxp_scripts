@@ -1,0 +1,69 @@
+Este script é muito fácil de configurar. Trata-se de um sistema de pesca 
+(está mais para utilidade do que para minigame) que permite ao jogador 
+ganhar itens de acordo com o valor de uma variável. O jogador aperta Enter 
+no "Pesque-pague" e pode ganhar ou não um item, nem adianta eu postar 
+screenshots. Para configurar o script, faça o seguinte:
+Na linha 4, está escrito:
+
+Codigo:
+@fish_type = [1,2,3]
+
+
+
+Substitua 1, 2 e 3 pelos IDs dos itens que serão fisgados. Você pode colocar 
+quantos itens quiser.
+Na linha 6, está escrito:
+
+  Codigo:
+$game_variables[1] = ""
+
+
+
+Substitua o número 1 pelo ID da variável que controla a chance de sucesso na 
+pescaria. Não use esta variável durante o jogo, ela pode interferir no 
+sistema se for usada.
+Na linha 15, está escrito:
+
+          Codigo:
+$game_variables[1] = "Você pescou ... "+$data_items[i].name.to_s
+
+
+
+Coloque entre aspas a mensagem que aparece quando você pesca um peixe.
+Na linha 21:
+
+    Codigo:
+$game_variables[1] = "Você pescou... Espere aí... Você não pescou nada!"
+
+
+
+Coloque a mensagem que diz que você não pescou nada. O script está abaixo:
+
+Codigo:
+# Criado por Ice Dragon
+class Fishing
+def initialize
+  @fish_type = [1,2,3] #Coloque o ID dos itens a serem pescados
+  @fishing = 0
+  $game_variables[1] = "" # Coloque o ID da variável que indica se você 
+pescou ou não e não use-a no jogo
+  refresh
+end
+def refresh
+  @fishing = rand(@fish_type.size*2-2)
+  for i in @fish_type
+    if i == @fishing
+          $game_party.gain_item(i,1)
+          # Mensagem dizendo que você pegou um peixe
+          $game_variables[1] = "Você pescou ... "+$data_items[i].name.to_s
+          break
+    end
+  end
+  if i != @fishing
+    # Mensagem dizendo que você não pescou nada
+    $game_variables[1] = "Você pescou... Espere aí... Você não pescou nada!"
+  end
+end
+end
+
+

@@ -1,0 +1,1045 @@
+################################################################ 
+#Script criado por Momo e traduzido e editado por Turbidos    # 
+################################################################ 
+# Adiciona ao seu game o Livro de itens, que é um database de  # 
+#itens, ele mostrará todos os itens que você adquiriu até agora# 
+#com todos os detalhes de preço, função, poder etc...          #  
+################################################################ 
+module Item_Book_Config 
+################################################################ 
+# modo de visualização de itens completados.                   # 
+# 0 = não mostra nada                                          # 
+# 1 = O valor será mostrado em números reais.                  # 
+# 2 = O valor será mostrado em porcentagem                     # 
+################################################################ 
+  SHOW_COMPLETE_TYPE = 3 
+end 
+class Data_ItemBook 
+  attr_reader :item_kind_name 
+  attr_reader :weapon_kind_name 
+  attr_reader :armor_kind_name 
+  attr_reader :kind_row 
+  attr_reader :item_id_data 
+  attr_reader :weapon_id_data 
+  attr_reader :armor_id_data 
+  attr_reader :item_kind_element_name 
+  attr_reader :weapon_kind_element_name 
+  attr_reader :armor_kind_element_name 
+################################################################# 
+# Defina aqui o nome dos menus dos Itens, o nome deve ser igual # 
+#ao nome do atributo do database.                               # 
+################################################################# 
+def initialize 
+    @item_kind_name = ["Comuns", "Especiais"] 
+    @weapon_kind_name = ["Armas"] 
+    @armor_kind_name = ["Escudo", "Armaduras", "Acessórios", "Livros Mágicos"] 
+    @kind_row = ["Comuns", 
+                 "Armas", 
+                 "Escudo", 
+                 "Armaduras", 
+                 "Acessórios", 
+                 "Livros Mágicos", 
+                 "Especiais"] 
+    @item_kind_element_name = ["Comuns", "Especiais"] 
+    @weapon_kind_element_name = [] 
+    @armor_kind_element_name = ["Escudo", "Armaduras", "Acessórios", "Livros Mágicos"] 
+    @item_id_data = item_book_id_set 
+    @weapon_id_data = weapon_book_id_set 
+    @armor_id_data = armor_book_id_set 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ???????????????? 
+  #-------------------------------------------------------------------------- 
+  def kind_search(name) 
+    if @item_kind_name.include?(name) 
+      return [0, @item_kind_name.index(name)] 
+    elsif @weapon_kind_name.include?(name) 
+      return [1, @weapon_kind_name.index(name)] 
+    elsif @armor_kind_name.include?(name) 
+      return [2, @armor_kind_name.index(name)] 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ??????????? 
+  #-------------------------------------------------------------------------- 
+  def no_add_element 
+    no_add = 0 
+    # ???????ID??? 
+    for i in 1...$data_system.elements.size 
+      if $data_system.elements[i] =~ /??????/ 
+        no_add = i 
+        break 
+      end 
+    end 
+    return no_add 
+  end 
+  
+  #-------------------------------------------------------------------------- 
+  # ? ?????????ID??? 
+  #-------------------------------------------------------------------------- 
+  def element_search(element_name) 
+    return nil if element_name == nil 
+    for i in 1...$data_system.elements.size 
+      if $data_system.elements[i] =~ /^#{element_name}/ 
+        return i 
+      end 
+    end 
+  end 
+  
+  #-------------------------------------------------------------------------- 
+  # ? ???????ID?? 
+  #-------------------------------------------------------------------------- 
+  def item_book_id_set 
+    data = [] 
+    no_add = no_add_element 
+    if @item_kind_element_name.size == 0 
+      data[0] = [0] 
+      for i in 1...$data_items.size 
+        item = $data_items[i] 
+        next if item.name == "" 
+        next if item.element_set.include?(no_add) 
+        data[0].push(item.id) 
+      end 
+    else 
+      for i in 0...@item_kind_element_name.size 
+        data[i] = [0] 
+        element_id = element_search(@item_kind_element_name[i]) 
+        for j in 1...$data_items.size 
+          item = $data_items[j] 
+          next if item.name == "" 
+          next if item.element_set.include?(no_add) 
+          if item.element_set.include?(element_id) 
+            data[i].push(item.id) 
+          end 
+        end 
+      end 
+    end 
+    return data 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????ID?? 
+  #-------------------------------------------------------------------------- 
+  def weapon_book_id_set 
+    data = [] 
+    no_add = no_add_element 
+    if @weapon_kind_element_name.size == 0 
+      data[0] = [0] 
+      for i in 1...$data_weapons.size 
+        item = $data_weapons[i] 
+        next if item.name == "" 
+        next if item.element_set.include?(no_add) 
+        data[0].push(item.id) 
+      end 
+    else 
+      for i in 0...@weapon_kind_element_name.size 
+        data[i] = [0] 
+        element_id = element_search(@weapon_kind_element_name[i]) 
+        for j in 1...$data_weapons.size 
+          item = $data_weapons[j] 
+          next if item.name == "" 
+          next if item.element_set.include?(no_add) 
+          if item.element_set.include?(element_id) 
+            data[i].push(item.id) 
+          end 
+        end 
+      end 
+    end 
+    return data 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????ID?? 
+  #-------------------------------------------------------------------------- 
+  def armor_book_id_set 
+    data = [] 
+    no_add = no_add_element 
+    if @armor_kind_element_name.size == 0 
+      data[0] = [0] 
+      for i in 1...$data_armors.size 
+        item = $data_armors[i] 
+        next if item.name == "" 
+        next if item.guard_element_set.include?(no_add) 
+        data[0].push(item.id) 
+      end 
+    else 
+      for i in 0...@armor_kind_element_name.size 
+        data[i] = [0] 
+        element_id = element_search(@armor_kind_element_name[i]) 
+        for j in 1...$data_armors.size 
+          item = $data_armors[j] 
+          next if item.name == "" 
+          next if item.guard_element_set.include?(no_add) 
+          if item.guard_element_set.include?(element_id) 
+            data[i].push(item.id) 
+          end 
+        end 
+      end 
+    end 
+    return data 
+  end 
+end 
+
+class Window_Base < Window 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? 
+  #-------------------------------------------------------------------------- 
+  def draw_attack_element(x, y, element_set) 
+    elem_temp = [] 
+    for i in element_set 
+      elem = $data_system.elements[i] 
+      elem_temp.push("Fogo") if elem == "Fogo" 
+      elem_temp.push("Gelo") if elem == "Gelo" 
+      elem_temp.push("Água") if elem == "Água" 
+      elem_temp.push("Ar") if elem == "Ar" 
+      elem_temp.push("Terra") if elem == "Terra" 
+      elem_temp.push("Luz") if elem == "Luz" 
+      elem_temp.push("Trevas") if elem == "Trevas" 
+      elem_temp.push("Trovão") if elem == "Trovão" 
+    end 
+    if elem_temp.size == 0 
+      self.contents.draw_text(x, y, 64, 32, "Nada") 
+      return 
+    end 
+    ox = 0 
+    for name in elem_temp 
+      cx = self.contents.text_size(name).width 
+      self.contents.draw_text(x+ox, y, cx, 32, name) 
+      ox += cx+8 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? 
+  #-------------------------------------------------------------------------- 
+  def draw_attack_wp_element(x, y, element_set) 
+    elem_temp = [] 
+    for i in element_set 
+      elem = $data_system.elements[i] 
+      elem_temp.push("Morto") if elem == "Morto" 
+      elem_temp.push("Cegueira") if elem == "Cegueira" 
+      elem_temp.push("Paralizia") if elem == "Paralizia" 
+      elem_temp.push("Mudez") if elem == "Mudez" 
+      elem_temp.push("Veneno") if elem == "Veneno" 
+    end 
+    if elem_temp.size == 0 
+      self.contents.draw_text(x, y, 64, 32, "Nada") 
+      return 
+    end 
+    ox = 0 
+    for name in elem_temp 
+      cx = self.contents.text_size(name).width 
+      self.contents.draw_text(x+ox, y, cx, 32, name) 
+      ox += cx+8 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? 
+  #-------------------------------------------------------------------------- 
+  def draw_attack_weak_element(x, y, element_set) 
+    elem_temp = [] 
+    for i in element_set 
+      elem = $data_system.elements[i] 
+      elem_temp.push("Fogo") if elem == "Gelo" 
+      elem_temp.push("Gelo")   if elem == "Fogo" 
+      elem_temp.push("Água") if elem == "Trovão" 
+      elem_temp.push("Trovão")   if elem == "Água" 
+      elem_temp.push("Terra")   if elem == "Ar" 
+      elem_temp.push("Ar")   if elem == "Terra" 
+      elem_temp.push("Luz") if elem == "Trevas" 
+      elem_temp.push("Trevas") if elem == "Luz" 
+    end 
+    if elem_temp.size == 0 
+      self.contents.draw_text(x, y, 64, 32, "Nenhum") 
+      return 
+    end 
+    ox = 0 
+    for name in elem_temp 
+      cx = self.contents.text_size(name).width 
+      self.contents.draw_text(x+ox, y, cx, 32, name) 
+      ox += cx+8 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ???????? 
+  #-------------------------------------------------------------------------- 
+  def draw_attack_add_state(x, y, plus_state_set) 
+    state_temp = [] 
+    for i in plus_state_set 
+      state = $data_states[i] 
+      state_temp.push(state.name) if state.name != "" 
+    end 
+    if state_temp.size == 0 
+      self.contents.draw_text(x, y, 64, 32, "Nenhum") 
+      return 
+    end 
+    ox = 0 
+    oy = 0 
+    for name in state_temp 
+      cx = self.contents.text_size(name).width 
+      if ox + cx + 4 >= self.contents.width - 128 
+        ox = 0 
+        oy += 1 
+      end 
+      self.contents.draw_text(x+ox, y+oy*32, cx, 32, name) 
+      ox += cx+8 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ??????? 
+  #-------------------------------------------------------------------------- 
+  def draw_scope(scope) 
+    case scope 
+    when 0 
+      return "Nada" 
+    when 1 
+      return "Acerta um alvo inimigo" 
+    when 2 
+      return "Acerta todos os alvos inimigos" 
+    when 3 
+      return "Acerta um alvo aliado" 
+    when 4 
+      return "Acerta todos os alvos aliados" 
+    when 5 
+      return "Acerta um alvo alidado abatido" 
+    when 6 
+      return "Acerta todos alvos alidados abatidos" 
+    when 7 
+      return "Acerta todos alvos da tela" 
+    end 
+  end 
+end 
+
+class Game_Temp 
+  attr_accessor :item_book_data 
+  alias temp_item_book_data_initialize initialize 
+  def initialize 
+    temp_item_book_data_initialize 
+    @item_book_data = Data_ItemBook.new 
+  end 
+end 
+
+class Game_Party 
+  attr_accessor :item_count               # ????????(???) 
+  attr_accessor :weapon_count             # ??????(???) 
+  attr_accessor :armor_count              # ??????(???) 
+  #-------------------------------------------------------------------------- 
+  # ? ????????? 
+  #-------------------------------------------------------------------------- 
+  alias item_book_info_initialize initialize 
+  def initialize 
+    item_book_info_initialize 
+    @item_count = {} 
+    @weapon_count = {} 
+    @armor_count = {} 
+  end 
+  alias item_book_gain_item gain_item 
+  def gain_item(item_id, n) 
+    add_item_count(item_id, 0) if n > 0 
+    item_book_gain_item(item_id, n) 
+  end 
+  alias item_book_gain_weapon gain_weapon 
+  def gain_weapon(item_id, n) 
+    add_weapon_count(item_id, 0) if n > 0 
+    item_book_gain_weapon(item_id, n) 
+  end 
+  alias item_book_gain_armor gain_armor 
+  def gain_armor(item_id, n) 
+    add_armor_count(item_id, 0) if n > 0 
+    item_book_gain_armor(item_id, n) 
+  end 
+  
+  #-------------------------------------------------------------------------- 
+  # ? ????????????(???) 
+  #     0:??? 1:??? 
+  #-------------------------------------------------------------------------- 
+  def add_item_count(item_id, type = 0) 
+    if type == -1 
+      @item_count[item_id] = 0 
+    else 
+      @item_count[item_id] = 1 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ??????????(???) 
+  #     0:??? 1:??? 
+  #-------------------------------------------------------------------------- 
+  def add_weapon_count(weapon_id, type = 0) 
+    if type == -1 
+      @weapon_count[weapon_id] = 0 
+    else 
+      @weapon_count[weapon_id] = 1 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ??????????(???) 
+  #     0:??? 1:??? 
+  #-------------------------------------------------------------------------- 
+  def add_armor_count(armor_id, type = 0) 
+    if type == -1 
+      @armor_count[armor_id] = 0 
+    else 
+      @armor_count[armor_id] = 1 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ??????????????? 
+  #-------------------------------------------------------------------------- 
+  def item_book_max 
+    kind_data = [] 
+    kind_data[0] = $game_temp.item_book_data.item_kind_name 
+    kind_data[1] = $game_temp.item_book_data.weapon_kind_name 
+    kind_data[2] = $game_temp.item_book_data.armor_kind_name 
+    size = 0 
+    for i in 0..2 
+      for kind in kind_data[i] 
+        size += item_book_category_max(kind) 
+      end 
+    end 
+    return size 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ??????????????? 
+  #-------------------------------------------------------------------------- 
+  def item_book_now 
+    kind_data = [] 
+    kind_data[0] = $game_temp.item_book_data.item_kind_name 
+    kind_data[1] = $game_temp.item_book_data.weapon_kind_name 
+    kind_data[2] = $game_temp.item_book_data.armor_kind_name 
+    size = 0 
+    for i in 0..2 
+      for kind in kind_data[i] 
+        size += item_book_category_now(kind) 
+      end 
+    end 
+    return size 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ????????????? 
+  #-------------------------------------------------------------------------- 
+  def item_book_complete_percentage 
+    i_max = item_book_max.to_f 
+    i_now = item_book_now.to_f 
+    comp = i_now / i_max * 100 
+    return comp.truncate 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ????????????????????? 
+  # category:?????? 
+  #-------------------------------------------------------------------------- 
+  def item_book_category_max(category) 
+    kind_data = $game_temp.item_book_data.kind_search(category) 
+    case kind_data[0] 
+    when 0 
+      id_data = $game_temp.item_book_data.item_id_data.dup 
+    when 1 
+      id_data = $game_temp.item_book_data.weapon_id_data.dup 
+    when 2 
+      id_data = $game_temp.item_book_data.armor_id_data.dup 
+    end 
+    index = kind_data[1] 
+    size = id_data[index].size - 1 
+    return size 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ????????????????????? 
+  # category:?????? 
+  #-------------------------------------------------------------------------- 
+  def item_book_category_now(category) 
+    kind_data = $game_temp.item_book_data.kind_search(category) 
+    index = kind_data[1] 
+    case kind_data[0] 
+    when 0 
+      now_item_info = @item_count.keys 
+      elename = $game_temp.item_book_data.item_kind_element_name[index] 
+      item_set = $data_items 
+    when 1 
+      now_item_info = @weapon_count.keys 
+      elename = $game_temp.item_book_data.weapon_kind_element_name[index] 
+      item_set = $data_weapons 
+    when 2 
+      now_item_info = @armor_count.keys 
+      elename = $game_temp.item_book_data.armor_kind_element_name[index] 
+      item_set = $data_armors 
+    end 
+    # ???????ID??? 
+    no_add = $game_temp.item_book_data.no_add_element 
+    element_id = $game_temp.item_book_data.element_search(elename) 
+    new_item_info = [] 
+    for i in now_item_info 
+      item = item_set[i] 
+      next if item == nil 
+      next if item.name == "" 
+      case item 
+      when RPG::Item 
+        ele_set = item.element_set 
+      when RPG::Weapon 
+        ele_set = item.element_set 
+      when RPG::Armor 
+        ele_set = item.guard_element_set 
+      end 
+      next if ele_set.include?(no_add) 
+      if element_id == nil or ele_set.include?(element_id) 
+        new_item_info.push(item.id) 
+      end 
+    end 
+    return new_item_info.size 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ??????????????????? 
+  # category:?????? 
+  #-------------------------------------------------------------------------- 
+  def item_book_category_complete_percentage(category) 
+    i_max = item_book_category_max(category).to_f 
+    i_now = item_book_category_now(category).to_f 
+    comp = i_now / i_max * 100 
+#    return comp.truncate 
+  end 
+end 
+
+class Interpreter 
+  def item_book_max(category=nil) 
+    if category == nil 
+      return $game_party.item_book_max 
+    else 
+      return $game_party.item_book_category_max(category) 
+    end 
+  end 
+  def item_book_now(category=nil) 
+    if category == nil 
+      return $game_party.item_book_now 
+    else 
+      return $game_party.item_book_category_now(category) 
+    end 
+  end 
+  def item_book_comp(category=nil) 
+    if category == nil 
+      return $game_party.item_book_complete_percentage 
+    else 
+      return $game_party.item_book_category_complete_percentage(category) 
+    end 
+  end 
+end 
+
+class Window_ItemBook < Window_Selectable 
+  attr_reader   :data 
+  attr_reader   :item_kind 
+  attr_reader   :item_index 
+  #-------------------------------------------------------------------------- 
+  # ? ????????? 
+  #-------------------------------------------------------------------------- 
+  def initialize(index=0) 
+    super(0, 64, 640, 416) 
+    @column_max = 2 
+    @book_data = $game_temp.item_book_data 
+    @data = data_set(index) 
+    @data.shift 
+    #@data.sort! 
+    @item_max = @data.size 
+    @item_kind = index 
+    self.index = 0 
+    #refresh 
+  end 
+  def new_data_set(index) 
+    @data = data_set(index) 
+    @data.shift 
+    #@data.sort! 
+    @item_max = @data.size 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ???????? 
+  #-------------------------------------------------------------------------- 
+  def data_set(index) 
+    kind_row_data = @book_data.kind_search(@book_data.kind_row[index]) 
+    @item_kind = kind_row_data[0] 
+    @item_index = kind_row_data[1] 
+    data = [] 
+    case @item_kind 
+    when 0 
+      data = @book_data.item_id_data[@item_index].dup 
+    when 1 
+      data = @book_data.weapon_id_data[@item_index].dup 
+    when 2 
+      data = @book_data.armor_id_data[@item_index].dup 
+    end 
+    return data 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? 
+  #-------------------------------------------------------------------------- 
+  def show?(kind, id) 
+    case kind 
+    when 0 
+      if $game_party.item_count[id] == 0 or $game_party.item_count[id] == nil 
+        return false 
+      else 
+        return true 
+      end 
+    when 1 
+      if $game_party.weapon_count[id] == 0 or $game_party.weapon_count[id] == nil 
+        return false 
+      else 
+        return true 
+      end 
+    when 2 
+      if $game_party.armor_count[id] == 0 or $game_party.armor_count[id] == nil 
+        return false 
+      else 
+        return true 
+      end 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? 
+  #-------------------------------------------------------------------------- 
+  def item 
+    return @data[self.index] 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? 
+  #-------------------------------------------------------------------------- 
+  def refresh 
+    if self.contents != nil 
+      self.contents.dispose 
+      self.contents = nil 
+    end 
+    #???? 0 ?????????????????????? 
+    return if @item_max == 0 
+    self.contents = Bitmap.new(width - 32, row_max * 32) 
+    for i in 0...@item_max 
+      draw_item(i) 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ????? 
+  #     index : ???? 
+  #-------------------------------------------------------------------------- 
+  def draw_item(index) 
+    case @item_kind 
+    when 0 
+      item = $data_items[@data[index]] 
+      id = @book_data.item_id_data[@item_index].index(item.id) 
+    when 1 
+      item = $data_weapons[@data[index]] 
+      id = @book_data.weapon_id_data[@item_index].index(item.id) 
+    when 2 
+      item = $data_armors[@data[index]] 
+      id = @book_data.armor_id_data[@item_index].index(item.id) 
+    end 
+    return if item == nil 
+    x = 4 + index % 2 * (288 + 32) 
+    y = index / 2 * 32 
+    rect = Rect.new(x, y, self.width / @column_max - 32, 32) 
+    self.contents.fill_rect(rect, Color.new(0, 0, 0, 0)) 
+    self.contents.font.color = normal_color 
+    self.contents.draw_text(x, y, 32, 32, id.to_s) 
+    if show?(@item_kind, item.id) 
+      bitmap = RPG::Cache.icon(item.icon_name) 
+      opacity = 255 
+      self.contents.blt(x+48, y + 4, bitmap, Rect.new(0, 0, 24, 24), opacity) 
+      self.contents.draw_text(x+48 + 28, y, 212, 32, item.name, 0) 
+    else 
+      self.contents.draw_text(x+48 + 28, y, 212, 32, "------", 0) 
+      return 
+    end 
+  end 
+end 
+
+
+class Window_ItemBook_Info < Window_Selectable 
+  #-------------------------------------------------------------------------- 
+  # ? ????????? 
+  #-------------------------------------------------------------------------- 
+  def initialize 
+    super(0, 0+64+64, 640, 480-64-64) 
+    @book_data = $game_temp.item_book_data 
+    self.contents = Bitmap.new(width - 32, height - 32) 
+    self.index = -1 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? 
+  #-------------------------------------------------------------------------- 
+  def refresh(item_id, item_kind, item_index) 
+    self.contents.clear 
+    self.contents.font.size = 22 
+    case item_kind 
+    when 0 
+      draw_item_info(item_id, item_index) 
+    when 1 
+      draw_weapon_info(item_id, item_index) 
+    when 2 
+      draw_armor_info(item_id, item_index) 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? 
+  #-------------------------------------------------------------------------- 
+  def draw_item_info(item_id, item_index) 
+    item = $data_items[item_id] 
+    rect = Rect.new(4, 0, 160, 32) 
+    self.contents.fill_rect(rect, Color.new(0, 0, 0, 0)) 
+    bitmap = RPG::Cache.icon(item.icon_name) 
+    opacity = 255 
+    self.contents.blt(4+48, 0 + 4, bitmap, Rect.new(0, 0, 24, 24), opacity) 
+    self.contents.font.color = normal_color 
+    id = @book_data.item_id_data[item_index].index(item.id) 
+    self.contents.draw_text(4, 0, 32, 32, id.to_s) 
+    self.contents.draw_text(4+48 + 28, 0, 212, 32, item.name, 0) 
+    self.contents.draw_text(640-128-88-4, 0, 88, 32, item.price.to_s, 2) 
+    self.contents.font.color = system_color 
+    self.contents.draw_text(640-128, 0, 128, 32, $data_system.words.gold, 0) 
+    self.contents.font.color = normal_color 
+    @help_window.set_text(item.description) 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ???? 
+  #-------------------------------------------------------------------------- 
+  def draw_weapon_info(item_id, item_index) 
+    item = $data_weapons[item_id] 
+    rect = Rect.new(4, 0, 160, 32) 
+    self.contents.fill_rect(rect, Color.new(0, 0, 0, 0)) 
+    bitmap = RPG::Cache.icon(item.icon_name) 
+    opacity = 255 
+    self.contents.blt(4+48, 0 + 4, bitmap, Rect.new(0, 0, 24, 24), opacity) 
+    self.contents.font.color = normal_color 
+    id = @book_data.weapon_id_data[item_index].index(item.id) 
+    self.contents.draw_text(4, 0, 32, 32, id.to_s) 
+    self.contents.draw_text(4+48 + 28, 0, 212, 32, item.name, 0) 
+    self.contents.draw_text(640-128-88-4, 0, 88, 32, item.price.to_s, 2) 
+    self.contents.font.color = system_color 
+    self.contents.draw_text(640-128, 0, 128, 32, $data_system.words.gold, 0) 
+    self.contents.font.color = text_color(2) 
+    self.contents.draw_text(4, 32, 48, 32, "ATK", 0) 
+    self.contents.font.color = text_color(4) 
+    self.contents.draw_text(4+128, 32, 48, 32, "DEF", 0) 
+    self.contents.font.color = text_color(6) 
+    self.contents.draw_text(4+256, 32, 48, 32, "MDF", 0) 
+    self.contents.font.color = normal_color 
+    self.contents.draw_text(4+48, 32, 48, 32, item.atk.to_s, 2) 
+    self.contents.draw_text(4+48+128, 32, 48, 32, item.pdef.to_s, 2) 
+    self.contents.draw_text(4+48+256, 32, 48, 32, item.mdef.to_s, 2) 
+    
+    self.contents.font.color = system_color 
+    self.contents.draw_text(4, 64, 48, 32, "STR", 0) 
+    self.contents.draw_text(4+128, 64, 48, 32, "DEX", 0) 
+    self.contents.draw_text(4+256, 64, 48, 32, "SPD", 0) 
+    self.contents.draw_text(4+384, 64, 48, 32, "MAT", 0) 
+    self.contents.font.color = normal_color 
+    self.contents.draw_text(4+48, 64, 48, 32, item.str_plus.to_s, 2) 
+    self.contents.draw_text(4+48+128, 64, 48, 32, item.dex_plus.to_s, 2) 
+    self.contents.draw_text(4+48+256, 64, 48, 32, item.agi_plus.to_s, 2) 
+    self.contents.draw_text(4+48+384, 64, 48, 32, item.int_plus.to_s, 2) 
+    
+    self.contents.font.color = system_color 
+    self.contents.draw_text(4, 96, 96, 32, "Elemento") 
+    self.contents.draw_text(4, 128, 96, 32, "Fraqueza") 
+    self.contents.draw_text(4, 160, 96, 32, "Efeito") 
+    #self.contents.draw_text(4, 128, 96, 32, "????") 
+    self.contents.font.color = normal_color 
+    draw_attack_element(4+96+16, 96, item.element_set) 
+    draw_attack_weak_element(4+96+16, 128, item.element_set) 
+    draw_attack_add_state(4+96+16, 160, item.plus_state_set) 
+    #draw_attack_wp_element(4+96+16, 128, item.element_set) 
+    
+    @help_window.set_text(item.description) 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ???? 
+  #-------------------------------------------------------------------------- 
+  def draw_armor_info(item_id, item_index) 
+    item = $data_armors[item_id] 
+    rect = Rect.new(4, 0, 160, 32) 
+    self.contents.fill_rect(rect, Color.new(0, 0, 0, 0)) 
+    bitmap = RPG::Cache.icon(item.icon_name) 
+    opacity = 255 
+    self.contents.blt(4+48, 0 + 4, bitmap, Rect.new(0, 0, 24, 24), opacity) 
+    self.contents.font.color = normal_color 
+    id = @book_data.armor_id_data[item_index].index(item.id) 
+    self.contents.draw_text(4, 0, 32, 32, id.to_s) 
+    self.contents.draw_text(4+48 + 28, 0, 212, 32, item.name, 0) 
+    self.contents.draw_text(640-128-88-4, 0, 88, 32, item.price.to_s, 2) 
+    self.contents.font.color = system_color 
+    self.contents.draw_text(640-128, 0, 128, 32, $data_system.words.gold, 0) 
+    self.contents.font.color = text_color(4) 
+    self.contents.draw_text(4, 32, 48, 32, "DEF", 0) 
+    self.contents.font.color = text_color(6) 
+    self.contents.draw_text(4+128, 32, 48, 32, "MDF", 0) 
+    self.contents.font.color = system_color 
+    self.contents.draw_text(4+256, 32, 48, 32, "??", 0) 
+    self.contents.font.color = normal_color 
+    self.contents.draw_text(4+48, 32, 48, 32, item.pdef.to_s, 2) 
+    self.contents.draw_text(4+48+128, 32, 48, 32, item.mdef.to_s, 2) 
+    self.contents.draw_text(4+48+256, 32, 48, 32, item.eva.to_s, 2) 
+    
+    self.contents.font.color = system_color 
+    self.contents.draw_text(4, 64, 48, 32, "STR", 0) 
+    self.contents.draw_text(4+128, 64, 48, 32, "DEX", 0) 
+    self.contents.draw_text(4+256, 64, 48, 32, "SPD", 0) 
+    self.contents.draw_text(4+384, 64, 48, 32, "MAT", 0) 
+    self.contents.font.color = normal_color 
+    self.contents.draw_text(4+48, 64, 48, 32, item.str_plus.to_s, 2) 
+    self.contents.draw_text(4+48+128, 64, 48, 32, item.dex_plus.to_s, 2) 
+    self.contents.draw_text(4+48+256, 64, 48, 32, item.agi_plus.to_s, 2) 
+    self.contents.draw_text(4+48+384, 64, 48, 32, item.int_plus.to_s, 2) 
+    
+    self.contents.font.color = system_color 
+    self.contents.draw_text(4, 96, 96, 32, "Elemento") 
+    self.contents.draw_text(4, 128, 96, 32, "Fraqueza") 
+    self.contents.draw_text(4, 160, 96, 32, "Efeito") 
+    #self.contents.draw_text(4, 128, 96, 32, "????") 
+    self.contents.font.color = normal_color 
+    draw_attack_element(4+96+16, 96, item.guard_element_set) 
+    draw_attack_weak_element(4+96+16, 128, item.guard_element_set) 
+    draw_attack_add_state(4+96+16, 160, item.guard_state_set) 
+    #draw_attack_wp_element(4+96+16, 128, item.guard_element_set) 
+    
+    @help_window.set_text(item.description) 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ????????? 
+  #-------------------------------------------------------------------------- 
+  def update_help 
+    #??? 
+  end 
+end 
+
+
+class Scene_ItemBook 
+  include Item_Book_Config 
+  #-------------------------------------------------------------------------- 
+  # ? ????? 
+  #-------------------------------------------------------------------------- 
+  def main 
+    # ???????? 
+    @title_window = Window_Base.new(0, 0, 640, 64) 
+    @title_window.contents = Bitmap.new(640 - 32, 64 - 32) 
+    @title_window.contents.draw_text(4, 0, 320, 32, "Livro de Itens", 0) 
+    draw_comp 
+    @main_window = Window_ItemBook.new 
+    @main_window.active = false 
+    @main_window.index = -1 
+    @help_window = Window_Help.new 
+    @help_window.z = 110 
+    @help_window.y = 64 
+    @help_window.visible = false 
+    command = $game_temp.item_book_data.kind_row 
+    @kind_window = Window_Command.new(160, command) 
+    @kind_window.z = 110 
+    @kind_window.x = 320 - @kind_window.width / 2 
+    @kind_window.y = 240 - @kind_window.height / 2 
+    @kind_window.active = true 
+    # ???????????? (???·?????????) 
+    @info_window = Window_ItemBook_Info.new 
+    @info_window.z = 110 
+    @info_window.visible = false 
+    @info_window.active = false 
+    # ????????????? 
+    @info_window.help_window = @help_window 
+    @visible_index = 0 
+    @now_kind = nil 
+    # ????????? 
+    Graphics.transition 
+    # ?????? 
+    loop do 
+      # ???????? 
+      Graphics.update 
+      # ??????? 
+      Input.update 
+      # ?????? 
+      update 
+      # ???????????????? 
+      if $scene != self 
+        break 
+      end 
+    end 
+    # ????????? 
+    Graphics.freeze 
+    # ???????? 
+    @title_window.dispose 
+    @help_window.dispose 
+    @main_window.dispose 
+    @kind_window.dispose 
+    @info_window.dispose 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? 
+  #-------------------------------------------------------------------------- 
+  def update 
+    # ???????? 
+    #@help_window.update 
+    @main_window.update 
+    @kind_window.update 
+    @info_window.update 
+    if @info_window.active 
+      update_info 
+      return 
+    end 
+    # ?????????????????: update_target ??? 
+    if @main_window.active 
+      update_main 
+      return 
+    end 
+    # ????????????????: update_kind ??? 
+    if @kind_window.active 
+      update_kind 
+      return 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? (????????????????) 
+  #-------------------------------------------------------------------------- 
+  def update_kind 
+    # C ?????????? 
+    if Input.trigger?(Input::C) 
+      # ?? SE ??? 
+      $game_system.se_play($data_system.decision_se) 
+      if @now_kind != @kind_window.index 
+        @main_window.new_data_set(@kind_window.index) 
+        @main_window.refresh 
+        @now_kind = @kind_window.index 
+      end 
+      subtitle = $game_temp.item_book_data.kind_row[@kind_window.index] 
+      title = "Item Book"+subtitle 
+      @title_window.contents.clear 
+      @title_window.contents = Bitmap.new(640 - 32, 64 - 32) 
+      @title_window.contents.draw_text(4, 0, 320, 32, title, 0) 
+      draw_comp(subtitle) 
+      @kind_window.active = false 
+      @kind_window.visible = false 
+      @main_window.active = true 
+      @main_window.index = 0 
+      return 
+    end 
+    # B ?????????? 
+    if Input.trigger?(Input::B) 
+      # ????? SE ??? 
+      $game_system.se_play($data_system.cancel_se) 
+      $scene = Scene_Map.new 
+      return 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? (?????????????????) 
+  #-------------------------------------------------------------------------- 
+  def update_main 
+    # B ?????????? 
+    if Input.trigger?(Input::B) 
+      # ????? SE ??? 
+      $game_system.se_play($data_system.cancel_se) 
+      @main_window.active = false 
+      @kind_window.active = true 
+      @kind_window.visible = true 
+      @main_window.index = -1 
+      @title_window.contents.clear 
+      @title_window.contents = Bitmap.new(640 - 32, 64 - 32) 
+      @title_window.contents.draw_text(4, 0, 320, 32, "Livro de Itens", 0) 
+      draw_comp 
+      return 
+    end 
+    # C ?????????? 
+    if Input.trigger?(Input::C) 
+      if @main_window.item == nil or 
+         @main_window.show?(@main_window.item_kind, @main_window.item) == false 
+        # ??? SE ??? 
+        $game_system.se_play($data_system.buzzer_se) 
+        return 
+      end 
+      # ?? SE ??? 
+      $game_system.se_play($data_system.decision_se) 
+      @main_window.active = false 
+      @info_window.active = true 
+      @info_window.visible = true 
+      @visible_index = @main_window.index 
+      @info_window.refresh(@main_window.item, @main_window.item_kind, @main_window.item_index) 
+      return 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? (??????????????????) 
+  #-------------------------------------------------------------------------- 
+  def update_info 
+    # B ?????????? 
+    if Input.trigger?(Input::B) 
+      # ????? SE ??? 
+      $game_system.se_play($data_system.cancel_se) 
+      @main_window.active = true 
+      @info_window.active = false 
+      @info_window.visible = false 
+      @help_window.visible = false 
+      return 
+    end 
+    # C ?????????? 
+    if Input.trigger?(Input::C) 
+      # ?? SE ??? 
+      $game_system.se_play($data_system.decision_se) 
+      return 
+    end 
+    if Input.trigger?(Input::L) 
+      # ?? SE ??? 
+      $game_system.se_play($data_system.decision_se) 
+      loop_end = false 
+      while loop_end == false 
+        if @visible_index != 0 
+          @visible_index -= 1 
+        else 
+          @visible_index = @main_window.data.size - 1 
+        end 
+        loop_end = true if @main_window.show?(@main_window.item_kind,@main_window.data[@visible_index]) 
+      end 
+      id = @main_window.data[@visible_index] 
+      @info_window.refresh(id, @main_window.item_kind, @main_window.item_index) 
+      return 
+    end 
+    if Input.trigger?(Input::R) 
+      # ?? SE ??? 
+      $game_system.se_play($data_system.decision_se) 
+      loop_end = false 
+      while loop_end == false 
+        if @visible_index != @main_window.data.size - 1 
+          @visible_index += 1 
+        else 
+         @visible_index = 0 
+        end 
+        loop_end = true if @main_window.show?(@main_window.item_kind,@main_window.data[@visible_index]) 
+      end 
+      id = @main_window.data[@visible_index] 
+      @info_window.refresh(id, @main_window.item_kind, @main_window.item_index) 
+      return 
+    end 
+  end 
+  def draw_comp(category=nil) 
+    if SHOW_COMPLETE_TYPE != 0 
+      if category == nil 
+        case SHOW_COMPLETE_TYPE 
+        when 1 
+          i_now = $game_party.item_book_now 
+          i_max = $game_party.item_book_max 
+          text = i_now.to_s + "/" + i_max.to_s 
+        when 2 
+          comp = $game_party.item_book_complete_percentage 
+          text = comp.to_s + "%" 
+        when 3 
+          i_now = $game_party.item_book_now 
+          i_max = $game_party.item_book_max 
+          comp = $game_party.item_book_complete_percentage 
+          text = i_now.to_s + "/" + i_max.to_s + " " + comp.to_s + "%" 
+        end 
+      else 
+        case SHOW_COMPLETE_TYPE 
+        when 1 
+          i_now = $game_party.item_book_category_now(category) 
+          i_max = $game_party.item_book_category_max(category) 
+          text = i_now.to_s + "/" + i_max.to_s 
+        when 2 
+          comp = $game_party.item_book_category_complete_percentage(category) 
+          text = comp.to_s + "%" 
+        when 3 
+          i_now = $game_party.item_book_category_now(category) 
+          i_max = $game_party.item_book_category_max(category) 
+          comp = $game_party.item_book_category_complete_percentage(category) 
+          text = i_now.to_s + "/" + i_max.to_s + " " + comp.to_s + "%" 
+        end 
+      end 
+      if text != nil 
+        @title_window.contents.draw_text(320, 0, 288, 32,  text, 2) 
+      end 
+    end 
+  end 
+end

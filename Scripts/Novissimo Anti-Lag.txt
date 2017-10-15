@@ -1,0 +1,221 @@
+#===============================================================================
+# ** AntiLag Script
+#-------------------------------------------------------------------------------
+# f0tz!baerchen
+# 0.71
+# 06.01.2007
+#-------------------------------------------------------------------------------
+# Credits: 
+# Chaosg1 (for testing ;) )
+# NearFantastica (for the Event AntiLag I used and improved)
+#-------------------------------------------------------------------------------
+# Features:
+# - Event AntiLag: Event (and their Sprites) which are not on the screen are 
+#   not updated except they run on "Autostart" or "Parallel Process" or they
+#   have an empty comment in the first line
+# - High Priority: Game can be run on high priority
+# - Smooth Antilag: the Event AntiLag does only work fine if the events are
+#   distributed over the whole map, but when there are many events at the same
+#   place it lags again. If the script notices that the CPU utilization
+#   gets higher than $antilag.max_cpu_utilization it will slow down the game and
+#   reduce the framerate as long as needed.
+#-------------------------------------------------------------------------------
+# Settings: 
+# can be changed anytime during the game. They are found at the end of the 
+# script.
+#===============================================================================
+#===============================================================================
+# Class for Antilag Settings
+#===============================================================================
+class Antilag_Settings
+  
+  attr_accessor :event
+  attr_accessor :max_cpu_utilization
+  attr_accessor :cpu_tolerance
+  #-----------------------------------------------------------------------------
+  # initializes default settings
+  #-----------------------------------------------------------------------------
+  def initialize
+    @event = true
+    @high_priority = true
+    @max_cpu_utilization = 100
+    @cpu_tolerance = 20
+    @SetPriorityClass = Win32API.new('kernel32', 'SetPriorityClass', 
+                                     ['p', 'i'], 'i')
+    @GetProcessTimes = Win32API.new('kernel32', 'GetProcessTimes', 
+                                    ['i','p','p','p','p'], 'i')
+  end
+  #-----------------------------------------------------------------------------
+  # turns high priority on/off
+  #-----------------------------------------------------------------------------
+  def high_priority=(value)
+    @high_priority = value
+    
+    if @high_priority
+      @SetPriorityClass.call(-1, 0x00000080) # High Priority
+    else
+      @SetPriorityClass.call(-1, 0x00000020) # Normal Priority
+    end
+  end
+  #-----------------------------------------------------------------------------
+  # returns the current CPU Utilization
+  #-----------------------------------------------------------------------------
+  def get_cpu_utilization
+    # uses API Call to get the Kernel and User Time
+    creation_time = '0' * 10
+    exit_time = '0' * 10
+    kernel_time = '0' * 10
+    user_time = '0' * 10
+    @GetProcessTimes.call(-1, creation_time, exit_time, kernel_time, user_time)
+    # converts times into integer (in 100ns)
+    kernel_time = kernel_time.unpack('l2')
+    user_time = user_time.unpack('l2')
+    kernel_time = kernel_time[0] + kernel_time[1]
+    user_time = user_time[0] + user_time[1]
+    # takes differences to calculate cpu utilization
+    if @old_time != nil
+      timer_difference = Time.new - @old_timer
+      time_difference = kernel_time + user_time - @old_time
+      result = time_difference / timer_difference / 100000
+    else
+      result = $antilag.max_cpu_utilization
+    end
+    # saves values (to calculate the differences, s.a.)
+    @old_timer = Time.new
+    @old_time = kernel_time + user_time
+    return result
+  end
+end
+$antilag = Antilag_Settings.new
+#===============================================================================
+# Scene_Map class
+#===============================================================================
+class Scene_Map
+  #-----------------------------------------------------------------------------
+  # update method, smooth antilag has been added
+  #-----------------------------------------------------------------------------
+  alias f0tzis_anti_lag_scene_map_update update
+  def update
+    f0tzis_anti_lag_scene_map_update
+    if Graphics.frame_count % 20 == 0 and $antilag.max_cpu_utilization <= 100
+      # calculates difference between max utilization and current utilization
+      abs = $antilag.max_cpu_utilization - $antilag.get_cpu_utilization
+      # changes Frame Rate if difference is bigger than the tolerance
+      if abs.abs >= $antilag.max_cpu_utilization * $antilag.cpu_tolerance/100.0
+        Graphics.frame_rate = [[10, Graphics.frame_rate + abs / 2].max, 40].min
+      end
+    end
+  end
+end
+#==============================================================================
+# Game_Event Class
+#===============================================================================
+class Game_Event
+  #-----------------------------------------------------------------------------
+  # for AntiLag, decides, if an event is on the screen or not.
+  #-----------------------------------------------------------------------------
+  def in_range?
+        
+    # returns true if $event_antilag is false or the event is an 
+    # Autostart/Parallel Process event or it has an empty 
+    # comment in the first line
+    if not $antilag.event or (@trigger == 3 or @trigger == 4 or 
+    (@list != nil and @list[0].code == 108 and @list[0].parameters == ['']))
+      return true
+    end
+          
+    screne_x = $game_map.display_x
+    screne_x -= 256
+    screne_y = $game_map.display_y
+    screne_y -= 256
+    screne_width = $game_map.display_x
+    screne_width += 2816
+    screne_height = $game_map.display_y
+    screne_height += 2176
+    
+    return false if @real_x <= screne_x
+    return false if @real_x >= screne_width
+    return false if @real_y <= screne_y
+    return false if @real_y >= screne_height
+    return true
+            
+  end
+  #-----------------------------------------------------------------------------
+  # update method
+  #-----------------------------------------------------------------------------
+  alias f0tzis_anti_lag_game_event_update update
+  def update
+    return if not self.in_range?      
+    f0tzis_anti_lag_game_event_update
+  end
+  
+end
+#===============================================================================
+# Sprite_Character Class
+#===============================================================================
+class Sprite_Character < RPG::Sprite
+  #-----------------------------------------------------------------------------
+  # update method, parameters added for Loop_Map, rebuild for 8dirs
+  #-----------------------------------------------------------------------------
+  alias f0tzis_anti_lag_sprite_char_update update
+  def update
+    return if @character.is_a?(Game_Event) and not @character.in_range?
+    f0tzis_anti_lag_sprite_char_update
+  end
+  
+end
+#===============================================================================
+# Settings
+#===============================================================================
+$antilag.max_cpu_utilization = 70 # the maximum CPU utilization, the script
+                                  # try to stay under this value during changing
+                                  # changing the frame rate. The lower this
+                                  # value the higher will be the lag reduction
+                                  # (and the smoothness, too), a value > 100
+                                  # will disable this feature completely
+$antilag.cpu_tolerance = 20       # this value tells the script how many % of
+                                  # the CPU utilization change should be ignored
+                                  # If you change it too a higher value you,
+                                  # your Frame Rate will be more constant but
+                                  # smaller lags will be ignored.
+$antilag.high_priority = true     # set this to true if you want the game to run 
+                                  # on high priority
+$antilag.event = true             # set this to true to enable normal anti-lag
+#===============================================================================
+# Interpreter Class
+#===============================================================================
+class Interpreter
+  #-----------------------------------------------------------------------------
+  # * Script
+  #-----------------------------------------------------------------------------
+  def command_355
+    # Set first line to script
+    script = @list[@index].parameters[0] + "\n"
+    # Loop
+    loop do
+      # If next event command is second line of script or after
+      if @list[@index+1].code == 655
+        # Add second line or after to script
+        script += @list[@index+1].parameters[0] + "\n"
+      # If event command is not second line or after
+      else
+        # Abort loop
+        break
+      end
+      # Advance index
+      @index += 1
+    end
+    # Evaluation
+    result = eval(script)
+    #---------------------------------------------------------------------------
+    # If return value is false 
+    # NEW: the last word of the code mustnt be false!
+    #---------------------------------------------------------------------------
+    if result == false and script[script.length-6..script.length-2] != 'false'
+      # End
+      return false
+    end
+    # Continue
+    return true
+  end
+end

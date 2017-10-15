@@ -1,0 +1,34 @@
+CARACTERÍSTICAS
+O personagens que estiver sobre o status counter e receber ataque ofensivo 
+revidará o ataque ao seu inimigo
+
+
+UTILIZAÇÃO
+Crie o status com o nome de "Counter" e ao lado do nome defina o tipo de 
+contra ataque, Exemplo de nomeação:
+          -----------------
+          Counter -cr
+          -----------------
+
+
+TIPOS DE CONTRA ATAQUE
+(Deve-se colocar o código ao lado do status "Counter")
+
+-cr        => Contra ataca todos os tipos de ação.
+-crp      => Contra ataca ataques físicos.
+-crm      => Contra ataca ataques mágicos.
+-cre      => Contra ataca apenas ataque de determinados elementos
+          Coloque o numero ID do atributo ao lado do código, por exemplo:
+          -----------------
+          Counter -cre7
+          -----------------
+-ca      => Contra ataca quando recebe algun tipo de ação.
+-cas    => Contra ataca habilidades especifica.
+          Coloque o numero ID da habilidade ao lado do código, por exemplo:
+          -----------------
+          Counter -cas10
+          -----------------
+-cai      => Contra ataca itens especificos, a mesma explicação acima.
+-caa      => Contra ataca o comando ataque.
+-cae      => Contra ataca quando fugir.
+-cac      => Contra ataca com a mesma ação inimiga

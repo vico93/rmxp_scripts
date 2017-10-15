@@ -1,0 +1,365 @@
+#==============================================================================
+# @ { { @ƒTƒCƒhƒrƒ… [ƒoƒgƒ‹ i•à sƒOƒ‰ƒtƒBƒbƒN”Å j @ver. 1.14 @ { {
+# @ @Script by ƒpƒ‰Œ¢
+# @ @http://para.j-mx.com/
+#------------------------------------------------------------------------------
+# ƒoƒgƒ‹ƒtƒB [ƒ‹ƒh‚É•à sƒOƒ‰ƒtƒBƒbƒN‚ð•\Ž¦‚µ‚Ü‚· B
+#==============================================================================
+
+module SDVA
+  
+  X_LINE = 140        # ‰¡ˆÊ’u‚Ìƒoƒgƒ‰ [•\Ž¦ À•W
+  Y_LINE = 290        #  cˆÊ’u‚Ìƒoƒgƒ‰ [•\Ž¦ À•W
+  X_SPACE = 120        # ‰¡ˆÊ’u‚Ìƒoƒgƒ‰ [“¯Žm‚ÌŠÔŠu
+  Y_SPACE = 0        #  cˆÊ’u‚Ìƒoƒgƒ‰ [“¯Žm‚ÌŠÔŠu
+  X_POSITION = 0     # ‘à—ñ m‘O‰q E’†‰q EŒã‰q n‚Ì‰¡ŠÔŠu
+  Y_POSITION = 10      # ‘à—ñ m‘O‰q E’†‰q EŒã‰q n‚Ì cŠÔŠu
+  PARTY_POS = 3      # ƒLƒƒƒ‰ƒNƒ^ [‚ÌŒü‚« i 0:‰º / 1: ¶ / 2:‰E / 3: ã  j
+  
+  ATTACK_MOVE = true  #  UŒ‚Žž‚É‘O‚Ö“¥‚Ý o‚·‚© i true / false  j
+  SKILL_MOVE = true   # ƒXƒLƒ‹Žg—pŽž‚É‘O‚Ö“¥‚Ý o‚·‚© i true / false  j
+  ITEM_MOVE = false   # ƒAƒCƒeƒ€Žg—pŽž‚É‘O‚Ö“¥‚Ý o‚·‚© i true / false  j
+  MOVE_STEP = 1       # ˆÚ“®•à ”
+  MOVE_PIXEL = 10     # ˆê•à‚ ‚½‚è‚ÌƒsƒNƒZƒ‹ ”
+  
+  PARTY_POS = 3       # ƒLƒƒƒ‰ƒNƒ^ [‚ÌŒü‚« i 0:‰º / 1: ¶ / 2:‰E / 3: ã  j
+
+  WINDOWPOS_CHANGE = true   # ƒRƒ}ƒ“ƒhƒEƒCƒ“ƒhƒE‚ðƒoƒgƒ‰ [‚Ì‰¡‚É•\Ž¦‚·‚é‚© i true / false  j
+
+  end
+  
+#==============================================================================
+#  ¡ Game_Actor
+#==============================================================================
+
+class Game_Actor < Game_Battler
+  #--------------------------------------------------------------------------
+  #  œ ƒoƒgƒ‹‰æ–Ê X  À•W‚ÌŽæ“¾
+  #--------------------------------------------------------------------------
+  def screen_x
+    if self.index != nil
+      # ‘à—ñ‚ðŽæ“¾
+      pos = $data_classes[self.class_id].position
+      x_pos = pos * SDVA::X_POSITION
+      scr_x = self.index * SDVA::X_SPACE + SDVA::X_LINE + x_pos
+      # ˆÚ“®ƒAƒNƒVƒ‡ƒ“‚Ì‚Æ‚«
+      if self.current_action.move_action == true
+        # ‰¡‚ÉˆÚ“®
+        scr_x += @shift_x
+      end
+      return scr_x
+    else
+      return 0
+    end
+  end
+  #--------------------------------------------------------------------------
+  #  œ ƒoƒgƒ‹‰æ–Ê Y  À•W‚ÌŽæ“¾
+  #--------------------------------------------------------------------------
+  def screen_y
+    if self.index != nil
+      # ‘à—ñ‚ðŽæ“¾
+      pos = $data_classes[self.class_id].position
+      y_pos = pos * SDVA::Y_POSITION
+      scr_y = self.index * SDVA::Y_SPACE + SDVA::Y_LINE + y_pos
+      # ˆÚ“®ƒAƒNƒVƒ‡ƒ“‚Ì‚Æ‚«
+      if self.current_action.move_action == true
+        #  c‚ÉˆÚ“®
+        scr_y += @shift_y
+      end
+      return scr_y
+    else
+      return 0
+    end
+  end
+  #--------------------------------------------------------------------------
+  #  œ ƒoƒgƒ‹‰æ–Ê Z  À•W‚ÌŽæ“¾
+  #--------------------------------------------------------------------------
+  def screen_z
+    if self.index != nil
+      return self.index
+    else
+      return 0
+    end
+  end
+end
+
+#==============================================================================
+#  ¡ Game_Battler (•ªŠ„’è‹` 1)
+#==============================================================================
+
+class Game_Battler
+  #--------------------------------------------------------------------------
+  #  œ ŒöŠJƒCƒ“ƒXƒ^ƒ“ƒX•Ï ”
+  #--------------------------------------------------------------------------
+  attr_reader   :pattern        # •à sƒpƒ^ [ƒ“
+  attr_reader   :trans_x        # X•ûŒü‚ÌˆÚ“®‹——£
+  attr_reader   :moving         # ˆÚ“®’†ƒtƒ‰ƒO
+  #--------------------------------------------------------------------------
+  #  œ ƒIƒuƒWƒFƒNƒg ‰Šú‰»
+  #--------------------------------------------------------------------------
+  alias initialize_sdva initialize
+  def initialize
+    initialize_sdva
+    move_reset
+  end
+  #--------------------------------------------------------------------------
+  #  › ˆÚ“®ƒJƒEƒ“ƒg
+  #--------------------------------------------------------------------------
+  def move
+    @moving = 1
+      if @step < SDVA::MOVE_STEP
+        # •à ”‚ð–ž‚½‚·‚Ü‚ÅˆÚ“®
+        @pattern = (@pattern + 1) % 4
+        @step += 1
+        move_step
+      else
+        # ˆÚ“® I—¹
+        @pattern = 1
+        @moving = 2
+      end
+  end
+  #--------------------------------------------------------------------------
+  #  › ˆÚ“® ˆ— 
+  #--------------------------------------------------------------------------
+  def move_step
+  # ƒp [ƒeƒB‚ÌŒü‚«‚É‚æ‚Á‚ÄˆÚ“® À•W‚ð•Ï‚¦‚é
+  case SDVA::PARTY_POS
+    when 0
+      @shift_y = @step * SDVA::MOVE_PIXEL
+    when 1
+      @shift_x = -(@step * SDVA::MOVE_PIXEL)
+    when 2
+      @shift_x = @step * SDVA::MOVE_PIXEL
+    when 3
+      @shift_y = -(@step * SDVA::MOVE_PIXEL)
+    end       
+  end
+  #--------------------------------------------------------------------------
+  #  › ˆÚ“®‚ÌƒŠƒZƒbƒg
+  #--------------------------------------------------------------------------
+  def move_reset
+    @moving = 0
+    @pattern = 0
+    @step = 0
+    @shift_x = 0
+    @shift_y = 0
+  end
+end
+
+#==============================================================================
+#  ¡ Game_BattleAction
+#==============================================================================
+
+class Game_BattleAction
+  #--------------------------------------------------------------------------
+  #  œ ŒöŠJƒCƒ“ƒXƒ^ƒ“ƒX•Ï ”
+  #--------------------------------------------------------------------------
+  attr_accessor :move_action             # ˆÚ“®‚·‚éƒAƒNƒVƒ‡ƒ“‚©
+  #--------------------------------------------------------------------------
+  #  œ ƒNƒŠƒA
+  #--------------------------------------------------------------------------
+  alias clear_sdva clear
+  def clear
+    clear_sdva
+    @move_action = false
+  end
+end
+
+#==============================================================================
+#  ¡ Sprite_Battler
+#==============================================================================
+
+class Sprite_Battler < RPG::Sprite
+  #--------------------------------------------------------------------------
+  #  œ ƒtƒŒ [ƒ€ X V
+  #--------------------------------------------------------------------------
+  alias update_sdva update
+  def update
+    # ƒoƒgƒ‰ [‚ªƒAƒNƒ^ [‚ÉŠÜ‚Ü‚ê‚é‚Æ‚«
+    if @battler.is_a?(Game_Actor)
+      # ƒtƒ@ƒCƒ‹–¼‚© F‘Š‚ªŒ» Ý‚Ì‚à‚Ì‚ÆˆÙ‚È‚é ê ‡
+      #  s“®’†‚Ì ê ‡
+      if @battler.battler_name != @battler_name or
+         @battler.battler_hue != @battler_hue or
+         @battler.current_action.basic == 0 or
+         @battler.current_action.kind != 3
+        # ƒrƒbƒgƒ}ƒbƒv‚ðŽæ“¾ A Ý’è
+        @character_name = @battler.character_name
+        @character_hue = @battler.character_hue
+        # •à sƒOƒ‰ƒtƒBƒbƒN‚ð•`‰æ
+        self.bitmap = RPG::Cache.character(@character_name, @character_hue)
+        cw = self.bitmap.width / 4
+        ch = self.bitmap.height / 4
+        @width = cw
+        @height = ch
+        if @battler.current_action.move_action == true
+          # •à‚©‚¹‚é
+          @battler.move
+        else
+          @battler.move_reset
+        end
+        # “]‘—Œ³‚Ì‹éŒ`‚ð Ý’è
+        sx = @battler.pattern * cw
+        sy = SDVA::PARTY_POS * ch
+        self.src_rect.set(sx, sy, cw, ch)
+        self.ox = @width / 2
+        self.oy = @height
+        # ‰B‚ê ó‘Ô‚È‚ç•s“§–¾“x‚ð 0 ‚É‚·‚é
+        if @battler.hidden
+          self.opacity = 0
+        end
+      end
+    end
+    update_sdva
+  end
+end
+  
+#==============================================================================
+#  ¡ Scene_Battle
+#==============================================================================
+
+class Scene_Battle
+  #--------------------------------------------------------------------------
+  #  œ ƒAƒNƒ^ [ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ÌƒZƒbƒgƒAƒbƒv
+  #--------------------------------------------------------------------------
+  alias phase3_setup_command_window_sdva phase3_setup_command_window
+  def phase3_setup_command_window
+    phase3_setup_command_window_sdva
+    if SDVA::WINDOWPOS_CHANGE
+      # ƒAƒNƒ^ [ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ÌˆÊ’u‚ð Ý’è
+      case SDVA::PARTY_POS
+        when 0
+          x_pos = @active_battler.screen_x - (@actor_command_window.width/2)
+          y_pos = @active_battler.screen_y
+        when 1
+          x_pos = @active_battler.screen_x - @actor_command_window.width - 16
+          y_pos = @active_battler.screen_y - @actor_command_window.height
+        when 2
+          x_pos = @active_battler.screen_x + 16
+          y_pos = @active_battler.screen_y - @actor_command_window.height
+        when 3
+          x_pos = @active_battler.screen_x - (@actor_command_window.width/2)
+          y_pos = @active_battler.screen_y - @actor_command_window.height - 48
+      end
+      @actor_command_window.x = x_pos >= 0 ? x_pos : 0
+      @actor_command_window.x = x_pos+@actor_command_window.width <= 640 ? x_pos : 640-@actor_command_window.width
+      @actor_command_window.y = y_pos >= 0 ? y_pos : 0
+      @actor_command_window.y = y_pos+@actor_command_window.height <= 480 ? y_pos : 480-@actor_command_window.height
+      # ƒXƒe [ƒ^ƒXƒEƒCƒ“ƒhƒE‚É‰B‚ê‚È‚¢‚æ‚¤‚É
+      @actor_command_window.z = 9999
+    end
+  end
+  #--------------------------------------------------------------------------
+  #  œ ƒtƒŒ [ƒ€ X V (ƒ ƒCƒ“ƒtƒF [ƒY ƒXƒeƒbƒv 3 :  s“®‘¤ƒAƒjƒ  [ƒVƒ‡ƒ“)
+  #--------------------------------------------------------------------------
+  alias update_phase4_step3_sdva update_phase4_step3
+  def update_phase4_step3
+    if SDVA::ATTACK_MOVE
+      if @active_battler.current_action.basic == 0
+        @active_battler.current_action.move_action = true
+      end
+    end
+    if SDVA::SKILL_MOVE
+      if @active_battler.current_action.kind == 1
+        @active_battler.current_action.move_action = true
+      end
+    end
+    if SDVA::ITEM_MOVE
+      if @active_battler.current_action.kind == 2
+        @active_battler.current_action.move_action = true
+      end
+    end
+    # ƒoƒgƒ‰ [‚ªƒAƒNƒ^ [‚ÉŠÜ‚Ü‚ê AˆÚ“®ƒAƒNƒVƒ‡ƒ“’†
+    if @active_battler.is_a?(Game_Actor) and
+     @active_battler.current_action.move_action
+      # ˆÚ“® I—¹Žž
+      if @active_battler.moving == 2
+        update_phase4_step3_sdva
+      end
+    elsif @active_battler.moving == 0
+      update_phase4_step3_sdva
+    end
+  end
+  #--------------------------------------------------------------------------
+  #  œ ƒtƒŒ [ƒ€ X V (ƒ ƒCƒ“ƒtƒF [ƒY ƒXƒeƒbƒv 6 : ƒŠƒtƒŒƒbƒVƒ…)
+  #--------------------------------------------------------------------------
+  alias update_phase4_step6_sdva update_phase4_step6
+  def update_phase4_step6
+    @active_battler.current_action.move_action = false
+    @active_battler.move_reset
+    update_phase4_step6_sdva
+  end
+end
+
+#==============================================================================
+#  ¡ Spriteset_Battle
+#==============================================================================
+
+class Spriteset_Battle
+  #--------------------------------------------------------------------------
+  #  œ ƒIƒuƒWƒFƒNƒg ‰Šú‰»
+  #--------------------------------------------------------------------------
+  alias initialize_sdva initialize
+  def initialize
+    initialize_sdva
+    @viewport2.z = 1
+  end
+end
+
+#==============================================================================
+#  ¡ Arrow_Actor
+#==============================================================================
+
+class Arrow_Actor < Arrow_Base
+  #--------------------------------------------------------------------------
+  #  œ ƒtƒŒ [ƒ€ X V
+  #--------------------------------------------------------------------------
+  alias update_sdva update
+  def update
+    update_sdva
+    # ƒJ [ƒ\ƒ‹‰º
+    if Input.repeat?(Input::DOWN)
+      $game_system.se_play($data_system.cursor_se)
+      @index += 1
+      @index %= $game_party.actors.size
+    end
+    # ƒJ [ƒ\ƒ‹ ã
+    if Input.repeat?(Input::UP)
+      $game_system.se_play($data_system.cursor_se)
+      @index += $game_party.actors.size - 1
+      @index %= $game_party.actors.size
+    end
+  end
+end
+
+#==============================================================================
+#  ¡ Arrow_Enemy
+#==============================================================================
+
+class Arrow_Enemy < Arrow_Base
+  #--------------------------------------------------------------------------
+  #  œ ƒtƒŒ [ƒ€ X V
+  #--------------------------------------------------------------------------
+  alias update_sdva update
+  def update
+    update_sdva
+    # ƒJ [ƒ\ƒ‹‰º
+    if Input.repeat?(Input::DOWN)
+      $game_system.se_play($data_system.cursor_se)
+      $game_troop.enemies.size.times do
+        @index += 1
+        @index %= $game_troop.enemies.size
+        break if self.enemy.exist?
+      end
+    end
+    # ƒJ [ƒ\ƒ‹ ã
+    if Input.repeat?(Input::UP)
+      $game_system.se_play($data_system.cursor_se)
+      $game_troop.enemies.size.times do
+        @index += $game_troop.enemies.size - 1
+        @index %= $game_troop.enemies.size
+        break if self.enemy.exist?
+      end
+    end
+  end
+end

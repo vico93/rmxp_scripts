@@ -1,0 +1,73 @@
+################################################################################
+################################### XMS ########################################
+################################################################################
+=begin
+Script criado pelo site XMS
+Tutorial - Moghunter
+
+FUNÇÃO
+Apresenta uma animação extra do Character depois de um momento
+parado, ou seja, piscando, respirando, bocejando, etc...
+
+UTILIZAÇÃO
+Para que a animação extra ocorra você deve ter um arquivo
+do Char com a animação extra, por exemplo, o herói piscando, 
+respirando, bocejando, etc...
+Depois de criado o arquivo imagem do char, você deve nomea-lo
+igual ao nome do arquivo de imagem do char do herói, mas 
+colocando o sufixo"_Act" no final.
+
+Exemplo de nomeação.
+Se o arquivo do character do herói tiver este nome.
+-------------------------
+007-Fighter07.png
+-------------------------
+Devemos nomear desta forma.
+-------------------------
+007-Fighter07_Act.png
+-------------------------
+
+=end
+#CUSTOMINZAÇÃO
+module XRXS_BreakActs
+  #Sufixo do nome do arquivo do char de animação.
+  SUFFIX = "_Act"
+  #Tempo para ativar a animação.
+  #Cada 20 pontos equivale a 1 segundo.
+  WCOUNT = 1
+#-------------------------------------------------------------------------------  
+  def character_name
+    filename = super
+    if @breakacting
+      new_name = filename + SUFFIX
+      filename = new_name if RPG_FileTest.character_exist?(new_name)
+    end
+    return filename
+  end
+  def breakact=(b)
+    @breakacting = b
+    @step_anime  = b
+  end
+  def update
+    super
+    if controllable?
+      if @breakact_count.to_i > 0
+        @breakact_count -= 1
+      else
+        self.breakact = true
+      end
+    else
+      @breakact_count = WCOUNT
+      self.breakact = false
+    end
+  end
+end
+class Game_Player < Game_Character
+  include XRXS_BreakActs
+end
+class Game_Player < Game_Character
+  def controllable?
+    return !(moving? or $game_system.map_interpreter.running? or
+            @move_route_forcing or $game_temp.message_window_showing)
+  end
+end

@@ -1,0 +1,172 @@
+Características
+O script permite adicionar a probabilidade do equipamento quebrar no momento 
+do ataque ou a armadura quebrar no momento do dano, ou seja, depois de 
+quebrar você perderá o seu equipamento.
+
+Utilização
+Crie um atributo no banco de dados chamado “Quebrar” e ao lado deste 
+atributo devemos definir à porcentagem de chance para que isso ocorra.
+Exemplo
+#----------------------
+Quebrar50%
+#----------------------
+O equipamento que estiver sobre este atributo terá 50% de chance de quebrar.
+
+Copie o script acima do script Main
+
+MODULO  KGC
+
+Codigo:
+#################################################################
+######################## Modulo KGC #############################
+#################################################################
+#Script necessário para usar alguns outros scripts do KGC #######
+#################################################################
+$game_special_elements = {}
+$imported = {}
+$data_states = load_data("Data/States.rxdata")
+$data_system = load_data("Data/System.rxdata")
+
+
+
+
+KGC_EquipmentBreak
+Codigo:
+#################################################################
+############################# KGC ###############################
+#################################################################
+# Adiciona a % de chance de seu equipamento quebrar (Inutilizar)
+#Crie um atributo chamado "Quebrar" no banco de dados.
+#
+#Para definir a porcentagem de chance para a arma quebrar você deve
+#nomear o atributo desta forma.
+#--------------------
+#Quebrar10%
+#--------------------
+# No caso a probabilidade do equipamento quebrar é de 10%.
+#É necessário atribuir esse atributo Quebrar10% ao equipamento
+#desejado.
+#################################################################
+
+$imported["EquipmentBreak"] = true
+$game_special_elements["equipment_break"] = /Quebrar(\d+)(%|&#65285;)/
+class Game_Battler
+  alias attack_effect_KGC_EquipmentBreak attack_effect
+  def attack_effect(attacker)
+    result = attack_effect_KGC_EquipmentBreak(attacker)
+    if result && self.damage.is_a?(Numeric)
+      attacker.break_equipment(0) if attacker.is_a?(Game_Actor)
+      self.break_equipment(1) if self.is_a?(Game_Actor)
+    end
+    return result
+  end
+  alias skill_effect_KGC_EquipmentBreak skill_effect
+  def skill_effect(user, skill)
+    result = skill_effect_KGC_EquipmentBreak(user, skill)
+    if result && skill.atk_f > 0 && self.damage.is_a?(Numeric)
+      user.break_equipment(0) if user.is_a?(Game_Actor)
+      self.break_equipment(1) if self.is_a?(Game_Actor)
+    end
+    return result
+  end
+end
+class Game_Actor < Game_Battler
+  attr_accessor :weapon_broken
+  attr_accessor :armor_broken
+  alias setup_KGC_EquipmentBreak setup
+  def setup(actor_id)
+    setup_KGC_EquipmentBreak(actor_id)
+
+    @weapon_broken, @armor_broken = false, false
+  end
+  def break_equipment(type)
+    case type
+    when 0
+      if $imported["EquipExtension"] && self.two_swords?
+        weapons = []
+        for i in 0...self.ts_number
+          next if self.weapon_id(i) == 0
+          weapons << $data_weapons[self.weapon_id(i)]
+        end
+      else
+        return if self.weapon_id == 0
+        weapons = [$data_weapons[self.weapon_id]]
+      end
+      for weapon in weapons
+        for element in weapon.element_set.compact
+          if $game_special_elements["equipment_break"] =~ 
+$data_system.elements[element]
+            prob = $1.to_i
+            break
+          end
+        end
+        if prob != nil && rand(100) < prob
+          broken_weapon = weapon.id
+          equip(0, 0)
+          $game_party.lose_weapon(broken_weapon, 1)
+          @weapon_broken = true
+        end
+      end
+    when 1
+      st = $imported["EquipExtension"] && self.two_swords? ? self.ts_number 
+: 1
+      ed = $imported["EquipExtension"] ? self.equip_type.size : 5
+      for i in st...ed
+        armor_id = $imported["EquipExtension"] ? self.armor_id[i] : 
+eval("@armor#{i}_id")
+        next if armor_id == nil || armor_id == 0
+        armor = $data_armors[armor_id]
+        for element in armor.guard_element_set.compact
+          if $game_special_elements["equipment_break"] =~ 
+$data_system.elements[element]
+            prob = $1.to_i
+            break
+          end
+        end
+        if prob != nil && rand(100) < prob
+          equip(i, 0)
+          $game_party.lose_armor(armor_id, 1)
+          @armor_broken = true
+          prob = nil
+        end
+      end
+    end
+  end
+end
+class Scene_Battle
+  alias update_phase4_step5_KGC_EquipmentBreak update_phase4_step5
+  def update_phase4_step5
+    update_phase4_step5_KGC_EquipmentBreak
+    for actor in $game_party.actors
+      next if actor == nil
+      if actor.weapon_broken
+        actor.damage = "Arma Destruída" if actor.damage == nil
+        actor.damage_pop = true
+        @broken = true
+      end
+      if actor.armor_broken
+        actor.damage = "Armadura Destruída" if actor.damage == nil
+        actor.damage_pop = true
+        @broken = true
+      end
+      actor.weapon_broken = false
+      actor.armor_broken = false
+    end
+    if @broken
+      @help_window.set_text("Equipamento Destruído&#65281;&#65281;", 1)
+      Audio.se_play("Audio/SE/097-Attack09", 80, 50)
+      @wait_count = 20
+    end
+  end
+  alias update_phase4_step6_KGC_EquipmentBreak update_phase4_step6
+  def update_phase4_step6
+    update_phase4_step6_KGC_EquipmentBreak
+    if @broken
+      @help_window.visible = false
+      @broken = false
+    end
+  end
+end
+
+
+

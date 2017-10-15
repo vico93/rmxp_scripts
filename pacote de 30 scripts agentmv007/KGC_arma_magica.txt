@@ -1,0 +1,193 @@
+####################################################################
+####################### KGC_Magic_Weapon ###########################
+####################################################################
+# O script permite você ativar habilidade quando usar determinadas
+#armas.
+#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+# Exemplo de uso
+# Vá ate a janela de armas e nomei as suas armas como no exemplo 
+#abaixo.
+##################
+#Longinus[MW8,50]#
+##################
+#Tradução
+# Quando você usar a arma Longinus a arma ira ativar a magia Fogo+
+#(ID8 do database da habilidade)e terá 50% de chance para 
+#que isso ocorra
+####################################################################
+
+$imported["MagicWeapon"] = true
+
+# ??????
+$game_special_elements["magic_weapon"] = $data_system.elements.index("???")
+
+#==============================================================================
+# ¦ RPG::Weapon
+#==============================================================================
+
+class RPG::Weapon
+  #--------------------------------------------------------------------------
+  # ? ????
+  #--------------------------------------------------------------------------
+  def name
+    return @name.gsub(/\[.*\]/) {""}
+  end
+  #--------------------------------------------------------------------------
+  # ? ????????
+  #--------------------------------------------------------------------------
+  def original_name
+    return @name
+  end
+  #--------------------------------------------------------------------------
+  # ? ???????
+  #--------------------------------------------------------------------------
+  def exec_skill
+    if @name =~ /\[MW[ ]*(\d+)[ ]*,[ ]*(\d+)\]/i
+      return [$1.to_i, $2.to_i]
+    elsif @element_set.include?($game_special_elements["magic_weapon"])
+      return [@dex_plus, @agi_plus]
+    else
+      return nil
+    end
+  end
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Game_Battler (???? 1)
+#==============================================================================
+
+class Game_Battler
+  #--------------------------------------------------------------------------
+  # ? ??????????
+  #--------------------------------------------------------------------------
+  attr_accessor :magic_weapon             # ????????
+  #--------------------------------------------------------------------------
+  # ? ?????????
+  #--------------------------------------------------------------------------
+  alias initialize_KGC_MagicWeapon initialize
+  def initialize
+    # ???????
+    initialize_KGC_MagicWeapon
+
+    @magic_weapon = false
+  end
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Scene_Battle (???? 3)
+#==============================================================================
+
+class Scene_Battle
+  #--------------------------------------------------------------------------
+  # ? ?????? (????????????)
+  #--------------------------------------------------------------------------
+  alias update_phase3_KGC_MagicWeapon update_phase3
+  def update_phase3
+    # ??????????
+    @active_battler.magic_weapon = false if @active_battler.magic_weapon
+
+    # ???????
+    update_phase3_KGC_MagicWeapon
+  end
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Scene_Battle (???? 4)
+#==============================================================================
+
+class Scene_Battle
+  #--------------------------------------------------------------------------
+  # ? ?????? (??????? ???? 2 : ???????)
+  #--------------------------------------------------------------------------
+  alias update_phase4_step2_KGC_MagicWeapon update_phase4_step2
+  def update_phase4_step2
+    # ???????
+    update_phase4_step2_KGC_MagicWeapon
+
+    # ????????
+    if @magic_weapon
+      @phase4_step = 2
+      @magic_weapon = false
+    end
+  end
+  #--------------------------------------------------------------------------
+  # ? ??????? ????
+  #--------------------------------------------------------------------------
+  alias make_basic_action_result_KGC_MagicWeapon make_basic_action_result
+  def make_basic_action_result
+    # ??????????
+    @active_battler.magic_weapon = false
+
+    # ???????????????????????
+    if @active_battler.is_a?(Game_Actor) &&
+        @active_battler.current_action.basic == 0
+      # ??????
+      weapon = $data_weapons[@active_battler.weapon_id]
+      if weapon != nil && weapon.exec_skill != nil
+        # ??????
+        if @active_battler.restriction == 3
+          target = $game_party.random_target_actor
+        elsif @active_battler.restriction == 2
+          target = $game_troop.random_target_enemy
+        else
+          index = @active_battler.current_action.target_index
+          target = $game_troop.smooth_target_enemy(index)
+        end
+        # ????
+        if rand(100) < weapon.exec_skill[1]
+          # ????????
+          @active_battler.current_action.kind = 1
+          @active_battler.current_action.skill_id = weapon.exec_skill[0]
+          # ????????????
+          @active_battler.magic_weapon = true
+          # ?????
+          @magic_weapon = true
+          # ??
+          return
+        end
+      end
+    end
+
+    # ???????
+    make_basic_action_result_KGC_MagicWeapon
+  end
+  #--------------------------------------------------------------------------
+  # ? ???????? ????
+  #--------------------------------------------------------------------------
+  alias make_skill_action_result_KGC_MagicWeapon make_skill_action_result
+  def make_skill_action_result
+    # ?????????????????????????????
+    if @active_battler.is_a?(Game_Actor) && @active_battler.magic_weapon &&
+        !@active_battler.current_action.forcing
+      # ??????????
+      @active_battler.magic_weapon = false
+      # ??????
+      @skill = $data_skills[@active_battler.current_action.skill_id]
+      # ?????????????????
+      @status_window.refresh
+      # ????????????????
+      @help_window.set_text(@skill.name, 1)
+      # ??????? ID ???
+      @animation1_id = @skill.animation1_id
+      @animation2_id = @skill.animation2_id
+      # ??????? ID ???
+      @common_event_id = @skill.common_event_id
+      # ??????????
+      set_target_battlers(@skill.scope)
+      # ?????????
+      for target in @target_battlers
+        target.skill_effect(@active_battler, @skill)
+      end
+      return
+    end
+
+    # ???????
+    make_skill_action_result_KGC_MagicWeapon
+  end
+end

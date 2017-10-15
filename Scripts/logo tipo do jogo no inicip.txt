@@ -1,0 +1,44 @@
+Este é apenas um codigo simples para quem quer colocar uma imagem para 
+aparecer logo no começo do game como seu logotipo , fiz apenas por achar que 
+torna o jogo mais profissional o codigo é completamente dispensavel e 
+gostaria que vocês colocassem as suas opiniões
+
+[ Nivel ]
+
+Facil
+
+[ Utilidade ]
+
+Não Essencial
+
+[ Instlação ]
+
+No script main entre as linhas 20-45
+
+[ Codigo ]
+
+  @posicao = Viewport.new(200, 100, 300, 300)
+  @variavel = Plane.new(@posicao)
+  @variavel.bitmap = RPG::Cache.title("IMAGEM_ESCOLHIDA")
+  @variavel.opacity = 0
+  for i in 0..255
+    if @variavel.opacity < 254
+      @variavel.opacity += 1
+      Graphics.update
+    end
+  end
+  @variavel.opacity = 255
+  for i in 0..255
+  if @variavel.opacity > 0
+    @variavel.opacity -= 1
+      Graphics.update
+    end
+  end
+
+[ Explicações do Codigo ]
+
+Linha 1 Os dois primeiros numeros é em relação a posição X e Y da figura e 
+os dois ultimos é o TAMANHO da sua figura... altura e largura
+
+Linha 2 e 3 Selecão da figura , colocar a figura na determinada e inserir 
+seu nome no lugar de "IMAGEM_ESCOLHIDA"

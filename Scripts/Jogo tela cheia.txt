@@ -1,0 +1,11 @@
+Conceito
+Esse script mostra com facilidade como fazer o seu jogo inicar em modo de tela cheia sem que o jogador precise pressionar Alt+Enter toda vez que for jogar. 
+
+Instalação
+Vá até a pasta do seu projeto e procure pelo aplicativo Game.exe, nele você deve clicar com o botão direito do mouse e ir em Propriedades. Após isso vá em Compatibilidade e marque a opção Executar em resolução de tela 640x480. Isso fará com que o seu jogo inicie automaticamente em tela cheia, porém com o bug do Menu Iniciar aparecendo o tempo todo.Para corrigir isso, basta ir até o editor de scirpts do seu jogo e ir até o script Main, nele abaixo de begin você deve colocar o código abaixo: 
+
+$showm = Win32API.new 'user32', 'keybd_event', %w(l l l l), '' 
+$showm.call(18,0,0,0) 
+$showm.call(13,0,0,0) 
+$showm.call(13,0,2,0) 
+$showm.call(18,0,2,0)

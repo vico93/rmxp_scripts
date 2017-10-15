@@ -1,0 +1,172 @@
+Apresentação automática do nome do mapa com de efeito Fade e Move.
+
+
+--------------------------------------------------------------------------------
+
+UTILIZAÇÃO
+Coloque a imagem desta pasta dentro da pasta Graphics/Pictures
+
+
+#_________________________________________________
+# MOG_Window Map Name V1.0            
+#_________________________________________________
+# By Moghunter               
+#_________________________________________________
+#Apresenta uma janela com o nome do mapa.
+#É preciso ter a imagem Mpname.png dentro da pasta
+#Graphics/Pictures.
+#_________________________________________________
+module MOG
+#Definição da fonte do texto com o nome do mapa.
+MPFONT = "Georgia"
+#Ativar fade.
+MPNMFD = true
+#Tempo de exposição da janela.(Deixe sempre acima de 255)
+MPNMTM = 500
+#Posição da janela.
+# 0 = Superior Esquerda.
+# 1 = Inferior Esquerda.
+# 2 = Superior Direita.
+# 3 = Inferior Direita.
+MPNMPS = 0
+end
+#_________________________________________________
+###############
+# Game_System #
+###############
+class Game_System
+attr_accessor :fdtm
+attr_accessor :mpnm_x
+attr_accessor :mpnm_y
+alias mog24_initialize initialize
+def initialize
+mog24_initialize
+@fdtm = MOG::MPNMTM
+if MOG::MPNMPS == 0 
+@mpnm_x = -300
+@mpnm_y = 0
+elsif MOG::MPNMPS == 1
+@mpnm_x = -300
+@mpnm_y = 380
+elsif MOG::MPNMPS == 2
+@mpnm_x = 640
+@mpnm_y = 0
+else 
+@mpnm_x = 640
+@mpnm_y = 380
+end  
+end
+def mpnm_x
+return @mpnm_x
+end
+def mpnm_y
+return @mpnm_y
+end
+def fdtm
+if @fdtm <= 0
+@fdtm = 0 
+end
+return @fdtm
+end
+end 
+############
+# Game_Map #
+############
+class Game_Map
+attr_reader   :map_id  
+def mpname
+$mpname = load_data("Data/MapInfos.rxdata") 
+$mpname[@map_id].name
+end
+end
+###############
+# Window Base #
+###############
+class Window_Base < Window
+def draw_mpname(x,y)
+mapic = RPG::Cache.picture("Mpname")    
+cw = mapic.width  
+ch = mapic.height 
+src_rect = Rect.new(0, 0, cw, ch)
+self.contents.blt(x , y - ch + 65, mapic, src_rect)
+self.contents.font.name = MOG::MPFONT
+self.contents.font.size = 22
+self.contents.font.color = Color.new(0,0,0,255)
+self.contents.draw_text(x + 76, y + 27, 110, 32, $game_map.mpname.to_s,1)
+self.contents.font.color = Color.new(255,255,255,255)
+self.contents.draw_text(x + 75, y + 26, 110, 32, $game_map.mpname.to_s,1)
+end
+end
+##########
+# Mpname #
+##########
+class Mpname < Window_Base
+def initialize
+super($game_system.mpnm_x, $game_system.mpnm_y, 250, 100)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.opacity = 0
+refresh
+end
+def refresh
+self.contents.clear
+draw_mpname(10,0)    
+end
+end
+#############
+# Scene_Map #
+#############
+class Scene_Map
+alias mog24_main main
+def main
+@mpnm = Mpname.new
+@mpnm.contents_opacity = $game_system.fdtm
+mog24_main
+@mpnm.dispose
+end
+alias mog24_update update
+def update
+mog24_update  
+$game_system.mpnm_x = @mpnm.x
+$game_system.mpnm_y = @mpnm.y
+if MOG::MPNMPS == 0 or MOG::MPNMPS == 1 
+if @mpnm.x < 0
+   @mpnm.x += 8
+elsif @mpnm.x >= 0
+   @mpnm.x = 0
+end   
+else
+if @mpnm.x > 400
+   @mpnm.x -= 8
+elsif @mpnm.x <= 400
+   @mpnm.x = 400
+end     
+end 
+@mpnm.contents_opacity = $game_system.fdtm
+if MOG::MPNMFD == true
+$game_system.fdtm -= 3
+end
+end
+alias mog24_transfer_player transfer_player
+def transfer_player
+mog24_transfer_player
+if MOG::MPNMPS == 0 
+$game_system.mpnm_x = -300
+$game_system.mpnm_y = 0
+elsif MOG::MPNMPS == 1
+$game_system.mpnm_x = -300
+$game_system.mpnm_y = 380
+elsif MOG::MPNMPS == 2
+$game_system.mpnm_x = 640
+$game_system.mpnm_y = 0
+else 
+$game_system.mpnm_x = 640
+$game_system.mpnm_y = 380
+end  
+@mpnm.y = $game_system.mpnm_y
+@mpnm.x = $game_system.mpnm_x
+$game_system.fdtm = MOG::MPNMTM
+@mpnm.refresh
+end
+end
+ 
+

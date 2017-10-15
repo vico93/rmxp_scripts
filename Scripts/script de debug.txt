@@ -1,0 +1,899 @@
+This is a script for RMXP and I haven't done this complately. I had some help from RPG Advocate. This is actually my first tut, and ist's basicly not a tut. It's just a script that you should copy/paste to your Script. RMXP uses those color coded things so you can edit it to the was you want. BTW: this is veery long script.
+
+This script adds many features to the debug screen (access by hitting F9 during Test Play). When editing variables, you can now push C to enter the variable's value, like in RPG Maker 2000 and 2003. You can also push X to multiply the variable by -1. By pushing X when the left window is active, you can open the Debug Command window (see images). Each option is described with its controls below: 
+
+Heal Character: Lets you heal a character.
+C Button: Recover the character's HP, SP, and status.
+X Button: Recover the character's HP only.
+Y Button: Recover the character's SP only.
+A Button: Recover the character's status only.
+God Mode: If this mode is on, your characters will be ultra-powerful.
+Money: Enter the amount of money you want to have in the number window.
+Encounters: Decide whether you want random encounters on or off.
+Items/Weapons/Armor: Lets you add or remove items, weapons, or armor from the party's inventory.
+Right: Gain 1 copy of the item.
+Left: Lose 1 copy of the item.
+X Button: Lose 10 copies of the item.
+Y Button: Gain 10 copies of the item.
+Teleport: Teleport to a preset destination. You'll need to edit the script yourself to add destinations.
+Walk Speed: Choose one of the six walk speeds for the player character.
+Save: Allows you to save anywhere, regardless of whether saving is enabled on the map or not. 
+
+To use this script, replace Scene_Debug with the one provided, then add the new class Window_Dataset after all the other window classes, then replace the methods shown in Game_Actor. Finally, add the statements in Game_Character and Game_Temp, as shown. Note that there is no need to add Window_Dataset if you're already using my battle debugger script. 
+
+======================================
+
+class Scene_Debug
+# ------------------------------
+def main
+@left_window = Window_DebugLeft.new
+@right_window = Window_DebugRight.new
+c1 = "Heal Character"
+c2 = "God Mode"
+c3 = "Money"
+c4 = "Encounters"
+c5 = "Items"
+c6 = "Weapons"
+c7 = "Armor"
+c8 = "Teleport"
+c9 = "Walk Speed"
+c10 = "Save"
+x1 = "On"
+x2 = "Off"
+w1 = "Slowest"
+w2 = "Slower"
+w3 = "Slow"
+w4 = "Fast"
+w5 = "Faster"
+w6 = "Fastest"
+d1 = "Destination 1"
+main_commands = [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10]
+speed_commands = [w1, w2, w3, w4, w5, w6]
+toggle_commands = [x1, x2]
+warp_commands = [d1]
+@other_window = Window_Command.new(240, main_commands)
+@speed_window = Window_Command.new(120, speed_commands)
+@enc_window = Window_Command.new(80, toggle_commands)
+@god_window = Window_Command.new(80, toggle_commands)
+@warp_window = Window_Command.new(240, warp_commands)
+@target_window = Window_Target.new
+@money_window = Window_Gold.new
+@number_window = Window_InputNumber.new(7)
+@var_window = Window_InputNumber.new(8)
+@help_window = Window_Base.new(192, 352, 448, 128)
+@help_window.contents = Bitmap.new(406, 96)
+@help_window.contents.font.name = "Arial"
+@help_window.contents.font.size = 24
+@left_window.top_row = $game_temp.debug_top_row
+@left_window.index = $game_temp.debug_index
+@right_window.mode = @left_window.mode
+@right_window.top_id = @left_window.top_id
+@other_window.visible = false
+@other_window.active = false
+@target_window.visible = false
+@target_window.active = false
+@enc_window.visible = false
+@enc_window.active = false
+@god_window.visible = false
+@god_window.active = false
+@speed_window.visible = false
+@speed_window.active = false
+@warp_window.visible = false
+@warp_window.active = false
+@money_window.visible = false
+@money_window.active = false
+@number_window.visible = false
+@number_window.active = false
+@var_window.visible = false
+@var_window.active = false
+@itemset_window = Window_Dataset.new(1)
+@itemset_window.visible = false
+@itemset_window.active = false
+@weaponset_window = Window_Dataset.new(2)
+@weaponset_window.visible = false
+@weaponset_window.active = false
+@armorset_window = Window_Dataset.new(3)
+@armorset_window.visible = false
+@armorset_window.active = false
+@other_window.opacity = 255
+@other_window.x = 100
+@other_window.y = 48
+@other_window.z = 200
+@target_window.x = 304
+@target_window.y = 0
+@target_window.z = 300
+@target_window.opacity = 255
+@enc_window.x = 225
+@enc_window.y = 180
+@enc_window.z = 210
+@enc_window.opacity = 255
+@god_window.x = 225
+@god_window.y = 180
+@god_window.z = 210
+@god_window.opacity = 255
+@speed_window.x = 270
+@speed_window.y = 100
+@speed_window.z = 220
+@speed_window.opacity = 255
+@warp_window.x = 270
+@warp_window.y = 100
+@warp_window.z = 220
+@warp_window.opacity = 255
+@itemset_window.x = 0
+@itemset_window.y = 0
+@itemset_window.z = 1000
+@itemset_window.opacity = 255
+@weaponset_window.x = 0
+@weaponset_window.y = 0
+@weaponset_window.z = 1000
+@weaponset_window.opacity = 255
+@armorset_window.x = 0
+@armorset_window.y = 0
+@armorset_window.z = 1000
+@armorset_window.opacity = 255
+@money_window.x = 270
+@money_window.y = 100
+@money_window.z = 700
+@money_window.opacity = 255
+@number_window.x = 270
+@number_window.y = 164
+@number_window.z = 710
+@number_window.opacity = 255
+@var_window.x = 270
+@var_window.y = 164
+@var_window.z = 710
+@var_window.opacity = 255
+@variable_edit = 0
+Graphics.transition
+loop do
+Graphics.update
+Input.update
+update
+if $scene != self
+break
+end
+end
+$game_map.refresh
+Graphics.freeze
+@left_window.dispose
+@right_window.dispose
+@help_window.dispose
+@other_window.dispose
+@god_window.dispose
+@speed_window.dispose
+@enc_window.dispose
+@target_window.dispose
+@warp_window.dispose
+@itemset_window.dispose
+@weaponset_window.dispose
+@armorset_window.dispose
+@money_window.dispose
+@var_window.dispose
+end
+# ------------------------------
+def update
+@right_window.mode = @left_window.mode
+@right_window.top_id = @left_window.top_id
+@left_window.update
+@right_window.update
+@other_window.update
+@enc_window.update
+@itemset_window.update
+@weaponset_window.update
+@armorset_window.update
+@target_window.update
+@god_window.update
+@speed_window.update
+@warp_window.update
+@money_window.update
+@number_window.update
+@var_window.update
+$game_temp.debug_top_row = @left_window.top_row
+$game_temp.debug_index = @left_window.index
+if @left_window.active
+update_left
+return
+end
+if @right_window.active
+update_right
+return
+end
+if @other_window.active
+update_command
+return
+end
+if @target_window.active
+update_target
+return
+end
+if @enc_window.active
+update_enc
+return
+end
+if @itemset_window.active
+update_itemset
+return
+end
+if @weaponset_window.active
+update_weaponset
+return
+end
+if @armorset_window.active
+update_armorset
+return
+end
+if @god_window.active
+update_god
+return
+end
+if @speed_window.active
+update_speed
+return
+end
+if @warp_window.active
+update_warp
+return
+end
+if @number_window.active
+update_money
+return
+end
+if @var_window.active
+update_var
+return
+end
+end
+# ------------------------------
+def update_left
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+$scene = Scene_Map.new
+return
+end
+if Input.trigger?(Input::C)
+$game_system.se_play($data_system.decision_se)
+if @left_window.mode == 0
+text1 = "C (Enter) : ON / OFF"
+@help_window.contents.draw_text(4, 0, 406, 32, text1)
+else
+text1 = "Left : -1 Right : +1"
+text2 = "L : -10"
+text3 = "R : +10"
+text4 = "C: Enter Value"
+text5 = "X: Change Sign"
+@help_window.contents.draw_text(4, 0, 200, 32, text1)
+@help_window.contents.draw_text(4, 32, 200, 32, text2)
+@help_window.contents.draw_text(4, 64, 200, 32, text3)
+@help_window.contents.draw_text(240, 0, 180, 32, text4)
+@help_window.contents.draw_text(240, 32, 180, 32, text5)
+end
+@left_window.active = false
+@right_window.active = true
+@right_window.index = 0
+return
+end
+if Input.trigger?(Input::X)
+$game_system.se_play($data_system.decision_se)
+@other_window.visible = true
+@left_window.active = false
+@other_window.active = true
+end
+end
+# ------------------------------
+def update_command
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@other_window.active = false
+@left_window.active = true
+@other_window.visible = false
+return
+end
+if Input.trigger?(Input::C)
+$game_system.se_play($data_system.decision_se)
+case @other_window.index
+when 0
+@other_window.active = false
+@target_window.active = true
+@target_window.visible = true
+@target_window.index = 0
+when 1
+@god_window.index = 1
+if $game_temp.god_mode
+@god_window.index = 0
+end
+@god_window.active = true
+@god_window.visible = true
+@other_window.active = false
+when 2
+@number_window.number = 0
+@money_window.visible = true
+@number_window.active = true
+@number_window.visible = true
+@other_window.active = false
+when 3
+@enc_window.index = 0
+if $game_system.encounter_disabled
+@enc_window.index = 1
+end
+@enc_window.active = true
+@enc_window.visible = true
+@other_window.active = false
+when 4
+@itemset_window.index = 0
+@itemset_window.active = true
+@itemset_window.visible = true
+@other_window.active = false
+when 5
+@weaponset_window.index = 0
+@weaponset_window.active = true
+@weaponset_window.visible = true
+@other_window.active = false
+when 6
+@armorset_window.index = 0
+@armorset_window.active = true
+@armorset_window.visible = true
+@other_window.active = false
+when 7
+@warp_window.active = true
+@warp_window.visible = true
+@other_window.active = false
+when 8
+@speed_window.index = $game_player.move_speed - 1
+@speed_window.active = true
+@speed_window.visible = true
+@other_window.active = false
+when 9
+$scene = Scene_Save.new
+return
+end
+end
+end
+# ------------------------------
+def update_money
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@number_window.active = false
+@other_window.active = true
+@money_window.visible = false
+@number_window.visible = false
+return
+end
+if Input.trigger?(Input::C)
+$game_system.se_play($data_system.decision_se)
+$game_party.lose_gold(9999999)
+$game_party.gain_gold(@number_window.number)
+@money_window.refresh
+end
+if Input.repeat?(Input::X)
+$game_system.se_play($data_system.cursor_se)
+$game_party.gain_gold(9999999)
+@money_window.refresh
+end
+if Input.repeat?(Input::Y)
+$game_system.se_play($data_system.cursor_se)
+$game_party.lose_gold(9999999)
+@money_window.refresh
+end
+end
+# ------------------------------
+def update_itemset
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@itemset_window.active = false
+@other_window.active = true
+@itemset_window.visible = false
+return
+end
+if Input.repeat?(Input::RIGHT)
+$game_system.se_play($data_system.cursor_se)
+$game_party.gain_item(@itemset_window.index + 1, 1)
+@itemset_window.refresh
+end
+if Input.repeat?(Input::LEFT)
+$game_system.se_play($data_system.cursor_se)
+$game_party.lose_item(@itemset_window.index + 1, 1)
+@itemset_window.refresh
+end
+if Input.repeat?(Input::X)
+$game_system.se_play($data_system.cursor_se)
+$game_party.lose_item(@itemset_window.index + 1, 10)
+@itemset_window.refresh
+end
+if Input.repeat?(Input::Y)
+$game_system.se_play($data_system.cursor_se)
+$game_party.gain_item(@itemset_window.index + 1, 10)
+@itemset_window.refresh
+end
+end
+# ------------------------------
+def update_weaponset
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@weaponset_window.active = false
+@other_window.active = true
+@weaponset_window.visible = false
+return
+end
+if Input.repeat?(Input::RIGHT)
+$game_system.se_play($data_system.cursor_se)
+$game_party.gain_weapon(@weaponset_window.index + 1, 1)
+@weaponset_window.refresh
+end
+if Input.repeat?(Input::LEFT)
+$game_system.se_play($data_system.cursor_se)
+$game_party.lose_weapon(@weaponset_window.index + 1, 1)
+@weaponset_window.refresh
+end
+if Input.repeat?(Input::X)
+$game_system.se_play($data_system.cursor_se)
+$game_party.lose_weapon(@weaponset_window.index + 1, 10)
+@weaponset_window.refresh
+end
+if Input.repeat?(Input::Y)
+$game_system.se_play($data_system.cursor_se)
+$game_party.gain_weapon(@weaponset_window.index + 1, 10)
+@weaponset_window.refresh
+end
+end
+# ------------------------------
+def update_armorset
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@armorset_window.active = false
+@other_window.active = true
+@armorset_window.visible = false
+return
+end
+if Input.repeat?(Input::RIGHT)
+$game_system.se_play($data_system.cursor_se)
+$game_party.gain_armor(@armorset_window.index + 1, 1)
+@armorset_window.refresh
+end
+if Input.repeat?(Input::LEFT)
+$game_system.se_play($data_system.cursor_se)
+$game_party.lose_armor(@armorset_window.index + 1, 1)
+@armorset_window.refresh
+end
+if Input.repeat?(Input::X)
+$game_system.se_play($data_system.cursor_se)
+$game_party.lose_armor(@armorset_window.index + 1, 10)
+@armorset_window.refresh
+end
+if Input.repeat?(Input::Y)
+$game_system.se_play($data_system.cursor_se)
+$game_party.gain_armor(@armorset_window.index + 1, 10)
+@armorset_window.refresh
+end
+end
+# -------------------------------
+def update_enc
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@enc_window.active = false
+@other_window.active = true
+@enc_window.visible = false
+return
+end
+if Input.trigger?(Input::C)
+case @enc_window.index
+when 0
+$game_system.se_play($data_system.decision_se)
+$game_system.encounter_disabled = false
+@enc_window.active = false
+@other_window.active = true
+@enc_window.visible = false
+when 1
+$game_system.se_play($data_system.decision_se)
+$game_system.encounter_disabled = true
+@enc_window.active = false
+@other_window.active = true
+@enc_window.visible = false
+end
+end
+end
+# -------------------------------
+def update_god
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@god_window.active = false
+@other_window.active = true
+@god_window.visible = false
+return
+end
+if Input.trigger?(Input::C)
+case @god_window.index
+when 0
+$game_system.se_play($data_system.decision_se)
+$game_temp.god_mode = true
+@god_window.active = false
+@other_window.active = true
+@god_window.visible = false
+when 1
+$game_system.se_play($data_system.decision_se)
+$game_temp.god_mode = false
+@god_window.active = false
+@other_window.active = true
+@god_window.visible = false
+end
+end
+end
+# -------------------------------
+def update_speed
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@speed_window.active = false
+@other_window.active = true
+@speed_window.visible = false
+return
+end
+if Input.trigger?(Input::C)
+$game_system.se_play($data_system.decision_se)
+$game_player.move_speed = @speed_window.index + 1
+@speed_window.active = false
+@other_window.active = true
+@speed_window.visible = false
+end
+end
+# -------------------------------
+def update_warp
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@warp_window.active = false
+@other_window.active = true
+@warp_window.visible = false
+return
+end
+if Input.trigger?(Input::C)
+$game_system.se_play($data_system.decision_se)
+$game_temp.player_transferring = true
+case @warp_window.index
+when 0
+$game_temp.player_new_map_id = 1
+$game_temp.player_new_x = 1
+$game_temp.player_new_y = 1
+@warp_window.active = false
+@other_window.active = true
+@warp_window.visible = false
+end
+end
+end
+# ------------------------------
+def update_target
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@target_window.active = false
+@other_window.active = true
+@target_window.visible = false
+return
+end
+if Input.trigger?(Input::C)
+$game_system.se_play($data_system.save_se)
+for i in 1..$data_states.size
+$game_party.actors[@target_window.index].remove_state(i)
+end
+$game_party.actors[@target_window.index].hp += 9999
+$game_party.actors[@target_window.index].sp += 9999
+@target_window.refresh
+end
+if Input.trigger?(Input::X)
+$game_system.se_play($data_system.save_se)
+$game_party.actors[@target_window.index].hp += 9999
+@target_window.refresh
+end
+if Input.trigger?(Input::Y)
+$game_system.se_play($data_system.save_se)
+$game_party.actors[@target_window.index].sp += 9999
+@target_window.refresh
+end
+if Input.trigger?(Input::A)
+$game_system.se_play($data_system.save_se)
+for i in 1..$data_states.size
+$game_party.actors[@target_window.index].remove_state(i)
+end
+@target_window.refresh
+end
+end
+# ------------------------------
+def update_var
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@var_window.active = false
+@var_window.visible = false
+@right_window.active = true
+return
+end
+if Input.trigger?(Input::C)
+$game_system.se_play($data_system.decision_se)
+$game_variables[@variable_edit] = @var_window.number
+@right_window.refresh
+@var_window.active = false
+@var_window.visible = false
+@right_window.active = true
+end
+end
+# ------------------------------
+def update_right
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@left_window.active = true
+@right_window.active = false
+@right_window.index = -1
+@help_window.contents.clear
+return
+end
+current_id = @right_window.top_id + @right_window.index
+if @right_window.mode == 0
+if Input.trigger?(Input::C)
+$game_system.se_play($data_system.decision_se)
+$game_switches[current_id] = (not $game_switches[current_id])
+@right_window.refresh
+return
+end
+end
+if @right_window.mode == 1
+if Input.repeat?(Input::RIGHT)
+$game_system.se_play($data_system.cursor_se)
+$game_variables[current_id] += 1
+if $game_variables[current_id] > 99999999
+$game_variables[current_id] = 99999999
+end
+@right_window.refresh
+return
+end
+if Input.repeat?(Input::LEFT)
+$game_system.se_play($data_system.cursor_se)
+$game_variables[current_id] -= 1
+if $game_variables[current_id] < -99999999
+$game_variables[current_id] = -99999999
+end
+@right_window.refresh
+return
+end
+if Input.repeat?(Input::C)
+$game_system.se_play($data_system.decision_se)
+current_id = @right_window.top_id + @right_window.index
+@variable_edit = current_id
+@var_window.number = $game_variables[current_id].abs
+@var_window.visible = true
+@var_window.active = true
+@right_window.active = false
+end
+if Input.repeat?(Input::X)
+$game_system.se_play($data_system.decision_se)
+current_id = @right_window.top_id + @right_window.index
+$game_variables[current_id] *= -1
+@right_window.refresh
+end
+if Input.repeat?(Input::R)
+$game_system.se_play($data_system.cursor_se)
+$game_variables[current_id] += 10
+if $game_variables[current_id] > 99999999
+$game_variables[current_id] = 99999999
+end
+@right_window.refresh
+return
+end
+if Input.repeat?(Input::L)
+$game_system.se_play($data_system.cursor_se)
+$game_variables[current_id] -= 10
+if $game_variables[current_id] < -99999999
+$game_variables[current_id] = -99999999
+end
+@right_window.refresh
+return
+end
+end
+end
+end
+
+======================================
+
+class Window_Dataset < Window_Selectable
+#---------------------------------
+def initialize(type)
+super(0, 0, 300, 480)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.back_opacity = 160
+self.contents.font.name = "Arial"
+self.contents.font.size = 24
+@type = type
+if @type == 1
+@item_max = $data_items.size - 1
+end
+if @type == 2
+@item_max = $data_weapons.size - 1
+end
+if @type == 3
+@item_max = $data_armors.size - 1
+end
+refresh
+end
+#---------------------------------
+def refresh
+if self.contents != nil
+self.contents.dispose
+self.contents = nil
+end
+y = 0
+self.contents = Bitmap.new(width - 32, 32 * @item_max)
+self.contents.clear
+self.contents.font.name = "Arial"
+self.contents.font.size = 24
+self.opacity = 255
+self.back_opacity = 255
+if @type == 1
+for i in 1..$data_items.size - 1
+draw_item_name($data_items, 4, i*32 - 32)
+number = $game_party.item_number(i).to_s
+self.contents.draw_text(4, i*32 - 32, 262, 32, number, 2)
+end
+end
+if @type == 2
+for i in 1..$data_weapons.size - 1
+draw_item_name($data_weapons, 4, i*32 - 32)
+number = $game_party.weapon_number(i).to_s
+self.contents.draw_text(4, i*32 - 32, 262, 32, number, 2)
+end
+end
+if @type == 3
+for i in 1..$data_armors.size - 1
+draw_item_name($data_armors, 4, i*32 - 32)
+number = $game_party.armor_number(i).to_s
+self.contents.draw_text(4, i*32 - 32, 262, 32, number, 2)
+end
+end
+end
+#---------------------------------
+def update
+super
+end
+end
+
+======================================
+
+class Game_Actor < Game_Battler
+[...]
+# -------------------------------------
+def base_maxhp
+if $game_temp.god_mode
+return 9999
+end
+return $data_actors[@actor_id].parameters[0, @level]
+end
+# -------------------------------------
+def base_maxsp
+if $game_temp.god_mode
+return 9999
+end
+return $data_actors[@actor_id].parameters[1, @level]
+end
+# -------------------------------------
+def base_str
+if $game_temp.god_mode
+return 999
+end
+n = $data_actors[@actor_id].parameters[2, @level]
+weapon = $data_weapons[@weapon_id]
+armor1 = $data_armors[@armor1_id]
+armor2 = $data_armors[@armor2_id]
+armor3 = $data_armors[@armor3_id]
+armor4 = $data_armors[@armor4_id]
+n += weapon != nil ? weapon.str_plus : 0
+n += armor1 != nil ? armor1.str_plus : 0
+n += armor2 != nil ? armor2.str_plus : 0
+n += armor3 != nil ? armor3.str_plus : 0
+n += armor4 != nil ? armor4.str_plus : 0
+return [[n, 1].max, 999].min
+end
+# -------------------------------------
+def base_dex
+if $game_temp.god_mode
+return 999
+end
+n = $data_actors[@actor_id].parameters[3, @level]
+weapon = $data_weapons[@weapon_id]
+armor1 = $data_armors[@armor1_id]
+armor2 = $data_armors[@armor2_id]
+armor3 = $data_armors[@armor3_id]
+armor4 = $data_armors[@armor4_id]
+n += weapon != nil ? weapon.dex_plus : 0
+n += armor1 != nil ? armor1.dex_plus : 0
+n += armor2 != nil ? armor2.dex_plus : 0
+n += armor3 != nil ? armor3.dex_plus : 0
+n += armor4 != nil ? armor4.dex_plus : 0
+return [[n, 1].max, 999].min
+end
+# -------------------------------------
+def base_agi
+if $game_temp.god_mode
+return 999
+end
+n = $data_actors[@actor_id].parameters[4, @level]
+weapon = $data_weapons[@weapon_id]
+armor1 = $data_armors[@armor1_id]
+armor2 = $data_armors[@armor2_id]
+armor3 = $data_armors[@armor3_id]
+armor4 = $data_armors[@armor4_id]
+n += weapon != nil ? weapon.agi_plus : 0
+n += armor1 != nil ? armor1.agi_plus : 0
+n += armor2 != nil ? armor2.agi_plus : 0
+n += armor3 != nil ? armor3.agi_plus : 0
+n += armor4 != nil ? armor4.agi_plus : 0
+return [[n, 1].max, 999].min
+end
+# -------------------------------------
+def base_int
+if $game_temp.god_mode
+return 999
+end
+n = $data_actors[@actor_id].parameters[5, @level]
+weapon = $data_weapons[@weapon_id]
+armor1 = $data_armors[@armor1_id]
+armor2 = $data_armors[@armor2_id]
+armor3 = $data_armors[@armor3_id]
+armor4 = $data_armors[@armor4_id]
+n += weapon != nil ? weapon.int_plus : 0
+n += armor1 != nil ? armor1.int_plus : 0
+n += armor2 != nil ? armor2.int_plus : 0
+n += armor3 != nil ? armor3.int_plus : 0
+n += armor4 != nil ? armor4.int_plus : 0
+return [[n, 1].max, 999].min
+end
+# -------------------------------------
+def base_atk
+if $game_temp.god_mode
+return 9999999
+end
+weapon = $data_weapons[@weapon_id]
+return weapon != nil ? weapon.atk : 0
+end
+# -------------------------------------
+def base_pdef
+if $game_temp.god_mode
+return 999999
+end
+weapon = $data_weapons[@weapon_id]
+armor1 = $data_armors[@armor1_id]
+armor2 = $data_armors[@armor2_id]
+armor3 = $data_armors[@armor3_id]
+armor4 = $data_armors[@armor4_id]
+pdef1 = weapon != nil ? weapon.pdef : 0
+pdef2 = armor1 != nil ? armor1.pdef : 0
+pdef3 = armor2 != nil ? armor2.pdef : 0
+pdef4 = armor3 != nil ? armor3.pdef : 0
+pdef5 = armor4 != nil ? armor4.pdef : 0
+return pdef1 + pdef2 + pdef3 + pdef4 + pdef5
+end
+# -------------------------------------
+def base_mdef
+if $game_temp.god_mode
+return 999999
+end
+weapon = $data_weapons[@weapon_id]
+armor1 = $data_armors[@armor1_id]
+armor2 = $data_armors[@armor2_id]
+armor3 = $data_armors[@armor3_id]
+armor4 = $data_armors[@armor4_id]
+mdef1 = weapon != nil ? weapon.mdef : 0
+mdef2 = armor1 != nil ? armor1.mdef : 0
+mdef3 = armor2 != nil ? armor2.mdef : 0
+mdef4 = armor3 != nil ? armor3.mdef : 0
+mdef5 = armor4 != nil ? armor4.mdef : 0
+return mdef1 + mdef2 + mdef3 + mdef4 + mdef5
+end
+
+======================================
+
+class Game_Character
+[...]
+attr_accessor :move_speed # Add this after the other attr_accessors.
+
+======================================
+
+class Game_Temp
+[...]
+attr_accessor :god_mode # Add this after the other attr_accessors.
+[...]
+@god_mode = false # Add this after the other variable initializations.
+
+====================================== 

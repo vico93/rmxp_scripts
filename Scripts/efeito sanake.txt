@@ -1,0 +1,430 @@
+nesse efeito os otro personagens da equipe seguem o heroi
+ai pessoal primeiro script meu aii...
+voce pega essa script e põe em cima do main:
+
+
+
+
+
+TRAIN_ACTOR_TRANSPARENT_SWITCH = true
+TRAIN_ACTOR_TRANSPARENT_SWITCHES_INDEX = 20
+# ------------------------------------
+DOWN_LEFT = 1
+DOWN_RIGHT = 3
+UP_LEFT = 7
+UP_RIGHT = 9
+JUMP = 5
+# ------------------------------------
+class Game_Party_Actor < Game_Character
+# ------------------------------------
+def initialize
+super()
+@through = true
+end
+# ------------------------------------
+def setup(actor)
+if actor != nil
+@character_name = actor.character_name
+@character_hue = actor.character_hue
+else
+@character_name = ""
+@character_hue = 0
+end
+@opacity = 255
+@blend_type = 0
+end
+# ------------------------------------
+def screen_z(height = 0)
+if $game_player.x == @x and $game_player.y == @y
+return $game_player.screen_z(height) - 1
+end
+super(height)
+end
+# ------------------------------------
+def move_down(turn_enabled = true)
+if turn_enabled
+turn_down
+end
+if passable?(@x, @y, Input::DOWN)
+turn_down
+@y += 1
+end
+end
+# ------------------------------------
+def move_left(turn_enabled = true)
+if turn_enabled
+turn_left
+end
+if passable?(@x, @y, Input::LEFT)
+turn_left
+@x -= 1
+end
+end
+# ------------------------------------
+def move_right(turn_enabled = true)
+if turn_enabled
+turn_right
+end
+if passable?(@x, @y, Input::RIGHT)
+turn_right
+@x += 1
+end
+end
+# ------------------------------------
+def move_up(turn_enabled = true)
+if turn_enabled
+turn_up
+end
+if passable?(@x, @y, Input::UP)
+turn_up
+@y -= 1
+end
+end
+# ------------------------------------
+def move_lower_left
+unless @direction_fix
+@direction = (@direction == Input::RIGHT ? Input::LEFT : @direction == 
+Input::UP ? Input::DOWN : @direction)
+end
+if (passable?(@x, @y, Input::DOWN) and passable?(@x, @y + 1, Input::LEFT)) 
+or
+(passable?(@x, @y, Input::LEFT) and passable?(@x - 1, @y, Input::DOWN))
+@x -= 1
+@y += 1
+end
+end
+# ------------------------------------
+def move_lower_right
+unless @direction_fix
+@direction = (@direction == Input::LEFT ? Input::RIGHT : @direction == 
+Input::UP ? Input::DOWN : @direction)
+end
+if (passable?(@x, @y, Input::DOWN) and passable?(@x, @y + 1, Input::RIGHT)) 
+or
+(passable?(@x, @y, Input::RIGHT) and passable?(@x + 1, @y, Input::DOWN))
+@x += 1
+@y += 1
+end
+end
+# ------------------------------------
+def move_upper_left
+unless @direction_fix
+@direction = (@direction == Input::RIGHT ? Input::LEFT : @direction == 
+Input::DOWN ? Input::UP : @direction)
+end
+if (passable?(@x, @y, Input::UP) and passable?(@x, @y - 1, Input::LEFT)) or
+(passable?(@x, @y, Input::LEFT) and passable?(@x - 1, @y, Input::UP))
+@x -= 1
+@y -= 1
+end
+end
+# ------------------------------------
+def move_upper_right
+unless @direction_fix
+@direction = (@direction == Input::LEFT ? Input::RIGHT : @direction == 
+Input::DOWN ? Input::UP : @direction)
+end
+if (passable?(@x, @y, Input::UP) and passable?(@x, @y - 1, Input::RIGHT)) or
+(passable?(@x, @y, Input::RIGHT) and passable?(@x + 1, @y, Input::UP))
+@x += 1
+@y -= 1
+end
+end
+# ------------------------------------
+def set_move_speed(move_speed)
+@move_speed = move_speed
+end
+end
+
+
+
+
+class Spriteset_Map
+# ------------------------------------
+def setup_actor_character_sprites?
+return @setup_actor_character_sprites_flag != nil
+end
+# ------------------------------------
+def setup_actor_character_sprites(characters)
+if !setup_actor_character_sprites?
+index_game_player = 0
+@character_sprites.each_index do |i|
+if @character_sprites[i].character.instance_of?(Game_Player)
+index_game_player = i
+break
+end
+end
+for character in characters.reverse
+@character_sprites.unshift(
+Sprite_Character.new(@viewport1, character)
+)
+end
+@setup_actor_character_sprites_flag = true
+end
+end
+end
+
+
+
+
+class Scene_Map
+# ------------------------------------
+def setup_actor_character_sprites(characters)
+@spriteset.setup_actor_character_sprites(characters)
+end
+end
+
+
+
+
+class Game_Party
+# ------------------------------------
+def set_transparent_actors(transparent)
+@transparent = transparent
+end
+# ------------------------------------
+def setup_actor_character_sprites
+if @characters == nil
+@characters = []
+for i in 1 .. 4
+@characters.push(Game_Party_Actor.new)
+end
+end
+if @actors_chach == nil
+@actors_chach = []
+end
+if @actors_chach != @actors
+@actors_chach = @actors.clone
+for i in 1 .. 4
+@characters[i - 1].setup(actors[i])
+end
+end
+if $scene.instance_of?(Scene_Map)
+$scene.setup_actor_character_sprites(@characters)
+end
+end
+# ------------------------------------
+def update_party_actors
+setup_actor_character_sprites
+transparent = $game_player.transparent
+if transparent == false
+if TRAIN_ACTOR_TRANSPARENT_SWITCH
+transparent = $game_switches[TRAIN_ACTOR_TRANSPARENT_SWITCHES_INDEX]
+else
+transparent = $game_player.transparent
+end
+end
+for character in @characters
+character.transparent = transparent
+character.set_move_speed($game_player.get_move_speed)
+character.update
+end
+end
+# ------------------------------------
+def moveto_party_actors( x, y )
+setup_actor_character_sprites
+for character in @characters
+character.moveto( x, y )
+end
+if @move_list == nil
+@move_list = []
+end
+for i in 0 .. 10
+@move_list[i] = nil
+end
+end
+def move_party_actors
+if @move_list == nil
+@move_list = []
+for i in 0 .. 10
+@move_list[i] = nil
+end
+end
+@move_list.each_index do |i|
+if @characters[i] != nil
+case @move_list[i].type
+when Input::DOWN
+@characters[i].move_down(@move_list[i].args[0])
+when Input::LEFT
+@characters[i].move_left(@move_list[i].args[0])
+when Input::RIGHT
+@characters[i].move_right(@move_list[i].args[0])
+when Input::UP
+@characters[i].move_up(@move_list[i].args[0])
+when DOWN_LEFT
+@characters[i].move_lower_left
+when DOWN_RIGHT
+@characters[i].move_lower_right
+when UP_LEFT
+@characters[i].move_upper_left
+when UP_RIGHT
+@characters[i].move_upper_right
+when JUMP
+@characters[i].jump(@move_list[i].args[0],@move_list[i].args[1])
+end
+end
+end
+end
+
+
+
+
+class Move_List_Element
+# ------------------------------------
+def initialize(type,args)
+@type = type
+@args = args
+end
+def type() return @type end
+def args() return @args end
+end
+# ------------------------------------
+def add_move_list(type,*args)
+@move_list.unshift(Move_List_Element.new(type,args)).pop
+end
+# ------------------------------------
+def move_down_party_actors(turn_enabled = true)
+move_party_actors
+add_move_list(Input::DOWN,turn_enabled)
+end
+# ------------------------------------
+def move_left_party_actors(turn_enabled = true)
+move_party_actors
+add_move_list(Input::LEFT,turn_enabled)
+end
+# ------------------------------------
+def move_right_party_actors(turn_enabled = true)
+move_party_actors
+add_move_list(Input::RIGHT,turn_enabled)
+end
+# ------------------------------------
+def move_up_party_actors(turn_enabled = true)
+move_party_actors
+add_move_list(Input::UP,turn_enabled)
+end
+# ------------------------------------
+def move_lower_left_party_actors
+move_party_actors
+add_move_list(DOWN_LEFT)
+end
+# ------------------------------------
+def move_lower_right_party_actors
+move_party_actors
+add_move_list(DOWN_RIGHT)
+end
+# ------------------------------------
+def move_upper_left_party_actors
+move_party_actors
+add_move_list(UP_LEFT)
+end
+# ------------------------------------
+def move_upper_right_party_actors
+move_party_actors
+add_move_list(UP_RIGHT)
+end
+# ------------------------------------
+def jump_party_actors(x_plus, y_plus)
+move_party_actors
+add_move_list(JUMP,x_plus, y_plus)
+end
+end
+
+
+
+
+module Game_Player_Module
+# ------------------------------------
+def update
+$game_party.update_party_actors
+super
+end
+# ------------------------------------
+def moveto( x, y )
+super
+$game_party.moveto_party_actors( x, y )
+end
+# ------------------------------------
+def move_down(turn_enabled = true)
+if passable?(@x, @y, Input::DOWN)
+$game_party.move_down_party_actors(turn_enabled)
+end
+super(turn_enabled)
+end
+# ------------------------------------
+def move_left(turn_enabled = true)
+if passable?(@x, @y, Input::LEFT)
+$game_party.move_left_party_actors(turn_enabled)
+end
+super(turn_enabled)
+end
+# ------------------------------------
+def move_right(turn_enabled = true)
+if passable?(@x, @y, Input::RIGHT)
+$game_party.move_right_party_actors(turn_enabled)
+end
+super(turn_enabled)
+end
+# ------------------------------------
+def move_up(turn_enabled = true)
+if passable?(@x, @y, Input::UP)
+$game_party.move_up_party_actors(turn_enabled)
+end
+super(turn_enabled)
+end
+# ------------------------------------
+def move_lower_left
+if (passable?(@x, @y, Input::DOWN) and passable?(@x, @y + 1, Input::LEFT)) 
+or
+(passable?(@x, @y, Input::LEFT) and passable?(@x - 1, @y, Input::DOWN))
+$game_party.move_lower_left_party_actors
+end
+super
+end
+# ------------------------------------
+def move_lower_right
+if (passable?(@x, @y, Input::DOWN) and passable?(@x, @y + 1, Input::RIGHT)) 
+or
+(passable?(@x, @y, Input::RIGHT) and passable?(@x + 1, @y, Input::DOWN))
+$game_party.move_lower_right_party_actors
+end
+super
+end
+# ------------------------------------
+def move_upper_left
+if (passable?(@x, @y, Input::UP) and passable?(@x, @y - 1, Input::LEFT)) or
+(passable?(@x, @y, Input::LEFT) and passable?(@x - 1, @y, Input::UP))
+$game_party.move_upper_left_party_actors
+end
+super
+end
+# ------------------------------------
+def move_upper_right
+if (passable?(@x, @y, Input::UP) and passable?(@x, @y - 1, Input::RIGHT)) or
+(passable?(@x, @y, Input::RIGHT) and passable?(@x + 1, @y, Input::UP))
+$game_party.move_upper_right_party_actors
+end
+super
+end
+# ------------------------------------
+def jump(x_plus, y_plus)
+new_x = @x + x_plus
+new_y = @y + y_plus
+if (x_plus == 0 and y_plus == 0) or passable?(new_x, new_y, 0)
+$game_party.jump_party_actors(x_plus, y_plus)
+end
+super(x_plus, y_plus)
+end
+# ------------------------------------
+def get_move_speed
+return @move_speed
+end
+end
+
+
+
+
+class Game_Player
+include Game_Player_Module
+end
+
+

@@ -1,0 +1,537 @@
+Características.
+Script permite ultrapassar os limites padrões dos parâmetros de Status 
+(LV,HP,SP,STR,DEX,Etc.), e também de dinheiro e o número de itens.
+
+NOTA – Cautela na hora de definir os números para o não tirar o balanço do 
+jogo (dificuldade), ou seja, você pode deixar o jogo insanamente difícil ou 
+fácil demais, este script é indicado para quem quer fazer chefes estilos 
+Weapons (Atma, Ruby, Crsytal, etc.) da serie FF onde os chefes são quase 
+impossíveis de se vencer.
+
+Utilização
+Procure estas linhas logo no começo do script.
+
+
+#---------------------------------------------------------------
+  LB_MAXHP_REVISE = 99999
+#---------------------------------------------------------------
+Limite de HP.
+
+#---------------------------------------------------------------
+  LB_MAXSP_REVISE = 99999
+#---------------------------------------------------------------
+Limite de SP.
+
+#---------------------------------------------------------------
+  LB_STR_REVISE  = 100
+#---------------------------------------------------------------
+Força.
+
+#---------------------------------------------------------------
+  LB_DEX_REVISE  = 100
+#---------------------------------------------------------------
+Dextreza.
+
+#---------------------------------------------------------------
+  LB_AGI_REVISE  = 100
+#---------------------------------------------------------------
+Agilidade.
+
+#---------------------------------------------------------------
+  LB_INT_REVISE  = 100
+#---------------------------------------------------------------
+Inteligência
+
+#---------------------------------------------------------------
+  LB_DAMAGE_CORRECT = true
+#---------------------------------------------------------------
+O parâmetro do dano será modificado?
+
+#---------------------------------------------------------------
+#-----------------------INIMIGO----------------------------
+#---------------------------------------------------------------
+
+#---------------------------------------------------------------
+  LB_ENEMY_HP_LIMIT = 999999999
+#---------------------------------------------------------------
+Limite maximo do HP
+
+#---------------------------------------------------------------
+  LB_ENEMY_SP_LIMIT = 9999999
+#---------------------------------------------------------------
+Limite maximo do SP
+
+#---------------------------------------------------------------
+  LB_ENEMY_ETC_LIMIT = 999999
+#---------------------------------------------------------------
+Definição dos parâmetros de Ataque, Def magia e Def Física.
+
+#---------------------------------------------------------------
+#-------------------------HERO------------------------------
+#---------------------------------------------------------------
+
+#---------------------------------------------------------------
+  LB_ACTOR_LV_LIMIT_DEFAULT = 512
+#---------------------------------------------------------------
+Nível maximo do seu personagem.
+
+#---------------------------------------------------------------
+  LB_ACTOR_EXP_LIMIT = 9999999999
+#---------------------------------------------------------------
+Experiência máxima de seu personagem.
+
+#---------------------------------------------------------------
+  LB_ACTOR_HP_LIMIT = 9999999
+#---------------------------------------------------------------
+Limite de HP maximo de seu personagem.
+
+#---------------------------------------------------------------
+  LB_ACTOR_SP_LIMIT = 9999999
+#---------------------------------------------------------------
+Limite de SP maximo de seu personagem.
+
+#---------------------------------------------------------------
+  LB_ACTOR_ETC_LIMIT = 99999
+#---------------------------------------------------------------
+Limite maximo para os parâmetros de status (STR,DEX,INT,AGL)
+
+#---------------------------------------------------------------
+  LB_ACTOR_LV100_CALC = "(p[2] - p[1]) * (lv - 99)"
+#---------------------------------------------------------------
+Definição do calculo para LV após o LV99.
+
+#---------------------------------------------------------------
+#--------------------------MISC------------------------------
+#---------------------------------------------------------------
+
+#---------------------------------------------------------------
+LB_GOLD_LIMIT = 99999999
+#---------------------------------------------------------------
+Limite maximo de dinheiro.
+
+#---------------------------------------------------------------
+  LB_ITEM_LIMIT = 99
+#---------------------------------------------------------------
+Limite maximo de item.
+
+Copie o script acima do script Main.
+
+Codigo:
+#######################################################################################
+############################# KGC 
+#####################################################
+#######################################################################################
+# O script permite que o jogo ultrapasse os parametros definidos
+#como HP,SP,STR,EXP,etc...
+#Mog Nota - Este script cancela o efeito do Else EX.
+#######################################################################################
+
+module KGC
+# O numero que colocar aqui será o valor que vai multiplicar
+#os parametros de status.
+  LB_MAXHP_REVISE = 99999  # MAXHP
+  LB_MAXSP_REVISE = 99999  # MAXSP
+  LB_STR_REVISE  = 100  # Força
+  LB_DEX_REVISE  = 100  # Dextreza
+  LB_AGI_REVISE  = 100  # Agilidade
+  LB_INT_REVISE  = 100  # Inteligência
+# O parâmetro do dano será modificado?
+  LB_DAMAGE_CORRECT = true
+########################
+########INIMIGO#########
+########################
+# Limite maximo do HP
+  LB_ENEMY_HP_LIMIT = 999999999
+# Limite maximo do SP
+  LB_ENEMY_SP_LIMIT = 9999999
+# Definição dos parâmetros de Ataque, Def magia e Def Física.
+  LB_ENEMY_ETC_LIMIT = 999999
+##########################
+##########HERO############
+##########################
+# Nível maximo do seu personagem.
+  LB_ACTOR_LV_LIMIT = [nil]
+  LB_ACTOR_LV_LIMIT_DEFAULT = 512
+# Experiência máxima de seu personagem.
+  LB_ACTOR_EXP_LIMIT = 9999999999
+# Limite de HP maximo de seu personagem.
+  LB_ACTOR_HP_LIMIT = 9999999
+# Limite de SP maximo de seu personagem.
+  LB_ACTOR_SP_LIMIT = 9999999
+# Definição de calculo para o LV-UP.
+  LB_ACTOR_ETC_LIMIT = 99999
+# Definição do calculo para LV após o LV99.
+  LB_ACTOR_LV100_CALC = "(p[2] - p[1]) * (lv - 99)"
+# Limite maximo de dinheiro.
+  LB_GOLD_LIMIT = 99999999
+# Limite maximo de item.
+  LB_ITEM_LIMIT = 99
+end
+#_________________________________________________________________
+
+$imported = {} if $imported == nil
+$imported["LimitBreak"] = true
+
+if $game_special_elements == nil
+  $game_special_elements = {}
+  $data_system = load_data("Data/System.rxdata")
+end
+
+module LimitBreak
+  def self.get_revised_battler(battler)
+    bt = battler.clone
+    hp_limit = battler.is_a?(RPG::Enemy) ?
+      KGC::LB_ENEMY_HP_LIMIT : KGC::LB_ACTOR_HP_LIMIT
+    sp_limit = battler.is_a?(RPG::Enemy) ?
+      KGC::LB_ENEMY_SP_LIMIT : KGC::LB_ACTOR_SP_LIMIT
+    etc_limit = battler.is_a?(RPG::Enemy) ?
+      KGC::LB_ENEMY_ETC_LIMIT : KGC::LB_ACTOR_ETC_LIMIT
+    bt.maxhp = [bt.maxhp * KGC::LB_MAXHP_REVISE / 100, hp_limit].min
+    bt.maxsp = [bt.maxsp * KGC::LB_MAXSP_REVISE / 100, sp_limit].min
+    bt.str  = [bt.str  * KGC::LB_STR_REVISE  / 100, etc_limit].min
+    bt.dex  = [bt.dex  * KGC::LB_DEX_REVISE  / 100, etc_limit].min
+    bt.agi  = [bt.agi  * KGC::LB_AGI_REVISE  / 100, etc_limit].min
+    bt.int  = [bt.int  * KGC::LB_INT_REVISE  / 100, etc_limit].min
+    return bt
+  end
+end
+class Game_Battler
+  def maxhp
+    n = [[base_maxhp + @maxhp_plus, 1].max, KGC::LB_ENEMY_HP_LIMIT].min
+    @states.each { |i| n *= $data_states[i].maxhp_rate / 100.0 }
+    n = [[Integer(n), 1].max, KGC::LB_ENEMY_HP_LIMIT].min
+    return n
+  end
+  def maxsp
+    n = [[base_maxsp + @maxsp_plus, 0].max, KGC::LB_ENEMY_SP_LIMIT].min
+    @states.each { |i| n *= $data_states[i].maxsp_rate / 100.0 }
+    n = [[Integer(n), 1].max, KGC::LB_ENEMY_SP_LIMIT].min
+    return n
+  end
+  def str
+    n = [[base_str + @str_plus, 1].max, KGC::LB_ENEMY_ETC_LIMIT].min
+    @states.each { |i| n *= $data_states[i].str_rate / 100.0 }
+    n = [[Integer(n), 1].max, KGC::LB_ENEMY_ETC_LIMIT].min
+    return n
+  end
+  def dex
+    n = [[base_dex + @dex_plus, 1].max, KGC::LB_ENEMY_ETC_LIMIT].min
+    @states.each { |i| n *= $data_states[i].dex_rate / 100.0 }
+    n = [[Integer(n), 1].max, KGC::LB_ENEMY_ETC_LIMIT].min
+    return n
+  end
+  def agi
+    n = [[base_agi + @agi_plus, 1].max, KGC::LB_ENEMY_ETC_LIMIT].min
+    @states.each { |i| n *= $data_states[i].agi_rate / 100.0 }
+    n = [[Integer(n), 1].max, KGC::LB_ENEMY_ETC_LIMIT].min
+    return n
+  end
+  def int
+    n = [[base_int + @int_plus, 1].max, KGC::LB_ENEMY_ETC_LIMIT].min
+    @states.each { |i| n *= $data_states[i].int_rate / 100.0 }
+    n = [[Integer(n), 1].max, KGC::LB_ENEMY_ETC_LIMIT].min
+    return n
+  end
+  def maxhp=(maxhp)
+    @maxhp_plus += maxhp - self.maxhp
+    @maxhp_plus = [[@maxhp_plus, -KGC::LB_ENEMY_HP_LIMIT].max, 
+KGC::LB_ENEMY_HP_LIMIT].min
+    @hp = [@hp, self.maxhp].min
+  end
+  def maxsp=(maxsp)
+    @maxsp_plus += maxsp - self.maxsp
+    @maxsp_plus = [[@maxsp_plus, -KGC::LB_ENEMY_SP_LIMIT].max, 
+KGC::LB_ENEMY_SP_LIMIT].min
+    @sp = [@sp, self.maxsp].min
+  end
+  def str=(str)
+    @str_plus += str - self.str
+    @str_plus = [[@str_plus, -KGC::LB_ENEMY_ETC_LIMIT].max, 
+KGC::LB_ENEMY_ETC_LIMIT].min
+  end
+  def dex=(dex)
+    @dex_plus += dex - self.dex
+    @dex_plus = [[@dex_plus, -KGC::LB_ENEMY_ETC_LIMIT].max, 
+KGC::LB_ENEMY_ETC_LIMIT].min
+  end
+  def agi=(agi)
+    @agi_plus += agi - self.agi
+    @agi_plus = [[@agi_plus, -KGC::LB_ENEMY_ETC_LIMIT].max, 
+KGC::LB_ENEMY_ETC_LIMIT].min
+  end
+  def int=(int)
+    @int_plus += int - self.int
+    @int_plus = [[@int_plus, -KGC::LB_ENEMY_ETC_LIMIT].max, 
+KGC::LB_ENEMY_ETC_LIMIT].min
+  end
+end
+class Game_Battler
+  alias attack_effect_KGC_LimitBreak attack_effect
+  def attack_effect(attacker)
+    last_hp = self.hp
+    result = attack_effect_KGC_LimitBreak(attacker)
+    if result && self.damage.is_a?(Numeric) && self.damage > 0
+      if KGC::LB_DAMAGE_CORRECT
+        self.damage = self.damage * KGC::LB_MAXHP_REVISE * 3 / 400
+        if $imported["BonusGauge"]
+          self.base_damage = self.base_damage * KGC::LB_MAXHP_REVISE * 3 / 
+400
+        end
+      end
+      self.hp = last_hp
+      self.hp -= self.damage
+    end
+    return result
+  end
+  alias skill_effect_KGC_LimitBreak skill_effect
+  def skill_effect(user, skill)
+    last_hp = self.hp
+    result = skill_effect_KGC_LimitBreak(user, skill)
+    if result && 
+!skill.element_set.include?($game_special_elements["spirit_id"]) &&
+        ($imported["RateDamage"] && KGC.check_damage_rate(skill) == nil) &&
+        ($imported["SPCostAlter"] && KGC.check_sp_rate(skill) == nil)
+      if self.damage.is_a?(Numeric)
+        if KGC::LB_DAMAGE_CORRECT
+          self.damage = self.damage * KGC::LB_MAXHP_REVISE * 3 / 400
+        end
+        self.base_damage = self.damage if $imported["BonusGauge"]
+        self.hp = last_hp
+        self.hp -= self.damage
+      end
+    end
+    return result
+  end
+end
+class Game_Actor < Game_Battler
+  def make_exp_list
+    actor = $data_actors[@actor_id]
+    @exp_list[1] = 0
+    pow_i = 2.4 + actor.exp_inflation / 100.0
+    (2..(self.final_level + 1)).each { |i|
+      if i > self.final_level
+        @exp_list[i] = 0
+      else
+        n = actor.exp_basis * ((i + 3) ** pow_i) / (5 ** pow_i)
+        @exp_list[i] = @exp_list[i-1] + Integer(n)
+      end
+    }
+  end
+  def exp=(exp)
+    if $imported["ExpGoldIncrease"]
+      inc_exp = 100
+      self.states.compact.each { |state|
+        if $data_states[state].name =~ $game_special_states["inc_exp"]
+          inc_exp *= $1.to_i
+          inc_exp /= 100
+        end
+      }
+      exp = exp * inc_exp / 100
+    end
+    @exp = [[exp, KGC::LB_ACTOR_EXP_LIMIT].min, 0].max
+    while @exp >= @exp_list[@level+1] and @exp_list[@level+1] > 0
+      @level += 1
+      $data_classes[@class_id].learnings.each { |j|
+        if j.level == @level
+          learn_skill(j.skill_id)
+        end
+      }
+    end
+    while @exp < @exp_list[@level]
+      @level -= 1
+    end
+    if @level >= 100
+      self.restore_parameter
+    end
+    @hp = [@hp, self.maxhp].min
+    @sp = [@sp, self.maxsp].min
+  end
+  def restore_parameter
+    return if @level < 100
+    $data_actors[@actor_id].parameters.resize(6, @level + 1)
+    (0..5).each { |k|
+      if $data_actors[@actor_id].parameters[k, @level] == 0
+        calc_text = KGC::LB_ACTOR_LV100_CALC
+        calc_text.gsub!(/lv/i) { "@level" }
+        calc_text.gsub!(/p\[(\d+)\]/i) { 
+"$data_actors[@actor_id].parameters[k, #{$1.to_i}]" }
+        n = $data_actors[@actor_id].parameters[k, 99]
+        n += eval(calc_text)
+        $data_actors[@actor_id].parameters[k, @level] = [n, 32767].min
+      end
+    }
+  end
+  def maxhp
+    n = [[base_maxhp + @maxhp_plus, 1].max, KGC::LB_ACTOR_HP_LIMIT].min
+    @states.each { |i| n *= $data_states[i].maxhp_rate / 100.0 }
+    n = [[Integer(n), 1].max, KGC::LB_ACTOR_HP_LIMIT].min
+    return n
+  end
+  def base_maxhp
+    restore_parameter if $data_actors[@actor_id].parameters[0, @level] == 
+nil
+    n = $data_actors[@actor_id].parameters[0, @level]
+    n *= KGC::LB_MAXHP_REVISE
+    return n / 100
+  end
+  def maxsp
+    n = [[base_maxsp + @maxsp_plus, 0].max, KGC::LB_ACTOR_SP_LIMIT].min
+    @states.each { |i| n *= $data_states[i].maxsp_rate / 100.0 }
+    n = [[Integer(n), 1].max, KGC::LB_ACTOR_SP_LIMIT].min
+    return n
+  end
+  def base_maxsp
+    restore_parameter if $data_actors[@actor_id].parameters[1, @level] == 
+nil
+    n = $data_actors[@actor_id].parameters[1, @level]
+    n *= KGC::LB_MAXSP_REVISE
+    return n / 100
+  end
+  alias base_str_KGC_LimitBreak base_str
+  def base_str
+    restore_parameter if $data_actors[@actor_id].parameters[2, @level] == 
+nil
+
+    if $imported["EquipExtension"]
+      n = base_str_KGC_LimitBreak
+    else
+      n = $data_actors[@actor_id].parameters[2, @level]
+      weapon = $data_weapons[@weapon_id]
+      n += weapon != nil ? weapon.str_plus : 0
+      (1..4).each { |i|
+        eval("armor = $data_armors[@armor#{i}_id];".concat(
+          "n += armor != nil ? armor.str_plus : 0"))
+      }
+    end
+    return [[n * KGC::LB_STR_REVISE / 100, 1].max, 
+KGC::LB_ACTOR_ETC_LIMIT].min
+  end
+  alias base_dex_KGC_LimitBreak base_dex
+  def base_dex
+    restore_parameter if $data_actors[@actor_id].parameters[3, @level] == 
+nil
+
+    if $imported["EquipExtension"]
+      n = base_dex_KGC_LimitBreak
+    else
+      n = $data_actors[@actor_id].parameters[3, @level]
+      weapon = $data_weapons[@weapon_id]
+      n += weapon != nil ? weapon.dex_plus : 0
+      (1..4).each { |i|
+        eval("armor = $data_armors[@armor#{i}_id];".concat(
+          "n += armor != nil ? armor.dex_plus : 0"))
+      }
+    end
+    return [[n * KGC::LB_DEX_REVISE / 100, 1].max, 
+KGC::LB_ACTOR_ETC_LIMIT].min
+  end
+  alias base_agi_KGC_LimitBreak base_agi
+  def base_agi
+    restore_parameter if $data_actors[@actor_id].parameters[4, @level] == 
+nil
+
+    if $imported["EquipExtension"]
+      n = base_agi_KGC_LimitBreak
+    else
+      n = $data_actors[@actor_id].parameters[4, @level]
+      weapon = $data_weapons[@weapon_id]
+      n += weapon != nil ? weapon.agi_plus : 0
+      (1..4).each { |i|
+        eval("armor = $data_armors[@armor#{i}_id];".concat(
+          "n += armor != nil ? armor.agi_plus : 0"))
+      }
+    end
+    return [[n * KGC::LB_AGI_REVISE / 100, 1].max, 
+KGC::LB_ACTOR_ETC_LIMIT].min
+  end
+  alias base_int_KGC_LimitBreak base_int
+  def base_int
+    restore_parameter if $data_actors[@actor_id].parameters[5, @level] == 
+nil
+
+    if $imported["EquipExtension"]
+      n = base_int_KGC_LimitBreak
+    else
+      n = $data_actors[@actor_id].parameters[5, @level]
+      weapon = $data_weapons[@weapon_id]
+      n += weapon != nil ? weapon.int_plus : 0
+      (1..4).each { |i|
+        eval("armor = $data_armors[@armor#{i}_id];".concat(
+          "n += armor != nil ? armor.int_plus : 0"))
+      }
+    end
+    return [[n * KGC::LB_INT_REVISE / 100, 1].max, 
+KGC::LB_ACTOR_ETC_LIMIT].min
+  end
+  def level=(level)
+    level = [[level, self.final_level].min, 1].max
+    self.exp = @exp_list[level]
+  end
+  def final_level
+    return KGC::LB_ACTOR_LV_LIMIT[@actor_id] != nil ? 
+KGC::LB_ACTOR_LV_LIMIT[@actor_id] : KGC::LB_ACTOR_LV_LIMIT_DEFAULT
+  end
+end
+class Game_Enemy < Game_Battler
+  alias base_maxhp_KGC_LimitBreak base_maxhp
+  def base_maxhp
+    n = base_maxhp_KGC_LimitBreak
+    n *= KGC::LB_MAXHP_REVISE
+    return n / 100
+  end
+  alias base_maxsp_KGC_LimitBreak base_maxsp
+  def base_maxsp
+    n = base_maxsp_KGC_LimitBreak
+    n *= KGC::LB_MAXSP_REVISE
+    return n / 100
+  end
+  alias base_str_KGC_LimitBreak base_str
+  def base_str
+    n = base_str_KGC_LimitBreak
+    n *= KGC::LB_STR_REVISE
+    return n / 100
+  end
+  alias base_dex_KGC_LimitBreak base_dex
+  def base_dex
+    n = base_dex_KGC_LimitBreak
+    n *= KGC::LB_DEX_REVISE
+    return n / 100
+  end
+  alias base_agi_KGC_LimitBreak base_agi
+  def base_agi
+    n = base_agi_KGC_LimitBreak
+    n *= KGC::LB_AGI_REVISE
+    return n / 100
+  end
+  alias base_int_KGC_LimitBreak base_int
+  def base_int
+    n = base_int_KGC_LimitBreak
+    n *= KGC::LB_INT_REVISE
+    return n / 100
+  end
+end
+class Game_Party
+  def gain_gold(n)
+    @gold = [[@gold + n, 0].max, KGC::LB_GOLD_LIMIT].min
+  end
+  def gain_item(item_id, n)
+    if item_id > 0
+      @items[item_id] = [[item_number(item_id) + n, 0].max, 
+KGC::LB_ITEM_LIMIT].min
+    end
+  end
+  def gain_weapon(weapon_id, n)
+    if weapon_id > 0
+      @weapons[weapon_id] = [[weapon_number(weapon_id) + n, 0].max, 
+KGC::LB_ITEM_LIMIT].min
+    end
+  end
+  def gain_armor(armor_id, n)
+    if armor_id > 0
+      @armors[armor_id] = [[armor_number(armor_id) + n, 0].max, 
+KGC::LB_ITEM_LIMIT].min
+    end
+  end
+end
+
+

@@ -1,0 +1,1043 @@
+Este é meu script favorito e resolvi colocá-lo aqui para vocês darem uma olhada e utilizarem o mesmo. O script foi criado por AcedentProne e o código de barras HP/MP/EXP criado por autores desconhecidos. 
+
+A instalação deste script é muito fácil e o resultado é ótimo ^_^ 
+
+InstalaçãoBem, vamos começar. Primeiro, atualize o Main Script. Substitua: 
+
+
+$fontface 
+$fontsize 
+
+ou 
+
+$fontname 
+$fontsize 
+
+ou 
+
+$defaultfonttype 
+$defaultfontsize 
+
+Por: 
+
+# Fontes usadas nas janelas 
+$defaultfonttype = $fontface = $fontname = Font.default_name = "Tahoma" 
+
+# Tamanho da fonte 
+$defaultfontsize = $fontsize = Font.default_size = 18 
+
+Agora, você pode usar as mesmas fontes nos scripts, não importando quais fontes são definidas em cada classe ou outro script. Notem os sinais de iguais no script, indicando que todas as variáveis configuradas terão o mesmo valor, no caso, a fonte Tahoma e abaixo, o valor 18. 
+
+Agora, crie uma nova página no editor de scripts e nomeie-o como FF7 Menu ou outro nome à seu gosto, então, cole este script: 
+
+#********************************************************* 
+# Menu Estilo Final Fantasy VII por AcedentProne 
+#********************************************************* 
+# 
+# Uso: 
+# 
+# Crie uma nova pasta dentro da pasta 'Characters' e nomeie-a como 'Faces' 
+# 
+# Adicionando Faces: adicione uma imagem 80x80 com o mesmo nome do characterset 
+# correspondente do personagem. 
+# 
+# Ex: 
+# 
+# Characters\SephirotChar.png 
+# Characters\Faces\SephirotChar.png 
+# 
+# 
+# Observações: 
+# 
+# Se você não quer usar faces, vá para a linha 94 
+# e delete o # da função 'draw_actor_graphic' 
+# e insira um # na frente da função 'draw_actor_face' 
+# 
+#======================================== 
+# Window_Base 
+#-------------------------------------------------------------------------------- 
+# Definindo funções para a 'base' 
+#======================================== 
+class Window_Base < Window 
+
+def draw_actor_face(actor, x, y) 
+face = RPG::Cache.character("Faces/" + actor.character_name, actor.character_hue) 
+fw = face.width 
+fh = face.height 
+src_rect = Rect.new(0, 0, fw, fh) 
+self.contents.blt(x - fw / 23, y - fh, face, src_rect) 
+end 
+end 
+def draw_actor_battler_graphic(actor, x, y) 
+bitmap = RPG::Cache.battler(actor.battler_name, actor.battler_hue) 
+cw = bitmap.width 
+ch = bitmap.height 
+src_rect = Rect.new(0, 0, cw, ch) 
+self.contents.blt(x - cw / 2, y - ch, bitmap, src_rect) 
+end 
+
+#======================================== 
+# Game_Map 
+#-------------------------------------------------------------------------------- 
+# Definindo funções para o mapa 
+#======================================== 
+class Game_Map 
+
+def name 
+$map_infos[@map_id] 
+end 
+end 
+
+#======================================== 
+# Window_Title 
+#-------------------------------------------------------------------------------- 
+# Definindo funções para o título 
+#======================================== 
+class Scene_Title 
+$map_infos = load_data("Data/MapInfos.rxdata") 
+for key in $map_infos.keys 
+$map_infos[key] = $map_infos[key].name 
+end 
+end 
+#============================================================================== 
+# Window_MenuStatus 
+#------------------------------------------------------------------------------ 
+# Configura a escolha 
+#============================================================================== 
+
+class Window_MenuStatus < Window_Selectable 
+#-------------------------------------------------------------------------- 
+# Inicialização 
+#-------------------------------------------------------------------------- 
+def initialize 
+super(0, 0, 560, 454) 
+self.contents = Bitmap.new(width - 32, height - 32) 
+self.contents.font.name = $defaultfonttype 
+self.contents.font.size = $defaultfontsize 
+refresh 
+self.active = false 
+self.index = -1 
+end 
+#-------------------------------------------------------------------------- 
+# Mostrando as informações na tela 
+#-------------------------------------------------------------------------- 
+def refresh 
+self.contents.clear 
+@item_max = $game_party.actors.size 
+for i in 0...$game_party.actors.size 
+x = 94 
+y = i * 110 
+actor = $game_party.actors[i] 
+draw_actor_face(actor, 12, y + 90) # Para retirar as faces, insira um "#" antes do draw_ desta linha 
+#draw_actor_graphic(actor, 48, y + 65) # e delete o "#" na frente do draw desta linha 
+draw_actor_name(actor, x, y) 
+draw_actor_class(actor, x + 72, y) 
+draw_actor_level(actor, x, y + 1 
+draw_actor_state(actor, x + 144, y) 
+draw_actor_exp(actor, x+ 144, y + 3 
+draw_actor_hp(actor, x, y + 3 
+draw_actor_sp(actor, x, y + 5 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# Atualização do Cursor 
+#-------------------------------------------------------------------------- 
+def update_cursor_rect 
+if @index < 0 
+self.cursor_rect.empty 
+else 
+self.cursor_rect.set(0, @index * 110, self.width - 32, 96) 
+end 
+end 
+end 
+
+#=======================================# 
+# Window_GameStats # 
+# por AcedentProne # 
+#------------------------------------------------------------------------------# 
+
+class Window_GameStats < Window_Base 
+def initialize 
+super(0, 0, 160, 60) 
+self.contents = Bitmap.new(width - 32, height - 32) 
+self.contents.font.name = $defaultfonttype 
+self.contents.font.size = $defaultfontsize 
+refresh 
+end 
+
+def refresh 
+self.contents.clear 
+# Mostra o dinheiro em vírgulas separadas, por Dubealex 
+case $game_party.gold 
+when 0..9999 
+gold = $game_party.gold 
+when 10000..99999 
+gold = $game_party.gold.to_s 
+array = gold.split(//) 
+gold = array[0].to_s+array[1].to_s+","+array[2].to_s+array[3].to_s+array[4].to_s 
+when 100000..999999 
+gold = $game_party.gold.to_s 
+array = gold.split(//) 
+gold = array[0].to_s+array[1].to_s+array[2].to_s+","+array[3].to_s+array[4].to_s+array[5].to_s 
+when 1000000..9999999 
+gold = $game_party.gold.to_s 
+array = gold.split(//) 
+gold = array[0].to_s+","+array[1].to_s+array[2].to_s+array[3].to_s+","+array[4].to_s+array[5].to_s+array[6].to_s 
+end 
+# Mostra o dinheiro 
+self.contents.font.color = system_color 
+gold_word = $data_system.words.gold.to_s 
+cx = contents.text_size(gold_word).width 
+cx2=contents.text_size(gold.to_s).width 
+self.contents.draw_text(4, 4, 120-cx-2, 32, gold_word) 
+self.contents.font.color = normal_color 
+self.contents.draw_text(124-cx2+1, 4, cx2, 32, gold.to_s, 2) 
+self.contents.font.color = system_color 
+# Mostra o tempo 
+@total_sec = Graphics.frame_count / Graphics.frame_rate 
+hour = @total_sec / 60 / 60 
+min = @total_sec / 60 % 60 
+sec = @total_sec % 60 
+text = sprintf("%02d:%02d:%02d", hour, min, sec) 
+self.contents.font.color = normal_color 
+self.contents.draw_text(4, -10, 120, 32, text, 2) 
+self.contents.font.color = system_color 
+self.contents.draw_text(4, -10, 120, 32, "Tempo") 
+end 
+#-------------------------------------------------------------------------- 
+# Atualização do contador 
+#-------------------------------------------------------------------------- 
+def update 
+super 
+if Graphics.frame_count / Graphics.frame_rate != @total_sec 
+refresh 
+end 
+end 
+end 
+
+#============================================================================== 
+# Window_Mapname 
+#------------------------------------------------------------------------------ 
+# Mostra o nome do mapa 
+#============================================================================== 
+
+class Window_Mapname < Window_Base 
+#-------------------------------------------------------------------------- 
+# Inicialização 
+#-------------------------------------------------------------------------- 
+def initialize 
+super(0, 0, 320, 44) 
+self.contents = Bitmap.new(width - 52, height - 32) 
+self.contents.font.name = $defaultfonttype 
+self.contents.font.size = $defaultfontsize 
+refresh 
+end 
+#-------------------------------------------------------------------------- 
+# Mostra as informações na tela 
+#-------------------------------------------------------------------------- 
+def refresh 
+self.contents.clear 
+
+# Nome do mapa 
+# map = $game_map.name 
+self.contents.font.color = system_color 
+self.contents.draw_text(4, -10, 220, 32, "Local") 
+self.contents.font.color = normal_color 
+self.contents.draw_text(175, -10, 80, 32, $game_map.name) 
+end 
+end 
+
+#============================================================================== 
+# Scene_Menu 
+#------------------------------------------------------------------------------ 
+# Layout do menu do Final Fantasy 7, por AcedentProne. 
+#============================================================================== 
+
+class Scene_Menu 
+#---------------------------------------------------------- 
+attr_reader :status_window 
+#/---------------------------------------------------------- 
+
+def initialize(menu_index = 0) 
+@menu_index = menu_index 
+end 
+def main 
+
+s1 = $data_system.words.item 
+s2 = $data_system.words.skill 
+s3 = $data_system.words.equip 
+s4 = "Status" 
+s5 = "Salvar" 
+s6 = "Sair" 
+
+#---------------------------------------------------------- 
+# Menu de Comandos 
+@command_window = Window_Command.new(160, [s1, s2, s3, s4, s5, s6]) 
+@command_window.x = 640 - @command_window.width 
+@command_window.y = 480 
+@command_window.z = 110 
+@command_window.index = @menu_index 
+# Se certas opções estão disponíveis 
+if $game_party.actors.size == 0 
+@command_window.disable_item(0) 
+@command_window.disable_item(1) 
+@command_window.disable_item(2) 
+@command_window.disable_item(3) 
+end 
+if $game_system.save_disabled 
+@command_window.disable_item(4) 
+end 
+# Mostrando janela de localização 
+@map = Window_Mapname.new 
+@map.x = 640 - @map.width 
+@map.y = 0 - @map.height - 1 
+@map.z = 110 
+# Mostrando status do jogo 
+@game_stats_window = Window_GameStats.new 
+@game_stats_window.x = 0 - @game_stats_window.width 
+@game_stats_window.y = 480 - @map.height - @game_stats_window.height 
+@game_stats_window.z =110 
+
+# Mostrando status no menu 
+@status_window = Window_MenuStatus.new 
+@status_window.x = 640 
+@status_window.y = 8 
+@status_window.z = 100 
+
+
+Graphics.transition 
+loop do 
+Graphics.update 
+Input.update 
+update 
+if $scene != self 
+break 
+end 
+end 
+Graphics.freeze 
+@command_window.dispose 
+@game_stats_window.dispose 
+@status_window.dispose 
+@map.dispose 
+end 
+#-------------------------------------------------------------------------- 
+# Definindo o delay 
+#-------------------------------------------------------------------------- 
+def delay(seconds) 
+for i in 0...(seconds * 1) 
+sleep 0.01 
+Graphics.update 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# Atualizando 
+#-------------------------------------------------------------------------- 
+def update 
+@command_window.update 
+@game_stats_window.update 
+@status_window.update 
+@map.update 
+# Movendo janelas 
+gamepos = 640 - @game_stats_window.width 
+mappos = 480 - @map.height - 1 
+if @command_window.y > 0 
+@command_window.y -= 60 
+end 
+if @game_stats_window.x < gamepos 
+@game_stats_window.x += 80 
+end 
+if @map.y < mappos 
+@map.y += 80 
+end 
+if @status_window.x > 0 
+@status_window.x -= 80 
+end 
+# Verificando se as opções estão ativas 
+if @command_window.active 
+update_command 
+return 
+end 
+if @status_window.active 
+update_status 
+return 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# Atualizando a seleção de comandos 
+#-------------------------------------------------------------------------- 
+def update_command 
+# Verifica se o botão B foi pressionado 
+if Input.trigger?(Input::B) 
+# Executa o SE definido 
+$game_system.se_play($data_system.cancel_se) 
+# Loop para as janelas saírem 
+loop do 
+if @command_window.y < 480 
+@command_window.y += 40 
+end 
+if @game_stats_window.x > 0 - @game_stats_window.width 
+@game_stats_window.x -= 40 
+end 
+if @map.y > 0 - @map.height 
+@map.y -= 40 
+end 
+if @status_window.x < 640 
+@status_window.x += 40 
+end 
+delay(0.5) 
+if @status_window.x >= 640 
+break 
+end 
+end 
+# Vai para o mapa 
+$scene = Scene_Map.new 
+return 
+end 
+# Verifica se o botão C foi pressionado 
+if Input.trigger?(Input::C) 
+# Verifica o tamanho do herói 
+if $game_party.actors.size == 0 and @command_window.index < 4 
+# Executa SE 
+$game_system.se_play($data_system.buzzer_se) 
+return 
+end 
+case @command_window.index 
+when 0 
+$game_system.se_play($data_system.decision_se) 
+loop do 
+if @command_window.y < 480 
+@command_window.y += 40 
+end 
+if @game_stats_window.x > 0 - @game_stats_window.width 
+@game_stats_window.x -= 40 
+end 
+if @map.y > 0 - @map.height 
+@map.y -= 40 
+end 
+if @status_window.x < 640 
+@status_window.x += 40 
+end 
+delay(0.5) 
+if @status_window.x >= 640 
+break 
+end 
+end 
+$scene = Scene_Item.new 
+when 1 
+$game_system.se_play($data_system.decision_se) 
+@command_window.active = false 
+@status_window.active = true 
+@status_window.index = 0 
+when 2 
+$game_system.se_play($data_system.decision_se) 
+@command_window.active = false 
+@status_window.active = true 
+@status_window.index = 0 
+when 3 
+$game_system.se_play($data_system.decision_se) 
+@command_window.active = false 
+@status_window.active = true 
+@status_window.index = 0 
+when 4 
+if $game_system.save_disabled 
+$game_system.se_play($data_system.buzzer_se) 
+return 
+end 
+$game_system.se_play($data_system.decision_se) 
+loop do 
+if @command_window.y < 480 
+@command_window.y += 40 
+end 
+if @game_stats_window.x > 0 - @game_stats_window.width 
+@game_stats_window.x -= 40 
+end 
+if @map.y > 0 - @map.height 
+@map.y -= 40 
+end 
+if @status_window.x < 640 
+@status_window.x += 40 
+end 
+delay(0.5) 
+if @status_window.x >= 640 
+break 
+end 
+end 
+$scene = Scene_Save.new 
+when 5 
+$game_system.se_play($data_system.decision_se) 
+loop do 
+if @command_window.y < 480 
+@command_window.y += 40 
+end 
+if @game_stats_window.x > 0 - @game_stats_window.width 
+@game_stats_window.x -= 40 
+end 
+if @map.y > 0 - @map.height 
+@map.y -= 40 
+end 
+if @status_window.x < 640 
+@status_window.x += 40 
+end 
+delay(0.5) 
+if @status_window.x >= 640 
+break 
+end 
+end 
+$scene = Scene_End.new 
+end 
+return 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# Atualiza a tela de status 
+#-------------------------------------------------------------------------- 
+def update_status 
+if Input.trigger?(Input::B) 
+$game_system.se_play($data_system.cancel_se) 
+@command_window.active = true 
+@status_window.active = false 
+@status_window.index = -1 
+return 
+end 
+if Input.trigger?(Input::C) 
+case @command_window.index 
+when 1 
+if $game_party.actors[@status_window.index].restriction >= 2 
+$game_system.se_play($data_system.buzzer_se) 
+return 
+end 
+$game_system.se_play($data_system.decision_se) 
+loop do 
+if @command_window.y < 480 
+@command_window.y += 40 
+end 
+if @game_stats_window.x > 0 - @game_stats_window.width 
+@game_stats_window.x -= 40 
+end 
+if @map.y > 0 - @map.height 
+@map.y -= 40 
+end 
+if @status_window.x < 640 
+@status_window.x += 40 
+end 
+delay(0.5) 
+if @status_window.x >= 640 
+break 
+end 
+end 
+$scene = Scene_Skill.new(@status_window.index) 
+when 2 
+$game_system.se_play($data_system.decision_se) 
+loop do 
+if @command_window.y < 480 
+@command_window.y += 40 
+end 
+if @game_stats_window.x > 0 - @game_stats_window.width 
+@game_stats_window.x -= 40 
+end 
+if @map.y > 0 - @map.height 
+@map.y -= 40 
+end 
+if @status_window.x < 640 
+@status_window.x += 40 
+end 
+delay(0.5) 
+if @status_window.x >= 640 
+break 
+end 
+end 
+$scene = Scene_Equip.new(@status_window.index) 
+when 3 
+$game_system.se_play($data_system.decision_se) 
+loop do 
+if @command_window.y < 480 
+@command_window.y += 40 
+end 
+if @game_stats_window.x > 0 - @game_stats_window.width 
+@game_stats_window.x -= 40 
+end 
+if @map.y > 0 - @map.height 
+@map.y -= 40 
+end 
+if @status_window.x < 640 
+@status_window.x += 40 
+end 
+delay(0.5) 
+if @status_window.x >= 640 
+break 
+end 
+end 
+$scene = Scene_Status.new(@status_window.index) 
+end 
+return 
+end 
+end 
+end 
+
+Note nesse script que você tem duas opções: usar faces ou não usar faces. 
+
+Para usar faces, você precisará criar uma pasta chamada "Faces" no diretório "Characters". As faces que você pôr nessa pasta devem ser associadas aos heróis. Como? Simples, basta pôr o nome do Character do herói igual ao nome do Face. Exemplo: 
+
+Characters\SephirotChar.png 
+Characters\Faces\SephirotChar.png 
+
+Se não quiser usar faces, vá até a linha 94 (ou aproximada) e remova o # do comando: 
+
+#draw_actor_graphic(actor, 48, y + 65) 
+
+E adicione um # no comando: 
+
+draw_actor_face(actor, 12, y + 90) 
+
+Pronto. Mas ainda falta um script. É o script que possui os dados das barras de HP/MP/EXP. Insira este script abaixo do script acima, nomei-o como HP/SP/EXP. 
+
+# HP/SP/EXPƒQ[ƒW•\¦ƒXƒNƒŠƒvƒg Ver 1.00 
+# ”z•zŒ³EƒTƒ|[ƒgURL 
+# http://members.jcom.home.ne.jp/cogwheel/ 
+
+#============================================================================== 
+# ¡ Game_Actor 
+#------------------------------------------------------------------------------ 
+# @ƒAƒNƒ^[‚ğˆµ‚¤ƒNƒ‰ƒX‚Å‚·B‚±‚ÌƒNƒ‰ƒX‚Í Game_Actors ƒNƒ‰ƒX ($game_actors) 
+# ‚Ì“à•”‚Åg—p‚³‚êAGame_Party ƒNƒ‰ƒX ($game_party) ‚©‚ç‚àQÆ‚³‚ê‚Ü‚·B 
+#============================================================================== 
+
+class Game_Actor < Game_Battler 
+def now_exp 
+return @exp - @exp_list[@level] 
+end 
+def next_exp 
+return @exp_list[@level+1] > 0 ? @exp_list[@level+1] - @exp_list[@level] : 0 
+end 
+end 
+
+#============================================================================== 
+# ¡ Window_Base 
+#------------------------------------------------------------------------------ 
+# @ƒQ[ƒ€’†‚Ì‚·‚×‚Ä‚ÌƒEƒBƒ“ƒhƒE‚ÌƒX[ƒp[ƒNƒ‰ƒX‚Å‚·B 
+#============================================================================== 
+
+class Window_Base < Window 
+#-------------------------------------------------------------------------- 
+# œ HP ƒQ[ƒW‚Ì•`‰æ 
+#-------------------------------------------------------------------------- 
+# ƒIƒŠƒWƒiƒ‹‚ÌHP•`‰æ‚ğ draw_actor_hp_original ‚Æ–¼‘O•ÏX 
+alias :draw_actor_hp_original :draw_actor_hp 
+def draw_actor_hp(actor, x, y, width = 144) 
+# •Ï”rate‚É Œ»İ‚ÌHP/MHP‚ğ‘ã“ü 
+if actor.maxhp != 0 
+rate = actor.hp.to_f / actor.maxhp 
+else 
+rate = 0 
+end 
+# plus_x:XÀ•W‚ÌˆÊ’u•â³ rate_x:XÀ•W‚ÌˆÊ’u•â³(%) plus_y:YÀ•W‚ÌˆÊ’u•â³ 
+# plus_width:•‚Ì•â³ rate_width:•‚Ì•â³(%) height:c• 
+# align1:•`‰æƒ^ƒCƒv1 0:¶‹l‚ß 1:’†‰›‘µ‚¦ 2:‰E‹l‚ß 
+# align2:•`‰æƒ^ƒCƒv2 0:ã‹l‚ß 1:’†‰›‘µ‚¦ 2:‰º‹l‚ß 
+# align3:ƒQ[ƒWƒ^ƒCƒv 0:¶‹l‚ß 1:‰E‹l‚ß 
+plus_x = 0 
+rate_x = 0 
+plus_y = 25 
+plus_width = 0 
+rate_width = 50 
+height = 7 
+align1 = 0 
+align2 = 1 
+align3 = 0 
+# ƒOƒ‰ƒf[ƒVƒ‡ƒ“İ’è grade1:‹óƒQ[ƒW grade2:ÀƒQ[ƒW 
+# (0:‰¡‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“ 1:c‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“ 2:Î‚ß‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“(Œƒd)j 
+grade1 = 1 
+grade2 = 0 
+# Fİ’èBcolor1:ŠO˜gCcolor2:’†˜g 
+# color3:‹óƒQ[ƒWƒ_[ƒNƒJƒ‰[Ccolor4:‹óƒQ[ƒWƒ‰ƒCƒgƒJƒ‰[ 
+# color5:ÀƒQ[ƒWƒ_[ƒNƒJƒ‰[Ccolor6:ÀƒQ[ƒWƒ‰ƒCƒgƒJƒ‰[ 
+color1 = Color.new(0, 0, 0, 192) 
+color2 = Color.new(255, 255, 192, 192) 
+color3 = Color.new(0, 0, 0, 192) 
+color4 = Color.new(64, 0, 0, 192) 
+color5 = Color.new(80 - 24 * rate, 80 * rate, 14 * rate, 192) 
+color6 = Color.new(240 - 72 * rate, 240 * rate, 62 * rate, 192) 
+# •Ï”sp‚É•`‰æ‚·‚éƒQ[ƒW‚Ì•‚ğ‘ã“ü 
+if actor.maxhp != 0 
+hp = (width + plus_width) * actor.hp * rate_width / 100 / actor.maxhp 
+else 
+hp = 0 
+end 
+# ƒQ[ƒW‚Ì•`‰æ 
+gauge_rect(x + plus_x + width * rate_x / 100, y + plus_y, 
+width, plus_width + width * rate_width / 100, 
+height, hp, align1, align2, align3, 
+color1, color2, color3, color4, color5, color6, grade1, grade2) 
+# ƒIƒŠƒWƒiƒ‹‚ÌHP•`‰æˆ—‚ğŒÄ‚Ño‚µ 
+draw_actor_hp_original(actor, x, y, width) 
+end 
+#-------------------------------------------------------------------------- 
+# œ SP ƒQ[ƒW‚Ì•`‰æ 
+#-------------------------------------------------------------------------- 
+# ƒIƒŠƒWƒiƒ‹‚ÌSP•`‰æ‚ğ draw_actor_sp_original ‚Æ–¼‘O•ÏX 
+alias :draw_actor_sp_original :draw_actor_sp 
+def draw_actor_sp(actor, x, y, width = 144) 
+# •Ï”rate‚É Œ»İ‚ÌSP/MSP‚ğ‘ã“ü 
+if actor.maxsp != 0 
+rate = actor.sp.to_f / actor.maxsp 
+else 
+rate = 1 
+end 
+# plus_x:XÀ•W‚ÌˆÊ’u•â³ rate_x:XÀ•W‚ÌˆÊ’u•â³(%) plus_y:YÀ•W‚ÌˆÊ’u•â³ 
+# plus_width:•‚Ì•â³ rate_width:•‚Ì•â³(%) height:c• 
+# align1:•`‰æƒ^ƒCƒv1 0:¶‹l‚ß 1:’†‰›‘µ‚¦ 2:‰E‹l‚ß 
+# align2:•`‰æƒ^ƒCƒv2 0:ã‹l‚ß 1:’†‰›‘µ‚¦ 2:‰º‹l‚ß 
+# align3:ƒQ[ƒWƒ^ƒCƒv 0:¶‹l‚ß 1:‰E‹l‚ß 
+plus_x = 0 
+rate_x = 0 
+plus_y = 25 
+plus_width = 0 
+rate_width = 50 
+height = 7 
+align1 = 0 
+align2 = 1 
+align3 = 0 
+# ƒOƒ‰ƒf[ƒVƒ‡ƒ“İ’è grade1:‹óƒQ[ƒW grade2:ÀƒQ[ƒW 
+# (0:‰¡‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“ 1:c‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“ 2:Î‚ß‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“(Œƒd)j 
+grade1 = 1 
+grade2 = 0 
+# Fİ’èBcolor1:ŠO˜gCcolor2:’†˜g 
+# color3:‹óƒQ[ƒWƒ_[ƒNƒJƒ‰[Ccolor4:‹óƒQ[ƒWƒ‰ƒCƒgƒJƒ‰[ 
+# color5:ÀƒQ[ƒWƒ_[ƒNƒJƒ‰[Ccolor6:ÀƒQ[ƒWƒ‰ƒCƒgƒJƒ‰[ 
+color1 = Color.new(0, 0, 0, 192) 
+color2 = Color.new(255, 255, 192, 192) 
+color3 = Color.new(0, 0, 0, 192) 
+color4 = Color.new(0, 64, 0, 192) 
+color5 = Color.new(14 * rate, 80 - 24 * rate, 80 * rate, 192) 
+color6 = Color.new(62 * rate, 240 - 72 * rate, 240 * rate, 192) 
+# •Ï”sp‚É•`‰æ‚·‚éƒQ[ƒW‚Ì•‚ğ‘ã“ü 
+if actor.maxsp != 0 
+sp = (width + plus_width) * actor.sp * rate_width / 100 / actor.maxsp 
+else 
+sp = (width + plus_width) * rate_width / 100 
+end 
+# ƒQ[ƒW‚Ì•`‰æ 
+gauge_rect(x + plus_x + width * rate_x / 100, y + plus_y, 
+width, plus_width + width * rate_width / 100, 
+height, sp, align1, align2, align3, 
+color1, color2, color3, color4, color5, color6, grade1, grade2) 
+# ƒIƒŠƒWƒiƒ‹‚ÌSP•`‰æˆ—‚ğŒÄ‚Ño‚µ 
+draw_actor_sp_original(actor, x, y, width) 
+end 
+#-------------------------------------------------------------------------- 
+# œ EXP ƒQ[ƒW‚Ì•`‰æ 
+#-------------------------------------------------------------------------- 
+# ƒIƒŠƒWƒiƒ‹‚ÌEXP•`‰æ‚ğ draw_actor_sp_original ‚Æ–¼‘O•ÏX 
+alias :draw_actor_exp_original :draw_actor_exp 
+def draw_actor_exp(actor, x, y, width = 204) 
+# •Ï”rate‚É Œ»İ‚Ìexp/nextexp‚ğ‘ã“ü 
+if actor.next_exp != 0 
+rate = actor.now_exp.to_f / actor.next_exp 
+else 
+rate = 1 
+end 
+# plus_x:XÀ•W‚ÌˆÊ’u•â³ rate_x:XÀ•W‚ÌˆÊ’u•â³(%) plus_y:YÀ•W‚ÌˆÊ’u•â³ 
+# plus_width:•‚Ì•â³ rate_width:•‚Ì•â³(%) height:c• 
+# align1:•`‰æƒ^ƒCƒv1 0:¶‹l‚ß 1:’†‰›‘µ‚¦ 2:‰E‹l‚ß 
+# align2:•`‰æƒ^ƒCƒv2 0:ã‹l‚ß 1:’†‰›‘µ‚¦ 2:‰º‹l‚ß 
+# align3:ƒQ[ƒWƒ^ƒCƒv 0:¶‹l‚ß 1:‰E‹l‚ß 
+plus_x = 0 
+rate_x = 0 
+plus_y = 25 
+plus_width = 0 
+rate_width = 50 
+height = 7 
+align1 = 0 
+align2 = 1 
+align3 = 0 
+# ƒOƒ‰ƒf[ƒVƒ‡ƒ“İ’è grade1:‹óƒQ[ƒW grade2:ÀƒQ[ƒW 
+# (0:‰¡‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“ 1:c‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“ 2:Î‚ß‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“(Œƒd)j 
+grade1 = 1 
+grade2 = 0 
+# Fİ’èBcolor1:ŠO˜gCcolor2:’†˜g 
+# color3:‹óƒQ[ƒWƒ_[ƒNƒJƒ‰[Ccolor4:‹óƒQ[ƒWƒ‰ƒCƒgƒJƒ‰[ 
+# color5:ÀƒQ[ƒWƒ_[ƒNƒJƒ‰[Ccolor6:ÀƒQ[ƒWƒ‰ƒCƒgƒJƒ‰[ 
+color1 = Color.new(0, 0, 0, 192) 
+color2 = Color.new(255, 255, 192, 192) 
+color3 = Color.new(0, 0, 0, 192) 
+color4 = Color.new(64, 0, 0, 192) 
+color5 = Color.new(80 * rate, 80 - 80 * rate ** 2, 80 - 80 * rate, 192) 
+color6 = Color.new(240 * rate, 240 - 240 * rate ** 2, 240 - 240 * rate, 192) 
+# •Ï”exp‚É•`‰æ‚·‚éƒQ[ƒW‚Ì•‚ğ‘ã“ü 
+if actor.next_exp != 0 
+exp = (width + plus_width) * actor.now_exp * rate_width / 
+100 / actor.next_exp 
+else 
+exp = (width + plus_width) * rate_width / 100 
+end 
+# ƒQ[ƒW‚Ì•`‰æ 
+gauge_rect(x + plus_x + width * rate_x / 100, y + plus_y, 
+width, plus_width + width * rate_width / 100, 
+height, exp, align1, align2, align3, 
+color1, color2, color3, color4, color5, color6, grade1, grade2) 
+# ƒIƒŠƒWƒiƒ‹‚ÌEXP•`‰æˆ—‚ğŒÄ‚Ño‚µ 
+draw_actor_exp_original(actor, x, y) 
+end 
+#-------------------------------------------------------------------------- 
+# œ ƒQ[ƒW‚Ì•`‰æ 
+#-------------------------------------------------------------------------- 
+def gauge_rect(x, y, rect_width, width, height, gauge, align1, align2, align3, 
+color1, color2, color3, color4, color5, color6, grade1, grade2) 
+case align1 
+when 1 
+x += (rect_width - width) / 2 
+when 2 
+x += rect_width - width 
+end 
+case align2 
+when 1 
+y -= height / 2 
+when 2 
+y -= height 
+end 
+# ˜g•`‰æ 
+self.contents.fill_rect(x, y, width, height, color1) 
+self.contents.fill_rect(x + 1, y + 1, width - 2, height - 2, color2) 
+if align3 == 0 
+if grade1 == 2 
+grade1 = 3 
+end 
+if grade2 == 2 
+grade2 = 3 
+end 
+end 
+if (align3 == 1 and grade1 == 0) or grade1 > 0 
+color = color3 
+color3 = color4 
+color4 = color 
+end 
+if (align3 == 1 and grade2 == 0) or grade2 > 0 
+color = color5 
+color5 = color6 
+color6 = color 
+end 
+# ‹óƒQ[ƒW‚Ì•`‰æ 
+self.contents.gradation_rect(x + 2, y + 2, width - 4, height - 4, 
+color3, color4, grade1) 
+if align3 == 1 
+x += width - gauge 
+end 
+# ÀƒQ[ƒW‚Ì•`‰æ 
+self.contents.gradation_rect(x + 2, y + 2, gauge - 4, height - 4, 
+color5, color6, grade2) 
+end 
+end 
+
+#------------------------------------------------------------------------------ 
+# @BitmapƒNƒ‰ƒX‚ÉV‚½‚È‹@”\‚ğ’Ç‰Á‚µ‚Ü‚·B 
+#============================================================================== 
+
+class Bitmap 
+#-------------------------------------------------------------------------- 
+# œ ‹éŒ`‚ğƒOƒ‰ƒf[ƒVƒ‡ƒ“•\¦ 
+# color1 : ƒXƒ^[ƒgƒJƒ‰[ 
+# color2 : ƒGƒ“ƒhƒJƒ‰[ 
+# align : 0:‰¡‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“ 
+# 1:c‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“ 
+# 2:Î‚ß‚ÉƒOƒ‰ƒf[ƒVƒ‡ƒ“iŒƒd‚É‚Â‚«’ˆÓj 
+#-------------------------------------------------------------------------- 
+def gradation_rect(x, y, width, height, color1, color2, align = 0) 
+if align == 0 
+for i in x...x + width 
+red = color1.red + (color2.red - color1.red) * (i - x) / (width - 1) 
+green = color1.green + 
+(color2.green - color1.green) * (i - x) / (width - 1) 
+blue = color1.blue + 
+(color2.blue - color1.blue) * (i - x) / (width - 1) 
+alpha = color1.alpha + 
+(color2.alpha - color1.alpha) * (i - x) / (width - 1) 
+color = Color.new(red, green, blue, alpha) 
+fill_rect(i, y, 1, height, color) 
+end 
+elsif align == 1 
+for i in y...y + height 
+red = color1.red + 
+(color2.red - color1.red) * (i - y) / (height - 1) 
+green = color1.green + 
+(color2.green - color1.green) * (i - y) / (height - 1) 
+blue = color1.blue + 
+(color2.blue - color1.blue) * (i - y) / (height - 1) 
+alpha = color1.alpha + 
+(color2.alpha - color1.alpha) * (i - y) / (height - 1) 
+color = Color.new(red, green, blue, alpha) 
+fill_rect(x, i, width, 1, color) 
+end 
+elsif align == 2 
+for i in x...x + width 
+for j in y...y + height 
+red = color1.red + (color2.red - color1.red) * 
+((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2 
+green = color1.green + (color2.green - color1.green) * 
+((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2 
+blue = color1.blue + (color2.blue - color1.blue) * 
+((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2 
+alpha = color1.alpha + (color2.alpha - color1.alpha) * 
+((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2 
+color = Color.new(red, green, blue, alpha) 
+set_pixel(i, j, color) 
+end 
+end 
+elsif align == 3 
+for i in x...x + width 
+for j in y...y + height 
+red = color1.red + (color2.red - color1.red) * 
+((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2 
+green = color1.green + (color2.green - color1.green) * 
+((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2 
+blue = color1.blue + (color2.blue - color1.blue) * 
+((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2 
+alpha = color1.alpha + (color2.alpha - color1.alpha) * 
+((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2 
+color = Color.new(red, green, blue, alpha) 
+set_pixel(i, j, color) 
+end 
+end 
+end 
+end 
+end 
+
+#============================================================================== 
+# ¡ Spriteƒ‚ƒWƒ…[ƒ‹ 
+#------------------------------------------------------------------------------ 
+# @ƒAƒjƒ[ƒVƒ‡ƒ“‚ÌŠÇ—‚ğs‚¤ƒ‚ƒWƒ…[ƒ‹‚Å‚·B 
+#============================================================================== 
+
+module RPG 
+class Sprite < ::Sprite 
+def damage(value, critical) 
+dispose_damage 
+if value.is_a?(Numeric) 
+damage_string = value.abs.to_s 
+else 
+damage_string = value.to_s 
+end 
+bitmap = Bitmap.new(160, 4 
+bitmap.font.name = "Arial Black" 
+bitmap.font.size = 32 
+bitmap.font.color.set(0, 0, 0) 
+bitmap.draw_text(-1, 12-1, 160, 36, damage_string, 1) 
+bitmap.draw_text(+1, 12-1, 160, 36, damage_string, 1) 
+bitmap.draw_text(-1, 12+1, 160, 36, damage_string, 1) 
+bitmap.draw_text(+1, 12+1, 160, 36, damage_string, 1) 
+if value.is_a?(Numeric) and value < 0 
+bitmap.font.color.set(176, 255, 144) 
+else 
+bitmap.font.color.set(255, 255, 255) 
+end 
+bitmap.draw_text(0, 12, 160, 36, damage_string, 1) 
+if critical 
+bitmap.font.size = 20 
+bitmap.font.color.set(0, 0, 0) 
+bitmap.draw_text(-1, -1, 160, 20, "GRAVE", 1) 
+bitmap.draw_text(+1, -1, 160, 20, "GRAVE", 1) 
+bitmap.draw_text(-1, +1, 160, 20, "GRAVE", 1) 
+bitmap.draw_text(+1, +1, 160, 20, "GRAVE", 1) 
+bitmap.font.color.set(255, 255, 255) 
+bitmap.draw_text(0, 0, 160, 20, "GRAVE", 1) 
+end 
+@_damage_sprite = ::Sprite.new 
+@_damage_sprite.bitmap = bitmap 
+@_damage_sprite.ox = 80 + self.viewport.ox 
+@_damage_sprite.oy = 20 + self.viewport.oy 
+@_damage_sprite.x = self.x + self.viewport.rect.x 
+@_damage_sprite.y = self.y - self.oy / 2 + self.viewport.rect.y 
+@_damage_sprite.z = 3000 
+@_damage_duration = 40 
+end 
+def animation(animation, hit) 
+dispose_animation 
+@_animation = animation 
+return if @_animation == nil 
+@_animation_hit = hit 
+@_animation_duration = @_animation.frame_max 
+animation_name = @_animation.animation_name 
+animation_hue = @_animation.animation_hue 
+bitmap = RPG::Cache.animation(animation_name, animation_hue) 
+if @@_reference_count.include?(bitmap) 
+@@_reference_count[bitmap] += 1 
+else 
+@@_reference_count[bitmap] = 1 
+end 
+@_animation_sprites = [] 
+if @_animation.position != 3 or not @@_animations.include?(animation) 
+for i in 0..15 
+sprite = ::Sprite.new 
+sprite.bitmap = bitmap 
+sprite.visible = false 
+@_animation_sprites.push(sprite) 
+end 
+unless @@_animations.include?(animation) 
+@@_animations.push(animation) 
+end 
+end 
+update_animation 
+end 
+def loop_animation(animation) 
+return if animation == @_loop_animation 
+dispose_loop_animation 
+@_loop_animation = animation 
+return if @_loop_animation == nil 
+@_loop_animation_index = 0 
+animation_name = @_loop_animation.animation_name 
+animation_hue = @_loop_animation.animation_hue 
+bitmap = RPG::Cache.animation(animation_name, animation_hue) 
+if @@_reference_count.include?(bitmap) 
+@@_reference_count[bitmap] += 1 
+else 
+@@_reference_count[bitmap] = 1 
+end 
+@_loop_animation_sprites = [] 
+for i in 0..15 
+sprite = ::Sprite.new 
+sprite.bitmap = bitmap 
+sprite.visible = false 
+@_loop_animation_sprites.push(sprite) 
+end 
+update_loop_animation 
+end 
+def animation_set_sprites(sprites, cell_data, position) 
+for i in 0..15 
+sprite = sprites[i] 
+pattern = cell_data[i, 0] 
+if sprite == nil or pattern == nil or pattern == -1 
+sprite.visible = false if sprite != nil 
+next 
+end 
+sprite.visible = true 
+sprite.src_rect.set(pattern % 5 * 192, pattern / 5 * 192, 192, 192) 
+if position == 3 
+if self.viewport != nil 
+sprite.x = self.viewport.rect.width / 2 
+sprite.y = self.viewport.rect.height - 160 
+else 
+sprite.x = 320 
+sprite.y = 240 
+end 
+else 
+sprite.x = self.x + self.viewport.rect.x - 
+self.ox + self.src_rect.width / 2 
+sprite.y = self.y + self.viewport.rect.y - 
+self.oy + self.src_rect.height / 2 
+sprite.y -= self.src_rect.height / 4 if position == 0 
+sprite.y += self.src_rect.height / 4 if position == 2 
+end 
+sprite.x += cell_data[i, 1] 
+sprite.y += cell_data[i, 2] 
+sprite.z = 2000 
+sprite.ox = 96 
+sprite.oy = 96 
+sprite.zoom_x = cell_data[i, 3] / 100.0 
+sprite.zoom_y = cell_data[i, 3] / 100.0 
+sprite.angle = cell_data[i, 4] 
+sprite.mirror = (cell_data[i, 5] == 1) 
+sprite.opacity = cell_data[i, 6] * self.opacity / 255.0 
+sprite.blend_type = cell_data[i, 7] 
+end 
+end 
+end 
+end

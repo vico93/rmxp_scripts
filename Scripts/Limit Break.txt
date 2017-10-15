@@ -1,0 +1,438 @@
+O script adiciona a função Limit Break 
+As habilidades com o atributo Limit Break somente serão acessíveis 
+quando a barra de Limit Break estiver cheia, igual a 
+Final Fantasy 7, 8 e 9. Então aproveitem por que esse scritp não tem em qualquer lugar não hein! 
+
+Crie uma Classe acima de Main Chamada Limit Break e coloque o Codigo Abaixo! 
+
+ 
+Código:	   
+################################################################### 
+##################### KGC_Over Drive ############################## 
+################################################################### 
+# O script adiciona a função Limit Break 
+# As habilidades com o atributo Limit Break somente serão acessíveis 
+# quando a barra de Limit Break estiver cheia, igual a 
+# Final Fantasy 7. 
+#============================================================================ 
+# 1 - Crie um atributo chamado Limit Break no database 
+# 2 - Na janela de habilidades coloque o atributo Limit Break na 
+# habilidade que deseja. 
+#============================================================================== 
+#============================================================================== 
+
+module KGC 
+# Defina aqui o tamanho do Limit Break. 
+OD_GAUGE_MAX = 1000 
+OD_GAIN_RATE = [10, 60, 200, 100, 160, 40, 160] 
+end 
+
+class Window_Base < Window 
+@@_od_gauge = RPG::Cache.picture("od_gauge.png") 
+OD_GAUGE_SLANT = true 
+OD_GAUGE_OFF_Y = 26 
+OD_GAUGE_OFF_Y_BATTLE = 26 
+OD_GAUGE_HIDE = false 
+end 
+
+
+$imported["OverDrive"] = true 
+
+$game_special_elements["Limit Break"] = $data_system.elements.index("Limit Break") 
+
+
+#============================================================================== 
+# ¦ Game_Battler (???? 3) 
+#============================================================================== 
+
+class Game_Battler 
+#-------------------------------------------------------------------------- 
+# ? ?????????? 
+#-------------------------------------------------------------------------- 
+attr_accessor :base_damage # ??????? 
+#-------------------------------------------------------------------------- 
+# ? ?????????? 
+#-------------------------------------------------------------------------- 
+alias skill_can_use_KGC_OverDrive skill_can_use? 
+def skill_can_use?(skill_id) 
+# OverDrive????? 
+if self.is_a?(Game_Actor) 
+skill = $data_skills[skill_id] 
+if skill != nil && skill.element_set.include?($game_special_elements["Limit Break"]) 
+if self.overdrive < KGC::OD_GAUGE_MAX 
+return false 
+end 
+end 
+end 
+
+# ??????? 
+return skill_can_use_KGC_OverDrive(skill_id) 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+alias attack_effect_KGC_OverDrive attack_effect 
+def attack_effect(attacker) 
+@base_damage = nil 
+
+# ??????? 
+result = attack_effect_KGC_OverDrive(attacker) 
+
+if @base_damage == nil 
+# ?????????? 
+@base_damage = [attacker.atk - self.pdef / 2, 0].max * 
+(20 + attacker.str) / 20 
+end 
+# ?????????? 
+if result && self.damage.is_a?(Numeric) 
+# ??????? 
+if attacker.is_a?(Game_Actor) && self.is_a?(Game_Enemy) && 
+attacker.overdrive_type == 0 && self.base_damage > 0 
+# OD???????? 
+od_up = [[self.damage * KGC::OD_GAIN_RATE[0] * 10 / self.base_damage, 1].max, 160].min 
+# OD????? 
+attacker.overdrive += od_up 
+# ?????????? 
+elsif attacker.is_a?(Game_Enemy) && self.is_a?(Game_Actor) && 
+self.overdrive_type == 1 && self.base_damage > 0 
+od_up = [self.damage * KGC::OD_GAIN_RATE[1] * 10 / self.maxhp, 1].max 
+self.overdrive += od_up 
+end 
+end 
+return result 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???????? 
+#-------------------------------------------------------------------------- 
+alias skill_effect_KGC_OverDrive skill_effect 
+def skill_effect(user, skill) 
+@base_damage = nil 
+
+# ??????? 
+result = skill_effect_KGC_OverDrive(user, skill) 
+
+if @base_damage == nil 
+# ????? 
+power = skill.power + user.atk * skill.atk_f / 100 
+if power > 0 
+power -= self.pdef * skill.pdef_f / 200 
+power -= self.mdef * skill.mdef_f / 200 
+power = [power, 0].max 
+end 
+# ????? 
+rate = 20 
+rate += (user.str * skill.str_f / 100) 
+rate += (user.dex * skill.dex_f / 100) 
+rate += (user.agi * skill.agi_f / 100) 
+rate += (user.int * skill.int_f / 100) 
+# ????????? 
+@base_damage = power * rate / 20 
+end 
+# ?????????? 
+if result && self.damage.is_a?(Numeric) 
+# ??????? 
+if user.is_a?(Game_Actor) && self.is_a?(Game_Enemy) && 
+user.overdrive_type == 0 && self.base_damage > 0 
+# OD???????? 
+od_up = [[self.damage * KGC::OD_GAIN_RATE[0] * 10 / self.base_damage, 1].max, 160].min 
+# OD????? 
+user.overdrive += od_up 
+# ?????????? 
+elsif user.is_a?(Game_Enemy) && self.is_a?(Game_Actor) && 
+self.overdrive_type == 1 && self.base_damage > 0 
+od_up = [self.damage * KGC::OD_GAIN_RATE[1] * 10 / self.maxhp, 1].max 
+self.overdrive += od_up 
+end 
+end 
+return result 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Game_Actor 
+#============================================================================== 
+
+class Game_Actor < Game_Battler 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+alias setup_KGC_OverDrive setup 
+def setup(actor_id) 
+# ??????? 
+setup_KGC_OverDrive(actor_id) 
+
+@overdrive = 0 
+@overdrive_type = 0 
+end 
+#-------------------------------------------------------------------------- 
+# ? OverDrive?????? 
+#-------------------------------------------------------------------------- 
+def overdrive 
+@overdrive = 0 if @overdrive == nil 
+return @overdrive 
+end 
+#-------------------------------------------------------------------------- 
+# ? OverDrive?????? 
+#-------------------------------------------------------------------------- 
+def overdrive=(value) 
+@overdrive = 0 if @overdrive == nil 
+@overdrive = [[value, 0].max, KGC::OD_GAUGE_MAX].min 
+end 
+#-------------------------------------------------------------------------- 
+# ? OverDrive?????? 
+#-------------------------------------------------------------------------- 
+def overdrive_type 
+@overdrive_type = 0 if @overdrive_type == nil 
+return @overdrive_type 
+end 
+#-------------------------------------------------------------------------- 
+# ? OverDrive?????? 
+#-------------------------------------------------------------------------- 
+def overdrive_type=(value) 
+@overdrive_type = 0 if @overdrive_type == nil 
+@overdrive_type = value 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Window_Base 
+#============================================================================== 
+
+class Window_Base < Window 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+alias initialize_KGC_OverDrive_Base initialize 
+def initialize(x, y, width, height) 
+@od_gauge = @@_od_gauge 
+@od_g_width = @od_gauge.width / 3 
+@od_g_height = (@od_gauge.height - 2) / 3 
+
+# ??????? 
+initialize_KGC_OverDrive_Base(x, y, width, height) 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????(????)??? 
+#-------------------------------------------------------------------------- 
+def _od_gauge 
+return @@_od_gauge 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????(????)??? 
+#-------------------------------------------------------------------------- 
+def _od_gauge=(new_bitmap) 
+@@_od_gauge.dispose 
+@@_od_gauge = new_bitmap 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???????? 
+#-------------------------------------------------------------------------- 
+def od_gauge 
+return @od_gauge 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???????? 
+#-------------------------------------------------------------------------- 
+def od_gauge=(new_bitmap) 
+@od_gauge = new_bitmap 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????? 
+#-------------------------------------------------------------------------- 
+alias draw_actor_name_KGC_OverDrive draw_actor_name 
+def draw_actor_name(actor, x, y) 
+unless (!$game_temp.in_battle && OD_GAUGE_HIDE) 
+draw_actor_od_gauge(actor, x, y, 120) 
+end 
+
+# ??????? 
+draw_actor_name_KGC_OverDrive(actor, x, y) 
+end 
+#-------------------------------------------------------------------------- 
+# ? OverDrive ?????? 
+#-------------------------------------------------------------------------- 
+def draw_actor_od_gauge(actor, x, y, width) 
+# ?????? 
+if $game_temp.in_battle && self.is_a?(Window_BattleStatus) 
+@gs_od[actor.index] = actor.overdrive if @gs_od[actor.index] == nil 
+dx = actor.screen_x + 52 - @od_g_width 
+dy = y + ($game_temp.in_battle ? OD_GAUGE_OFF_Y_BATTLE : OD_GAUGE_OFF_Y) 
+# dx -= 16 if $imported["HPSPAlter"] && !HPSP_DRAW_NAME_LUMP 
+gw = @gs_od[actor.index] * @od_g_width / KGC::OD_GAUGE_MAX 
+maximum = @gs_od[actor.index] == KGC::OD_GAUGE_MAX 
+else 
+@gauge_x = 0 
+dx = x + width - @od_g_width - 13 
+dy = y + ($game_temp.in_battle ? OD_GAUGE_OFF_Y_BATTLE : OD_GAUGE_OFF_Y) 
+gw = actor.overdrive * @od_g_width / KGC::OD_GAUGE_MAX 
+maximum = actor.overdrive == KGC::OD_GAUGE_MAX 
+end 
+# ???? 
+if OD_GAUGE_SLANT 
+self.contents.fill_rect(dx, dy, @od_g_width + 7, 6, Color.new(0, 0, 0, 0)) 
+# ??? 
+gy = @od_g_height + 1 
+for i in 0...(@od_g_height + 2) 
+self.contents.blt(dx + i, dy + gy - i, @od_gauge, Rect.new(0, gy - i, @od_g_width + 2, 1)) 
+end 
+# ???? 
+gy -= 1 
+gy2 = @od_g_height * (maximum ? 3 : 2) + 1 
+for i in 0...@od_g_height 
+self.contents.blt(dx + i + 2, dy + gy - i, @od_gauge, Rect.new(@gauge_x, gy2 - i, gw, 1)) 
+end 
+# ???? 
+else 
+self.contents.fill_rect(dx, dy, @od_g_width + 2, @od_g_height + 2, Color.new(0, 0, 0, 0)) 
+self.contents.blt(dx, dy, @od_gauge, Rect.new(0, 0, @od_g_width + 2, @od_g_height + 2)) 
+gy2 = @od_g_height * (maximum ? 2 : 1) + 2 
+self.contents.blt(dx + 1, dy + 1, @od_gauge, Rect.new(@gauge_x, gy2, gw, @od_g_height)) 
+end 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Window_BattleStatus 
+#============================================================================== 
+
+class Window_BattleStatus < Window_Base 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+alias initialize_KGC_OverDrive initialize 
+def initialize 
+@gauge_x, @gs_od = 0, [] 
+@od_g_width = @@_od_gauge.width / 3 
+@od_g_height = (@@_od_gauge.height - 2) / 3 
+
+# ??????? 
+initialize_KGC_OverDrive 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+alias refresh_KGC_OverDrive refresh 
+def refresh 
+# ??????? 
+refresh_KGC_OverDrive 
+
+for i in 0...$game_party.actors.size 
+@gs_od[i] = $game_party.actors[i].overdrive 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+alias update_KGC_OverDrive update 
+def update 
+# ??????? 
+update_KGC_OverDrive 
+
+# ???????? 
+unless $imported["HPSPAlter"] 
+@gauge_x -= [@od_g_width / 20, 1].max 
+@gauge_x = @od_g_width * 2 if @gauge_x < 0 
+end 
+for i in 0...$game_party.actors.size 
+draw_actor_od_gauge($game_party.actors[i], 0, 0, 120) 
+end 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Scene_Battle (???? 1) 
+#============================================================================== 
+
+class Scene_Battle 
+#-------------------------------------------------------------------------- 
+# ? ????? 
+# result : ?? (0:?? 1:?? 2:??) 
+#-------------------------------------------------------------------------- 
+alias battle_end_KGC_OverDrive battle_end 
+def battle_end(result) 
+case result 
+when 0 # ?? 
+for actor in $game_party.actors 
+next unless actor.exist? 
+# ?????????????????? 
+if actor.overdrive_type == 2 
+actor.overdrive += KGC::OD_GAIN_RATE[2] 
+end 
+end 
+when 1 # ?? 
+for actor in $game_party.actors 
+next unless actor.exist? 
+# ?????????????????? 
+if actor.overdrive_type == 3 
+actor.overdrive += KGC::OD_GAIN_RATE[3] 
+end 
+end 
+end 
+
+# ??????? 
+battle_end_KGC_OverDrive(result) 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Scene_Battle (???? 4) 
+#============================================================================== 
+
+class Scene_Battle 
+#-------------------------------------------------------------------------- 
+# ? ?????? (??????? ???? 2 : ???????) 
+#-------------------------------------------------------------------------- 
+alias update_phase4_step2_KGC_OverDrive update_phase4_step2 
+def update_phase4_step2 
+if @active_battler.is_a?(Game_Actor) 
+# ??????? 
+case @active_battler.overdrive_type 
+when 4 # ???? 
+alone = true 
+for actor in $game_party.actors 
+next if actor == @active_battler 
+# ??????????????? 
+if actor.exist? 
+alone = false 
+break 
+end 
+end 
+od_up = alone ? KGC::OD_GAIN_RATE[4] : 0 
+when 5 # ??? 
+od_up = KGC::OD_GAIN_RATE[5] 
+when 6 # ?? 
+od_up = @active_battler.hp <= @active_battler.maxhp / 4 ? KGC::OD_GAIN_RATE[6] : 0 
+else 
+od_up = 0 
+end 
+@active_battler.overdrive += od_up 
+end 
+
+# ??????? 
+update_phase4_step2_KGC_OverDrive 
+end 
+#-------------------------------------------------------------------------- 
+# ? ???????? ???? 
+#-------------------------------------------------------------------------- 
+alias make_skill_action_result_KGC_OverDrive make_skill_action_result 
+def make_skill_action_result 
+# ??????? 
+make_skill_action_result_KGC_OverDrive 
+
+# ?????????????????? 
+if @active_battler.is_a?(Game_Actor) && @skill.element_set.include?($game_special_elements["overdrive"]) 
+@active_battler.overdrive = 0 
+end 
+end 
+end	 
+

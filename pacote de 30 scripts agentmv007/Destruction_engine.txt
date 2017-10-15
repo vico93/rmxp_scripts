@@ -1,0 +1,1068 @@
+#==============================================================================
+# ¦ Destruction Engine
+#------------------------------------------------------------------------------
+#  By: Rataime
+#   Date: 12/06/2005
+#
+#------------------------------------------------------------------------------
+#   
+#   The Destruction Engine is a powerfull way to cut, slice, chop, destroy...
+#   events. It can be customized to fit your ideas
+#
+#------------------------------------------------------------------------------
+#   
+#   To use it, you must use the following commands :
+#   - $DE.init
+#   - A target command ($DE.target_event(id) or $DE.target_is_in_front_of_me)
+#   - A set of commands
+#   - $DE.clear   
+#   
+#------------------------------------------------------------------------------
+#   
+#   Call'n watch action commands (see the next ? for descriptions and options) :
+#   - $DE.decapitate
+#   - $DE.samurai_slash
+#   - $DE.axe_attack
+#   - $DE.double_samurai_slash
+#   - $DE.glass_breaking
+#   
+#------------------------------------------------------------------------------
+#
+#   The main command :
+#   
+#   $DE.add_line(start_x, start_y, end_x, end_y,speed)
+#   with coordinates corresponding to those on the charset,
+#   mainly 0<x<32 and 0<y<48
+#   and speed the drawing speed (1<=speed<=10). 
+#   Speed is optionnal, the default speed will be used if only 4 parameters are given
+#   
+#   $DE.add_line draws a line, and define where the event will be cut.
+#   Eg : 2 crossing lines defined with $DE.add_line => 4 pieces.
+#   
+#------------------------------------------------------------------------------
+#   
+#   Line commands :
+#   
+#   $DE.hide_lines :
+#   Will hide future lines 
+#   
+#   $DE.show_lines :
+#   Won't hide future lines anymore
+#   
+#   $DE.erase_lines :
+#   Erases all lines 
+#   The pieces will still be there, only line sprites will removed
+#   
+#   $DE.draw_line(start_x, start_y, end_x, end_y,speed)
+#   Same as $DE.add_line, but won't actually "cut" the event
+#   
+#   $DE.change_line_color(red,green,blue)
+#   Change future lines color
+#   The component values are >=0 and <=255
+#   
+#   $DE.change_line_speed(speed)
+#   Change the default line drawing speed
+#   Speed is >=1 and <=10
+#   
+#   $DE.change_line_width(pixels)
+#   Change future lines width,in pixels
+#   
+#==============================================================================#   
+#   
+#   Piece commands, usually used after having cut the event
+#   
+#   $DE.collapse
+#   Will collapse every piece the FF way (ie red&transparent)
+#
+#   $DE.fadeout
+#   Will fadeout every piece
+#
+#   $DE.explose
+#   Will make the target explose. Not perfect yet
+#   
+#   $DE.refresh_centre
+#   Will readjust pieces centers. Useful before rotating those...
+#
+#   $DE.glass_falling(speed)
+#   Will let the glass pieces fall until they reach the ground
+#   
+#   DE_Slide.new(line,number)
+#   Create a slide movement, using a line and a max number of pieces to slide 
+#   Pieces are selected from the top to the bottom
+#   Check the call'n watch function samurai_slash for a basic example
+#   
+#   $DE.map.pieces[i] : 
+#   Refers to the pieces. 
+#   pieces[0] is the top one, pieces[$DE.map.pieces.size-1] the bottom one
+#   You can use standard sprite functions, eg :
+#   @map.pieces[0].angle=90
+#   @map.pieces[0].x+=1
+#   
+#   $DE.target.reappear :
+#   Will reset target's transparency and passability
+#   
+#==============================================================================
+#   
+#   Notes :
+#   
+#   - The DE is far from perfect : if you experiment a problem, try changing
+#     the order of the add_lines functions
+#   
+#   - When changing scenes (eg : opening the menu), the DE will be reset.
+#     Think to disable the menu if you don't want it to happen
+#   
+#   - The target event will be invisible & passable, but still fonctionnal :
+#     It's up to you to use a switch or anything to prevent its re-use
+#   
+#   - If you see a colored triangle, it is because the script thinks that the
+#     first pixel is transparent. Move the character on the charset, or resize
+#     the charset...
+#
+#   - Bonus for those who read that far :
+#     If you are lazy, use $DE.tiifom instead of $DE.target_is_in_front_of_me...
+#   
+#==============================================================================
+# ? Here are the call'n watch functions (aka the "no-brainer functions")
+#    You have to call $DE.init, then the appropriate target function 
+#    (eg : $DE.target_is_in_front_of_me) and one of those functions
+#    (eg : $DE.decapitate).
+#    You still can change the lines visibility, color...
+#    Some have facultative options. Eg : To have the head roll on the left, use $DE.decapitate(true)
+#    When you have finished (and removed the head from the floor),
+#    call $DE.clear
+#
+#    Don't hesitate to make your own functions, you can even send them to me and 
+#    I'll add them in the next release if they are worthful
+#==============================================================================
+class Destruction_Engine
+  
+  #=============================================================================
+  # ? decapitate(roll_on_the_left,hide_the_second_line) by Rataime
+  #    Set roll_on_the_left to true to have an inversed animation
+  #    Set hide_the_second_line to true to only show the first line
+  #=============================================================================
+
+  def decapitate(roll_on_the_left=false , hide_the_second_line=false)
+    Audio.se_play("Audio/SE/099-Attack11",80)
+    add_line(0,14,32,31,@default_speed)
+    hide_the_second_line=false if @hide_line
+    if hide_the_second_line
+      hide_lines
+      add_line(32,14,0,31,10)
+      show_lines
+    else
+      add_line(32,14,0,31,@default_speed)
+    end
+    refresh_centre # Adjust ox and oy to their correct place. Needed to rotate smoother...
+    delta=1
+    delta=-1 if roll_on_the_left
+    erase_lines
+    for i in 1..30
+      @map.pieces[0].y+=1 if i%2==0 # every 2 i
+      @map.pieces[0].x+=1*delta if i%2==0
+      @map.pieces[0].angle-=3*delta
+      Graphics.update
+    end
+    Audio.se_play("Audio/SE/042-Knock03",80)
+    erase_lines
+  end
+  
+  #=============================================================================
+  # ? axe_attack(x) by Rataime
+  #    Set time_interval in ms to have a pause between movements
+  #=============================================================================
+
+  def axe_attack(time_interval=0,collapsing=false)
+    Audio.se_play("Audio/SE/095-Attack07",80)
+    add_line(@bmpw/2,0,@bmpw/2,@bmph,@default_speed)
+    erase_lines
+    refresh_centre # Adjust ox and oy to their correct place. Needed to rotate smoother...
+    for i in 1..30*(time_interval+1)
+      @map.pieces[0].angle+=3 if i%(time_interval+1)==0
+      @map.pieces[1].angle-=3 if i%(time_interval+1)==0
+      Audio.se_play("Audio/SE/103-Attack15",80) if i==27*(time_interval+1) or i==28*(time_interval+1)
+      Graphics.update
+    end
+    collapse if collapsing
+  end
+  
+  
+  #=============================================================================
+  # ? samurai_slash(time_interval,collapsing) by Rataime
+  #    Set time_interval in ms to have a pause between sliding movements
+  #    Set collapsing to true to have it collapse in the end
+  #=============================================================================
+  
+  def samurai_slash(time_interval=0,collapsing=true)
+    Audio.se_play("Audio/SE/094-Attack06",80)
+    line1 = add_line(0,0.3*@bmph,@bmpw,0.67*@bmph,@default_speed)
+    slide1=DE_Slide.new(line1,1)
+    erase_lines
+    for i in 1..15*(time_interval+1)
+      slide1.update if i%(time_interval+1)==0
+      Graphics.update
+    end
+    collapse if collapsing
+  end
+  
+  #=============================================================================
+  # ? double_samurai_slash(time_interval) by Rataime
+  #    Set time_interval in ms to have a pause between sliding movements
+  #    Set collapsing to true to have it collapse in the end
+  #=============================================================================
+  
+  def double_samurai_slash(time_interval=0,collapsing=true)
+    Audio.se_play("Audio/SE/094-Attack06",80)
+    line1 = add_line(0,0.5*@bmph,@bmpw,@bmph-2,@default_speed)
+    Audio.se_play("Audio/SE/094-Attack06",80)
+    line2 = add_line(0,0.35*@bmph,@bmpw,0.20*@bmph,@default_speed)
+    slide1=DE_Slide.new(line2,1)
+    slide2=DE_Slide.new(line1,2)
+    erase_lines
+    for i in 1..15*(time_interval+1)
+      slide1.update if i%(time_interval+1)==0
+      slide2.update if i%(time_interval+1)==0
+      Graphics.update
+    end
+    collapse if collapsing
+  end
+  
+  #=============================================================================
+  # ? glass_breaking(sound,speed) by Rataime
+  #    Set sound to true to have the glass breaking sound (needs a non-rtp SE)
+  #    Set speed to 1 or 2 (>2 is too fast)
+  #=============================================================================
+  
+  def glass_breaking(sound=false,speed=2)
+    Audio.se_play("Audio/SE/100-Attack12",80)
+    add_line(@bmpw/4,0,@bmpw*3/4,@bmph,@default_speed)
+    Audio.se_play("Audio/SE/096-Attack08",80,130)
+    add_line(0,0.15*@bmph,@bmpw,0.4*@bmph,@default_speed)
+    Audio.se_play("Audio/SE/100-Attack12",80,80)
+    add_line(0,0.35*@bmph,@bmpw,0.7*@bmph,@default_speed)
+    Audio.se_play("Audio/SE/Glass",80,70)
+    hide_lines
+    add_line(0,80,@bmpw,80)
+    show_lines
+    erase_lines
+    refresh_centre
+    for i in 1..2
+      for to_break in 0..@map.pieces.size-1
+        if @map.pieces[to_break].x<@bmpx+@bmpw/2
+          @map.pieces[to_break].x-=1
+        else
+          @map.pieces[to_break].x+=1
+        end
+      end
+      Graphics.update
+    end
+    glass_falling(speed)
+  end
+  
+#==============================================================================
+# ? Here are the pieces manipulation functions
+#    Usually called after having cut the sprite
+#==============================================================================
+
+  def collapse
+    Audio.se_play("Audio/SE/012-System12",80)
+    @map.collapse
+  end
+  
+  def fadeout
+    @map.fadeout
+  end
+  
+  def explose
+    explosion=[]
+    refresh_centre
+    for to_explose in 0..@map.pieces.size-1
+      #This is a hack, wasn't working so I "forced" things to work...
+      #I will have to fix that one day !
+      end_x=@map.pieces[to_explose].src_rect.width/2+@map.pieces[to_explose].x
+      end_y=@map.pieces[to_explose].src_rect.height/2+@map.pieces[to_explose].y
+      start_x=@bmpx+@bmpw/2+@bmpw/6
+      start_y=@bmpy+@bmph
+      explosion[to_explose]=DE_Explosion.new([(end_x - start_x).to_f,-(end_y - start_y).to_f,0],to_explose)
+    end
+    Audio.se_play("Audio/SE/054-Cannon03",80)
+    for i in 1..51
+      for to_explose in 0..@map.pieces.size-1
+        explosion[to_explose].update
+      end
+      Graphics.update
+    end
+  end
+ 
+  def refresh_centre
+    @map.refresh_centre
+  end
+
+  def glass_falling(speed=2)
+    for i in 1..90
+      for to_break in 0..@map.pieces.size-1
+        if @map.pieces[to_break].y<@bmpy+@bmph+2
+          @map.pieces[to_break].y+=1*speed if 2*(@map.pieces.size-to_break)<i
+          @map.pieces[to_break].angle+=abovezero(rand(5)-3)*(to_break+1)/(to_break+1).abs
+        else
+          @map.pieces[to_break].opacity-=20
+        end
+      end
+      Graphics.update
+    end
+  end
+  
+end
+
+class DE_Slide
+
+  def initialize(line,num)
+    @dy=0
+    @y=-line[1]
+    @x=line[0]
+    if @y<0
+      @y=-@y
+      @x=-@x
+    end
+    @y=@y/(@x.abs).to_f
+    @x=@x/@x.abs
+    @num=num
+    @map=$DE.map
+  end
+  
+  def update
+      @correcty=false
+      @dy+=@y-@y.floor
+      if @dy>=1
+        @dy-=1
+        @correcty=true
+      end
+      for i in 0..@num-1
+        @map.pieces[i].x+=@x
+        @map.pieces[i].y+=@y.floor
+        @map.pieces[i].y+=1 if @correcty
+      end
+    end
+  end
+  
+  class DE_Explosion
+
+  def initialize(line,num)
+    @dy=0
+    @y=-line[1]
+    @x=line[0]
+    @sign=1
+    @sign=-1 if @y<0
+    @y=@y/(@x.abs).to_f*2
+    @x=@x/@x.abs*2
+    @num=num
+    @map=$DE.map
+  end
+  
+  def update
+      @correcty=false
+      @dy+=(@y-@y.floor).abs
+      if @dy>=1
+        @dy-=1
+        @correcty=true
+      end
+      @map.pieces[@num].x+=@x
+      @map.pieces[@num].x
+      #@map.pieces[@num].zoom_x=0.1+@map.pieces[@num].zoom_x
+      #@map.pieces[@num].zoom_y=0.1+@map.pieces[@num].zoom_y
+      @map.pieces[@num].y+=@y.floor
+      @map.pieces[@num].y+=1*@sign if @correcty
+      @map.pieces[@num].opacity-=5
+      @map.pieces[@num].angle+=1*@sign
+    end
+  end
+#==============================================================================
+# ¦ DE
+# An unloaded DE
+#==============================================================================
+
+class DE
+
+  def init
+    $DE=Destruction_Engine.new
+  end
+  
+  def Init
+    $DE=Destruction_Engine.new
+  end
+  
+end
+
+#==============================================================================
+# ¦ Destruction_Engine
+# The actual DE. Contains every functions you need to use the DE
+#==============================================================================
+
+class Destruction_Engine
+  
+attr_accessor :slot
+attr_accessor :map
+attr_accessor :target
+attr_accessor :hide_line
+
+#==============================================================================
+# ? General functions
+#==============================================================================
+
+def initialize
+  @width=2
+  @default_speed=5
+  @color=Color.new(255, 255, 255)
+end
+
+def init(n = nil)
+  if n==nil
+    p "Initialisation already done. Don't forget to $DE.clear"
+  else
+    @slot[n]=Destruction_Engine.new
+  end
+end
+
+def Init(n = nil)
+  init(n)
+end
+
+def clear
+  for i in @map.pieces
+     i.opacity=0
+   end
+  GC::start
+  $DE = DE.new
+end
+
+def Clear
+  clear
+end
+
+def update
+  if @map!=nil
+    for i in @map.pieces
+      i.update
+    end
+  end
+end
+
+def abovezero(num)
+  if num>0
+    return num
+  else
+    return 0
+  end
+end
+
+
+def wait(seconds) # Dubealex's delay function
+  for i in 0...(seconds * 10)
+    sleep 0.1
+    Graphics.update
+  end
+end
+
+#==============================================================================
+# ? Target functions
+#==============================================================================
+
+def target_event(id = nil)
+  if id!=nil and $game_map.events[id].is_a?(Game_Event) and @target==nil
+    @target = $game_map.events[id]
+    @map=DE_Map.new(@target)
+      bitmap = RPG::Cache.character(@target.character_name,@target.character_hue)
+      @z_line=@target.screen_z(bitmap.height / 4)+5
+      @bmpx=@target.screen_x-bitmap.width/8
+      @bmpy=@target.screen_y-bitmap.height/4
+      @bmph=bitmap.height/4
+      @bmpw=bitmap.width/4
+      @color_b=bitmap.get_pixel(0,0)
+      @linebmp=Linebmp.new(@bmpx,@bmpy,@z_line,@bmpw,@bmph)
+  end
+end
+
+def Target_event(id = nil)
+  target_event(id)
+end
+
+def tiifom
+  check_x=$game_player.x
+  check_y=$game_player.y
+  case $game_player.direction
+  when 2
+    check_y+=1
+  when 4
+    check_x-=1
+  when 6
+    check_x+=1
+  when 8
+    check_y-=1
+  end
+  check=$game_map.check_event(check_x, check_y)
+  if check.type==Fixnum and @target==nil
+    @target=$game_map.events[check]
+    @map=DE_Map.new(@target)
+      bitmap = RPG::Cache.character(@target.character_name,@target.character_hue)
+      @z_line=@target.screen_z(bitmap.height / 4)+5
+      @bmpx=@target.screen_x-bitmap.width/8
+      @bmpy=@target.screen_y-bitmap.height/4
+      @bmph=bitmap.height/4
+      @bmpw=bitmap.width/4
+      @color_b=bitmap.get_pixel(0,0)
+      @linebmp=Linebmp.new(@bmpx,@bmpy,@z_line,@bmpw,@bmph)
+  end
+end
+
+def target_is_in_front_of_me
+  tiifom
+end
+
+#==============================================================================
+# ? Line functions
+#==============================================================================
+
+def hide_lines
+  @hide_line=true
+end
+
+def show_lines
+  @hide_line=false
+end
+
+def erase_lines
+  @linebmp.erase
+end
+
+def change_line_width(pixels)
+  if (pixels>10 or pixels<1)
+    p "DE error : Width argument out of range !"
+  else
+    @width=pixels
+  end
+end
+
+def change_line_color(r,g,b)
+  @color=Color.new(r, g, b)
+end
+
+def change_line_speed(speed)
+  if (speed>10 or speed<1)
+    p "DE error : Speed argument out of range !"
+  else
+    @default_speed=speed
+  end
+end
+
+def draw_line(start_x, start_y, end_x, end_y,speed=@default_speed)
+  @map.draw_line(start_x, start_y, end_x, end_y,speed,@width,@color)
+end
+
+#==============================================================================
+# ? The core function. Draw lines & separate sprites into smaller sprites
+#    Reading this can be bad for your health.
+#==============================================================================
+
+def addline(start_x, start_y, end_x, end_y,speed=@default_speed)
+  add_line(start_x, start_y, end_x, end_y,speed)
+end
+
+def add_line(start_x, start_y, end_x, end_y,speed=@default_speed)
+  if (speed>10 or speed<1) or (start_x==end_x and start_y==end_y)
+    p "DE error : Speed argument out of range, or the line is a point !"
+  else
+  if @target!=nil
+    @linebmp.draw_line(start_x, start_y, end_x, end_y,speed,@width,@color)
+    #ay+bx+c
+    a = (end_x - start_x).to_f
+    b = -(end_y - start_y).to_f
+    c = (-a * start_y - b * start_x).to_f
+    @a=a
+    @b=b
+    @c=c
+    sx = @target.pattern * @bmpw
+    sy = (@target.direction - 2) / 2 * @bmph
+    @sx=sx
+    @sy=sy
+    for i in 0..@map.pieces.size-1
+      s_rect=@map.pieces[i].src_rect
+    if true
+    if start_x==end_x
+      if s_rect.x<start_x+sx and start_x+sx<s_rect.x+s_rect.width
+        @map.cloning(@map.pieces[i])
+        @map.pieces[i].bitmap.fill_rect(sx+start_x, sy, @bmpw-start_x, s_rect.height, @color_b )
+        @map.pieces.last.bitmap.fill_rect(sx,sy, start_x, s_rect.height, @color_b )
+        @map.pieces.last.src_rect.set(start_x+sx,s_rect.y,abovezero(s_rect.x+s_rect.width-start_x-sx),s_rect.height)
+        @map.pieces[i].src_rect.set(s_rect.x,s_rect.y,abovezero(start_x+sx-s_rect.x),s_rect.height)
+        @map.pieces.last.x=@bmpx+start_x+@bmpw/2
+        @map.pieces[i].x=@bmpx+s_rect.x-sx+@bmpw/2
+      end
+    else
+      if start_y==end_y
+        if s_rect.y<start_y+sy and start_y+sy<s_rect.y+s_rect.height
+          @map.cloning(@map.pieces[i])
+          @map.pieces[i].bitmap.fill_rect(sx, sy+start_y, s_rect.width, @bmph-start_y, @color_b )
+          @map.pieces.last.bitmap.fill_rect(sx, sy, s_rect.width, start_y, @color_b )
+          @map.pieces.last.src_rect.set(s_rect.x,sy+start_y,s_rect.width,abovezero(s_rect.y-sy-start_y+s_rect.height))
+          @map.pieces[i].src_rect.set(s_rect.x,s_rect.y,s_rect.width, abovezero(start_y+sy-s_rect.y))
+          @map.pieces.last.y=@bmpy+start_y+@bmph
+          @map.pieces[i].y=@bmpy+s_rect.y-sy+@bmph
+        end
+      else
+        if b/a<0
+          dist1=(a*(s_rect.y+s_rect.height-sy)+ b*(s_rect.x-sx) + c)/((a**2+b**2)**0.5)
+          dist2=(a*(s_rect.y-sy)+ b*(s_rect.x+s_rect.width-sx) + c)/((a**2+b**2)**0.5)
+          square=(s_rect.height**2+s_rect.width**2)**0.5
+          #p (b/a,-c/a,dist1,dist2,square,1)
+          if dist1.abs<square and dist2.abs<square and dist1*dist2<0
+            #p "slope neg"
+            if -b/a*(s_rect.x-sx)-c/a<(s_rect.y-sy)
+              if -b/a*(s_rect.x-sx+s_rect.width)-c/a<(s_rect.y-sy+s_rect.height)
+                #p "above, above"
+                @map.cloning(@map.pieces[i])
+                xt=(-a/b*(s_rect.y-sy)-c/b).to_i
+                yt=(-b/a*(s_rect.x-sx+s_rect.width)-c/a).to_i
+                @map.triangle(@map.pieces.last,sx+xt,s_rect.y,s_rect.x+s_rect.width,sy+yt,s_rect.x+s_rect.width,s_rect.y,true)
+                @map.triangle(@map.pieces[i],sx+xt,s_rect.y,s_rect.x+s_rect.width,sy+yt,s_rect.x+s_rect.width,s_rect.y)
+                @map.pieces.last.x-=s_rect.x-(sx+xt)
+                @map.pieces.last.src_rect.set(sx+xt,s_rect.y,s_rect.x-sx+s_rect.width-xt,yt-(s_rect.y-sy))
+              else
+                #p "above, under"
+                @map.cloning(@map.pieces[i])
+                xt=(-a/b*(s_rect.y-sy)-c/b).to_i
+                xtp=(-a/b*(s_rect.y-sy+s_rect.height)-c/b).to_i
+                yt=(-b/a*(s_rect.x-sx)-c/a).to_i
+                ytp=(-b/a*(s_rect.x-sx+s_rect.width)-c/a).to_i
+                @map.triangle(@map.pieces.last,s_rect.x,sy+yt,s_rect.x+s_rect.width,sy+ytp,s_rect.x,sy+s_rect.height,true)
+                @map.triangle(@map.pieces[i],s_rect.x,sy+yt,s_rect.x+s_rect.width,sy+ytp,s_rect.x,sy+s_rect.height)
+                @map.pieces[i].x-=s_rect.x-(sx+xt)
+                @map.pieces.last.src_rect.set(s_rect.x,s_rect.y,xtp-(s_rect.x-sx),s_rect.height)
+                @map.pieces[i].src_rect.set(sx+xt,s_rect.y,s_rect.x-sx+s_rect.width-xt,s_rect.height)
+              end
+            else
+              if -b/a*(s_rect.x-sx+s_rect.width)-c/a>(s_rect.y-sy+s_rect.height)
+                #p "under, under"
+                @map.cloning(@map.pieces[i])
+                xt=(-a/b*(s_rect.y-sy+s_rect.height)-c/b).to_i
+                yt=(-b/a*(s_rect.x-sx)-c/a).to_i
+                @map.triangle(@map.pieces.last,s_rect.x,yt+sy,s_rect.x,s_rect.y+s_rect.height,xt+sx,s_rect.y+s_rect.height,true)
+                @map.triangle(@map.pieces[i],s_rect.x,yt+sy,s_rect.x,s_rect.y+s_rect.height,xt+sx,s_rect.y+s_rect.height)
+                @map.pieces.last.src_rect.set(s_rect.x,sy+yt,xt-(s_rect.x-sx),s_rect.y-sy+s_rect.height-yt)
+                @map.pieces.last.y-=-yt-sy+s_rect.y
+              else
+                #p "under, above"
+                @map.cloning(@map.pieces[i])
+                xt=(-a/b*(s_rect.y-sy)-c/b).to_i
+                xtp=(-a/b*(s_rect.y-sy+s_rect.height)-c/b).to_i
+                yt=(-b/a*(s_rect.x-sx)-c/a).to_i
+                ytp=(-b/a*(s_rect.x-sx+s_rect.width)-c/a).to_i
+                @map.triangle(@map.pieces.last,sx+xt,s_rect.y,sx+xtp,s_rect.y+s_rect.height,sx+xtp,s_rect.y,true)
+                @map.triangle(@map.pieces[i],sx+xt,s_rect.y,sx+xtp,s_rect.y+s_rect.height,sx+xtp,s_rect.y)
+                @map.pieces.last.src_rect.set(s_rect.x,s_rect.y,s_rect.width,ytp-(s_rect.y-sy))
+                @map.pieces[i].y+=-s_rect.y+sy+yt
+                @map.pieces[i].src_rect.set(s_rect.x,sy+yt,s_rect.width,s_rect.y-sy+s_rect.height-yt)
+              end
+            end
+          end
+        else
+          dist1=(a*(s_rect.y-sy)+ b*(s_rect.x-sx) + c)/(a**2+b**2)**0.5
+          dist2=(a*(s_rect.y+s_rect.height-sy)+ b*(s_rect.x+s_rect.width-sx) + c)/(a**2+b**2)**0.5
+          square=(s_rect.height**2+s_rect.width**2)**0.5
+          #p (-b/a,-c/a,dist1,dist2,square,2)
+          if dist1.abs<square and dist2.abs<square and dist1*dist2<0
+            #p "slope pos"
+            if -b/a*(s_rect.x-sx)-c/a<(s_rect.y-sy+s_rect.height)
+              if -b/a*(s_rect.x-sx+s_rect.width)-c/a<(s_rect.y-sy)
+                #p "above, above"
+                @map.cloning(@map.pieces[i])
+                xt=(-a/b*(s_rect.y-sy)-c/b).to_i
+                yt=(-b/a*(s_rect.x-sx)-c/a).to_i
+                @map.triangle(@map.pieces.last,s_rect.x,yt+sy,s_rect.x,s_rect.y,xt+sx,s_rect.y,true)
+                @map.triangle(@map.pieces[i],s_rect.x,yt+sy,s_rect.x,s_rect.y,xt+sx,s_rect.y)
+                @map.pieces.last.src_rect.set(s_rect.x,s_rect.y,xt-(s_rect.x-sx),yt-(s_rect.y-sy))
+              else
+                #p "above, under"
+                @map.cloning(@map.pieces[i])
+                xt=(-a/b*(s_rect.y-sy)-c/b).to_i
+                xtp=(-a/b*(s_rect.y-sy+s_rect.height)-c/b).to_i
+                ytp=(-b/a*(s_rect.x-sx)-c/a).to_i
+                yt=(-b/a*(s_rect.x-sx+s_rect.width)-c/a).to_i
+                @map.triangle(@map.pieces.last,sx+xt,s_rect.y,sx+xtp,s_rect.y+s_rect.height,sx+xtp,s_rect.y,true)
+                @map.triangle(@map.pieces[i],sx+xt,s_rect.y,sx+xtp,s_rect.y+s_rect.height,sx+xtp,s_rect.y)
+                @map.pieces.last.src_rect.set(s_rect.x,s_rect.y,s_rect.width,ytp-(s_rect.y-sy))
+                @map.pieces[i].y+=-s_rect.y+sy+yt
+                @map.pieces[i].src_rect.set(s_rect.x,sy+yt,s_rect.width,s_rect.y-sy+s_rect.height-yt)
+              end
+            else
+              if -b/a*(s_rect.x-sx+s_rect.width)-c/a>(s_rect.y-sy)
+                #p "under, under"
+                @map.cloning(@map.pieces[i])
+                xt=(-a/b*(s_rect.y-sy+s_rect.height)-c/b).to_i
+                yt=(-b/a*(s_rect.x-sx+s_rect.width)-c/a).to_i
+                @map.triangle(@map.pieces.last,s_rect.x+s_rect.width,s_rect.y+s_rect.height,s_rect.x+s_rect.width,sy+yt,sx+xt,s_rect.y+s_rect.height,true)
+                @map.triangle(@map.pieces[i],s_rect.x+s_rect.width,s_rect.y+s_rect.height,s_rect.x+s_rect.width,sy+yt,sx+xt,s_rect.y+s_rect.height)
+                @map.pieces.last.src_rect.set(s_rect.x+xt,s_rect.y+yt,s_rect.x-sx+s_rect.width-xt,s_rect.y-sy+s_rect.height-yt)
+                @map.pieces.last.y-=-yt-sy+s_rect.y
+                @map.pieces.last.x-=s_rect.x-(sx+xt)
+              else
+                #p "under, above"
+                @map.cloning(@map.pieces[i])
+                xtp=(-a/b*(s_rect.y-sy)-c/b).to_i
+                xt=(-a/b*(s_rect.y-sy+s_rect.height)-c/b).to_i
+                yt=(-b/a*(s_rect.x-sx)-c/a).to_i
+                ytp=(-b/a*(s_rect.x-sx+s_rect.width)-c/a).to_i
+                @map.triangle(@map.pieces.last,s_rect.x,sy+yt,s_rect.x+s_rect.width,sy+ytp,s_rect.x,sy+ytp,true)
+                @map.triangle(@map.pieces[i],s_rect.x,sy+yt,s_rect.x+s_rect.width,sy+ytp,s_rect.x,sy+ytp)
+                @map.pieces.last.src_rect.set(s_rect.x,s_rect.y,xtp-(s_rect.x-sx),s_rect.height)
+                @map.pieces[i].x-=s_rect.x-(sx+xt)
+                @map.pieces[i].src_rect.set(sx+xt,s_rect.y,s_rect.x-sx+s_rect.width-xt,s_rect.height)
+              end
+            end
+          end
+        end
+      end
+    end
+    end
+    end
+    @map.pieces=@map.pieces.sort{|d,e| d.src_rect.y <=> e.src_rect.y}
+    Graphics.update
+    return [a,b,c]
+  else
+    p "DE error : No target selected"
+  end
+  end
+
+end
+
+def testing_sort#DO NOT USE IT
+  p @map.pieces.size
+    for i in 0..@map.pieces.size-1
+      @map.pieces[i].x=@bmpx+30*i+20
+      #p (1,@map.pieces[1].x)
+      #p (3,@map.pieces[3].x) if @map.pieces[3]!=nil
+    end
+end
+
+end
+
+#==============================================================================
+# ¦ DE_Map
+# Manage pieces creation, cloning and modification
+#==============================================================================
+
+class DE_Map
+  
+  attr_accessor :pieces
+  
+  def initialize(target)
+    @target=target
+    @pieces=Array.new
+    @target.transparent=true
+    $DE_spriteset.update
+    @pieces[0]=DE_Piece.new($DE_viewport,@target,true)
+    Graphics.update
+  end
+  
+  def cloning(to_dup)
+    @pieces.push(DE_Piece.new($DE_viewport,@target))
+    @pieces.last.bitmap=to_dup.bitmap.clone
+    @pieces.last.x=to_dup.x
+    @pieces.last.y=to_dup.y
+    @pieces.last.z=to_dup.z
+    @pieces.last.src_rect.x=to_dup.src_rect.x
+    @pieces.last.src_rect.y=to_dup.src_rect.y
+    @pieces.last.src_rect.width=to_dup.src_rect.width
+    @pieces.last.src_rect.height=to_dup.src_rect.height
+  end
+  
+  def refresh_centre
+    for to_centre in pieces
+      ox=to_centre.ox
+      oy=to_centre.oy
+      to_centre.ox = to_centre.src_rect.width / 2
+      to_centre.oy = to_centre.src_rect.height
+      to_centre.x+=to_centre.ox-ox
+      to_centre.y+=(to_centre.oy-oy)
+    end
+    
+  end
+  
+  def collapse
+    for to_collapse in pieces
+      to_collapse.collapse if to_collapse.opacity!=0
+    end
+    for i in 1..48
+      for to_collapse in pieces
+        to_collapse.update
+      end
+      Graphics.update
+    end
+  end
+  
+  def fadeout
+    for to_fadeout in pieces
+      to_fadeout.escape if to_fadeout.opacity!=0
+    end
+    for i in 1..48
+      for to_fadeout in pieces
+        to_fadeout.update
+      end
+      Graphics.update
+    end
+  end
+
+#==============================================================================
+# ? Draw a triangle which erase either what is inside or outside
+#==============================================================================
+  
+  def triangle(bmp = nil, x1 = 0, y1 = 0, x2 = 0, y2 = 0, x3 = 0, y3 = 0, invert = false)
+  
+  if x1==x2 and y1==y2
+    # Fix an error : 2 points of the triangle are equal
+    triangle(bmp, x1, y1+1, x2, y2, x3, y3,invert)
+    return true
+  end  
+  if x2==x3 and y2==y3
+    # Fix an error : 2 points of the triangle are equal
+    triangle(bmp, x1, y1, x2, y2+1, x3, y3,invert)
+    return true
+  end
+  if x1==x3 and y1==y3
+    # Fix an error : 2 points of the triangle are equal
+    triangle(bmp, x1, y1, x2, y2, x3, y3+1,invert)
+    return true
+  end  
+  
+  if Math.atan2( y1 - y2, x1-x2) - Math.atan2( y3 - y2, x3-x2) >0
+    # Fix an error : The triangle doesn't appear due to its convexity...
+    triangle(bmp, x1, y1, x3, y3, x2, y2,invert)
+    return true
+  end
+  
+  color = bmp.bitmap.get_pixel(0, 0) 
+  
+  
+    #==============================================================================
+    # ? Here's the rasterization algorithm (whatever this is ^^, but this one wasn't easy to find and adapt !)
+    #==============================================================================
+      
+    # Deltas
+
+    dx12 = x1 - x2
+    dx23 = x2 - x3
+    dx31 = x3 - x1
+
+    dy12 = y1 - y2
+    dy23 = y2 - y3
+    dy31 = y3 - y1
+    
+    # Bounding Rectangle
+    
+    min_x = [x1,x2,x3].min
+    max_x = [x1,x2,x3].max
+    min_y = [y1,y2,y3].min
+    max_y = [y1,y2,y3].max
+    
+    # Half-edge constants
+    
+    c1 = dy12 * x1 - dx12 * y1
+    c2 = dy23 * x2 - dx23 * y2
+    c3 = dy31 * x3 - dx31 * y3
+    
+    # Let's Calculate !
+
+    cy1 = c1 + dx12 * min_y - dy12 * min_x
+    cy2 = c2 + dx23 * min_y - dy23 * min_x
+    cy3 = c3 + dx31 * min_y - dy31 * min_x
+
+  for y_coord in min_y..max_y-1
+    cx1=cy1
+    cx2=cy2
+    cx3=cy3
+    for x_coord in min_x..max_x-1
+      if (cx1 > 0 and cx3 > 0 and cx2 > 0)!=invert
+        bmp.bitmap.set_pixel(x_coord, y_coord ,color)
+      end
+      cx1 -= dy12 
+      cx2 -= dy23
+      cx3 -= dy31
+    end
+    cy1 += dx12
+    cy2 += dx23
+    cy3 += dx31
+  end
+  
+  end
+  
+end
+
+#==============================================================================
+# ¦ DE_Piece
+# This is the piece cut from the original sprite
+#==============================================================================
+
+class DE_Piece < RPG::Sprite
+  
+  def initialize(viewport, character = nil,first=false)
+    super(viewport)
+    @character = character
+    if @tile_id != @character.tile_id or
+       @character_name != @character.character_name or
+       @character_hue != @character.character_hue
+      @tile_id = @character.tile_id
+      @character_name = @character.character_name
+      @character_hue = @character.character_hue
+      if @tile_id >= 384
+        self.bitmap = RPG::Cache.tile($game_map.tileset_name,
+          @tile_id, @character.character_hue)
+        self.src_rect.set(0, 0, 32, 32)
+        self.ox = 16
+        self.oy = 32
+      else
+        self.bitmap = RPG::Cache.character(@character.character_name,@character.character_hue) if !first
+        self.bitmap = RPG::Cache.character(@character.character_name,@character.character_hue).clone if first
+        @character.go_through if first
+        @cw = bitmap.width / 4
+        @ch = bitmap.height / 4
+        self.ox = @cw / 2
+        self.oy = @ch
+        
+      sx = @character.pattern * @cw
+      sy = (@character.direction - 2) / 2 * @ch
+      self.src_rect.set(sx, sy, @cw, @ch)
+      end
+    end
+    @x=$game_map.display_x
+    @y=$game_map.display_y
+    self.x = @character.screen_x
+    self.y = @character.screen_y
+    self.z = @character.screen_z(bitmap.height/4)
+    self.opacity = @character.opacity
+    self.blend_type = @character.blend_type
+    self.bush_depth = @character.bush_depth
+    update
+  end
+  def update
+    super
+    self.x+=(@x-$game_map.display_x)/4
+    self.y+=(@y-$game_map.display_y)/4
+    @x=$game_map.display_x
+    @y=$game_map.display_y
+    self.z = @character.screen_z(bitmap.height/4)
+  end
+end
+
+#==============================================================================
+# ¦ Linebmp
+# Adds the ability to draw lines. Original by XRSX, adapted heavily to fit the DE
+#==============================================================================
+
+class Linebmp
+  
+  attr_accessor :bmp
+  
+  def initialize(x=0,y=0,z=0,w=32,h=48)
+    @w=w
+    @h=h
+    @bmp = Sprite.new($DE_viewport)
+    @bmp.x=x
+    @bmp.y=y
+    @bmp.z=z
+    @bmp.bitmap = Bitmap.new(@w,@h)
+  end
+    
+  def erase
+    @bmp.bitmap = Bitmap.new(@w,@h)
+  end
+  
+  def draw_line(start_x, start_y, end_x, end_y,speed,width,color=Color.new(255, 255, 255))
+  count=0  
+  distance = (start_x - end_x).abs + (start_y - end_y).abs
+      for i in 1..distance
+        x = (start_x + 1.0 * (end_x - start_x) * i / distance).to_i
+        y = (start_y + 1.0 * (end_y - start_y) * i / distance).to_i
+        if !$DE.hide_line
+        if width == 1
+          @bmp.bitmap.set_pixel(x, y, color)
+        else
+          @bmp.bitmap.fill_rect(x, y, width, width, color)
+        end
+        end
+        count+=1
+        if count>=speed
+          sleep 0.01
+          Graphics.update
+          count=0
+        end
+      end
+  end
+end
+
+#===================================================
+# ? CLASS Sprite_Character edit
+#===================================================
+
+class Sprite_Character < RPG::Sprite
+  alias de_initialize initialize
+  
+  def initialize(viewport, character)
+    #character.reappear
+    if character.is_a?(Game_Player)
+      $DE_viewport=viewport
+    end
+    de_initialize(viewport, character)
+  end
+  
+end
+
+#===================================================
+# ? CLASS Game_Character edit
+#===================================================
+
+class Game_Character
+  
+  alias de_Game_Character_initialize initialize
+
+  def initialize
+    de_Game_Character_initialize
+    @transparentde=@transparent
+    @throughde=@through
+  end
+  
+  alias de_Game_Character_update update
+  
+  def go_through
+    @through=true
+  end
+  
+  def reappear
+    @transparent=@transparentde
+    @through=@throughde
+  end
+  
+  def dont_go_through
+    @through=false
+  end
+  
+end
+
+#===================================================
+# ? CLASS Spriteset_Map edit
+#===================================================
+
+class Spriteset_Map
+  
+alias de_spriteset_update update
+alias de_spriteset_initialize initialize
+
+  def initialize
+    $DE = DE.new
+    de_spriteset_initialize
+    $DE_spriteset = self
+  end
+
+  def update
+   $DE.update if $DE.is_a?(Destruction_Engine)
+   de_spriteset_update
+  end
+end

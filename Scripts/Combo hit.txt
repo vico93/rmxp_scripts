@@ -1,0 +1,214 @@
+Este script foi criado por XRXS.
+ 
+O script permite adicionar o sistema de ComboHit, ataques consecutivos ,normais ou de habilidades, são considerados como hit, a cada Hit os ataques aumentam o seu dano.
+É necessário que a engine do sistema seja CBS Cybersan ou CBS KGC para funcionar, ou qualquer sistema Real Time.
+
+Para modificar o tempo de duração do Combo, procure esta linha.
+########################################## 
+COMBOHIT_DURATION = 100
+#########################################
+
+
+Para modificar o nível de dano a cada hit, procure esta linha.
+########################################
+DAMAGE_INCREASE_PER_HIT = 5
+########################################
+
+
+
+SCRIPT – Crie um novo script acima do script Main
+############################################
+class XRXS_BP19
+
+COMBOHIT_DURATION = 100
+end
+class Game_Battler
+DAMAGE_INCREASE_PER_HIT = 5
+end
+class Window_ComboHit < Window_Base
+COMBOHIT_FONTNAME = "Georgia"
+COMBOHIT_FONTCOLOR = Color.new(255,255,255,255)
+end
+class Window_ComboHit < Window_Base
+def initialize
+super(512, 64, 128, 80)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.opacity = 0
+self.visible = false
+@active = false
+@show_duration = 0
+@sliding_duration = 0
+self.contents.clear
+end
+def clear
+self.contents.clear
+self.visible = false
+end
+def refresh(hit_combo, duration)
+self.contents_opacity = 255
+self.visible = true
+@show_duration = duration
+@sliding_duration = 0
+self.contents.clear
+self.contents.font.name = COMBOHIT_FONTNAME
+self.contents.font.bold = true
+text = hit_combo.to_s + " "
+self.contents.font.size = 36
+self.contents.font.color.set( 0, 0, 0, 192)
+self.contents.draw_text(-1, -1, 64, 44, text, 2)
+self.contents.draw_text(-1, 1, 64, 44, text, 2)
+self.contents.draw_text( 1, -1, 64, 44, text, 2)
+self.contents.draw_text( 1, 1, 64, 44, text, 2)
+self.contents.font.color = COMBOHIT_FONTCOLOR
+self.contents.draw_text( 0, 0, 64, 44, text, 2)
+text ="HITS"
+self.contents.font.size = 24
+self.contents.font.color.set( 0, 0, 0, 192)
+self.contents.draw_text(63, 13, 32, 32, text, 0)
+self.contents.draw_text(65, 13, 32, 32, text, 0)
+self.contents.draw_text(63, 15, 32, 32, text, 0)
+self.contents.draw_text(65, 15, 32, 32, text, 0)
+self.contents.font.color = COMBOHIT_FONTCOLOR
+self.contents.draw_text(64, 14, 32, 32, text, 0)
+end
+def update
+if @sliding_duration > 0
+@sliding_duration -= 1
+self.contents_opacity -= 32
+self.x += 1
+if @sliding_duration == 0
+self.visible = false
+end
+elsif @show_duration > 0
+@show_duration -= 1
+if @show_duration == 0
+@sliding_duration = 8
+end
+end
+end
+end
+
+class Game_Battler
+def combohit
+@combohit = 0 if @combohit.nil?
+return @combohit
+end
+def combohit_duration
+@combohit_duration = 0 if @combohit_duration.nil?
+return @combohit_duration
+end
+def combohit_update
+@combohit_duration = 0 if @combohit_duration.nil?
+if @combohit_duration > 0
+@combohit_duration -= 1
+if @combohit_duration == 0
+@combohit = 0
+end
+end
+end
+def combohit_count
+@combohit = 0 if @combohit.nil?
+@combohit += 1
+if @motion.nil?
+@combohit_duration = XRXS_BP19::COMBOHIT_DURATION
+else
+@combohit_duration = @motion.knock_back_duration
+end
+end
+def combohit_clear
+@combohit = nil
+@combohit_duration = nil
+end
+alias xrxs_bp19_attack_effect attack_effect
+def attack_effect(attacker)
+bool = xrxs_bp19_attack_effect(attacker)
+if bool and self.damage != "Miss"
+if self.damage.is_a?(Numeric)
+add_damage = self.damage * ([self.combohit * DAMAGE_INCREASE_PER_HIT,-100].max)/100
+self.hp -= add_damage
+self.damage += add_damage
+end
+self.combohit_count
+end
+return bool
+end
+alias xrxs_bp19_skill_effect skill_effect
+def skill_effect(user, skill)
+if skill.power >= 1
+skill = skill.dup
+skill.power = skill.power * (100 + [self.combohit * DAMAGE_INCREASE_PER_HIT,-100].max)/100
+end
+bool = xrxs_bp19_skill_effect(user, skill)
+if skill.power >= 1 and bool and self.damage != "Miss"
+self.combohit_count
+end
+return bool
+end
+alias xrxs_bp19_item_effect item_effect
+def item_effect(item)
+unless (item.recover_hp < 0 or item.recover_hp_rate < 0)
+return xrxs_bp19_item_effect(item)
+end
+item = item.dup
+rate = (100 + [self.combohit * DAMAGE_INCREASE_PER_HIT,-100].max)
+item.recover_hp = skill.recover_hp * rate / 100
+item.recover_hp_rate = skill.recover_hp_rate * rate / 100
+bool = xrxs_bp19_item_effect(item)
+if (bool and self.damage != "Miss")
+self.combohit_count
+end
+return bool
+end
+end
+#==============================================================================
+# ¡ Scene_Battle
+#==============================================================================
+class Scene_Battle
+alias xrxs_bp19_main main
+def main
+xrxs_bp19_main
+@combohit_window.dispose
+end
+alias xrxs_bp19_update update
+def update
+@combohit_window.update
+for actor in $game_party.actors
+actor.combohit_update
+end
+for enemy in $game_troop.enemies
+enemy.combohit_update
+end
+xrxs_bp19_update
+end
+alias xrxs_bp19_start_phase1 start_phase1
+def start_phase1
+xrxs_bp19_start_phase1
+@combohit_window = Window_ComboHit.new
+end
+alias xrxs_bp19_update_phase4_step5 update_phase4_step5
+def update_phase4_step5
+xrxs_bp19_update_phase4_step5
+max = 0
+hit_target = nil
+for target in @target_battlers
+if target.combohit > max
+max = target.combohit
+hit_target = target
+end
+end
+if max >= 2 and !hit_target.nil?
+@combohit_window.x = hit_target.is_a?(Game_Enemy) ? 512 : 0
+@combohit_window.refresh(max, hit_target.combohit_duration)
+end
+end
+end
+##############################################################
+
+
+NOTA – Somente para quem usa o sistema Cybersan.
+Vá até o script CBS Scene_Battle e procure a linha.
+###########################
+@damage_wait = 20
+###########################
+Substitua o numero 20 por 0, desta forma a batalha ficara mais dinâmica.
+

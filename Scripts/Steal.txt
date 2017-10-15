@@ -1,0 +1,269 @@
+##################################################################### 
+############################ KGC_Steal ############################## 
+##################################################################### 
+# Traduzido Por TURBIDOS. 
+# Visite Também o site www.turbidos.oi.com.br e o forum http://turbidos.free-forums.org/ 
+# Cada habilidade que possuir o atributo Roubar, será ativada 
+# a habilidade roubo, que pode ser item, arma, armadura, dinheiro, etc... 
+#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/ 
+# 1 - Crie um atributo chamado Roubar no database 
+# 2 - Na janela de habilidades coloque o atributo Roubar na 
+# habilidade que ira roubar os item. 
+# 3 - Vá até a janela dos inimigos, e quando for nomear o nome de 
+# seu inimigo faça como no exemplo abaixo. 
+################################## 
+# Fantasma /i2 /g1300 /W5 
+################################## 
+# Tradução 
+# Quando você for roubar o inimigo Fantasma você podera roubar 
+# os seguintes items 
+# I2 = Poção+(ID2 do database de itens) 
+# g1300 = 1300 de dinheiro 
+# W5 = a arma Laça(ID5 do database de armas 
+#################################### 
+# Cada letra tem uma função e o numero é a posição do ID do Database 
+# I = ITEM 
+# W = Armas 
+# A = Armaduras,escudos,acessorios, etc. 
+# G = Dinheiro 
+#################################### 
+module KGC 
+  STEAL_SUCCESS_DMG = "Stolen" 
+  STEAL_EMPTY_MSG = "Não tem nada" 
+  STEAL_FAIL_MSG = "Não conseguiu roubar" 
+  STEAL_GOLD_MSG = "?{Gold}? de dinheiro roubados!!" 
+  STEAL_ITEM_MSG = "Roubou ?{item}? !!" 
+end 
+
+
+$imported["Steal"] = true 
+
+$game_special_elements["steal"] = $data_system.elements.index("Roubar") 
+
+#============================================================================== 
+# ¦ RPG::Enemy 
+#============================================================================== 
+
+class RPG::Enemy 
+  alias name_KGC_Steal name 
+  def name 
+    return name_KGC_Steal.split(/ /)[0] 
+  end 
+  def steal_items 
+    data = @name.split(/ /) 
+    data.delete_at(0) 
+    items = [] 
+    for i in 0...data.size 
+      items[i] = data[i].split(/\/([ABGIW])(\d+)?/i) 
+      items[i].delete_at(0) 
+      items[i][1] = items[i][1].to_i 
+    end 
+    return items 
+  end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Game_Battler (???? 3) 
+#============================================================================== 
+
+class Game_Battler 
+  alias skill_effect_KGC_Steal skill_effect 
+  def skill_effect(user, skill) 
+    return false if skill.element_set.include?($game_special_elements["steal"]) 
+    return skill_effect_KGC_Steal(user, skill) 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ????????? 
+  #     user      : ??????? (????) 
+  #     skill     : ??? 
+  #-------------------------------------------------------------------------- 
+  def steal_effect(user, skill) 
+    # ????????????? 
+    self.critical = false 
+    # ????????? HP 1 ?????????? HP ? 0? 
+    # ???????????? HP 0 ???????? HP ? 1 ????? 
+    if ((skill.scope == 3 || skill.scope == 4) && self.hp == 0) || 
+       ((skill.scope == 5 || skill.scope == 6) && self.hp >= 1) 
+      # ?????? 
+      return false 
+    end 
+    # ????????? 
+    steal_item = nil 
+
+    # ?????????????? 
+    if self.states.include?($game_state_invincible) && 
+        (skill.scope == 1 || skill.scope == 2) 
+      # ???????? 
+      hit_result = false 
+    else 
+      # ?????? 
+      hit_result = (rand(100) < skill.hit) 
+    end 
+
+    # ????? 
+    if hit_result 
+      # ???????? 
+      steal_prob = skill.power * user.dex / self.agi / 100.0 
+      # ???? 
+      steal_prob *= elements_correct(skill.element_set) 
+      steal_prob /= 100 
+      items = $data_enemies[self.id].steal_items 
+      # ??????????? 
+      count = 0 
+      for i in 0...items.size 
+        if (items[i][0] == "B" || items[i][0] == "b") || 
+            self.stolen_items_flag[i] 
+          next 
+        end 
+        count += 1 
+      end 
+      # ?????????? 
+      if count > 0 
+        # ?????(???????2?) 
+        hit = steal_prob * 200 
+        # ???? 
+        for i in 0...items.size 
+          # ????? 
+          hit = [hit / 2, 1].max 
+          # ???????????? 
+          next if self.stolen_items_flag[i] 
+          item = items[i] 
+          hit_result = (rand(100) < hit) 
+          # ?????? 
+          if hit_result 
+            case item[0].upcase 
+            when "B"  # ???? 
+              self.stolen_items_flag[i] = true 
+              next 
+            when "I"  # ???? 
+              steal_item = $data_items[item[1]].name 
+              $game_party.gain_item(item[1], 1) 
+            when "W"  # ?? 
+              steal_item = $data_weapons[item[1]].name 
+              $game_party.gain_weapon(item[1], 1) 
+            when "A"  # ?? 
+              steal_item = $data_armors[item[1]].name 
+              $game_party.gain_armor(item[1], 1) 
+            when "G"  # ???? 
+              steal_item = item[1] 
+              $game_party.gain_gold(item[1]) 
+            end 
+            # ???????? 
+            self.stolen_items_flag[i] = true 
+            break 
+          end 
+        end 
+      # ??????????????? 
+      else 
+        hit_result = true 
+      end 
+    end 
+    # ????? 
+    if hit_result 
+      # ?????????? 
+      if steal_item == nil 
+        self.damage = "Miss" 
+        steal_item = "No Item" 
+      # ?????? 
+      else 
+        self.damage = KGC::STEAL_SUCCESS_DMG 
+      end 
+    # ????? 
+    else 
+      self.damage = "Miss" 
+      steal_item = "Miss" 
+    end 
+    # ??????(????????) 
+    return steal_item 
+  end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Game_Enemy 
+#============================================================================== 
+
+class Game_Enemy < Game_Battler 
+  #-------------------------------------------------------------------------- 
+  # ? ?????????? 
+  #-------------------------------------------------------------------------- 
+  attr_accessor :stolen_items_flag        # ???????? 
+  #-------------------------------------------------------------------------- 
+  # ? ????????? 
+  #     troop_id     : ???? ID 
+  #     member_index : ??????????????? 
+  #-------------------------------------------------------------------------- 
+  alias initialize_KGC_Steal initialize 
+  def initialize(troop_id, member_index) 
+    # ??????? 
+    initialize_KGC_Steal(troop_id, member_index) 
+
+    @stolen_items_flag = [] 
+  end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Scene_Battle (???? 4) 
+#============================================================================== 
+
+class Scene_Battle 
+  #-------------------------------------------------------------------------- 
+  # ? ???????? ???? 
+  #-------------------------------------------------------------------------- 
+  alias make_skill_action_result_KGC_Steal make_skill_action_result 
+  def make_skill_action_result 
+    # ??????? 
+    make_skill_action_result_KGC_Steal 
+
+    # ?????????????? 
+    if @skill.element_set.include?($game_special_elements["steal"]) 
+      target = @target_battlers[0] 
+      @steal_item = target.steal_effect(@active_battler, @skill) 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? (??????? ???? 5 : ??????) 
+  #-------------------------------------------------------------------------- 
+  alias update_phase4_step5_KGC_Steal update_phase4_step5 
+  def update_phase4_step5 
+    # ??????? 
+    update_phase4_step5_KGC_Steal 
+
+    if @steal_item != nil 
+      case @steal_item 
+      when "No Item" 
+        @help_window.set_text(KGC::STEAL_EMPTY_MSG, 1) 
+      when "Miss" 
+        @help_window.set_text(KGC::STEAL_FAIL_MSG, 1) 
+      when Integer 
+        text = KGC::STEAL_GOLD_MSG.dup 
+        text.gsub!(/{gold}/i) {"#{@steal_item}"} 
+        text.gsub!(/{unit}/i) {"#{$data_system.words.gold}"} 
+        @help_window.set_text(text, 1) 
+      else 
+        text = KGC::STEAL_ITEM_MSG.dup 
+        text.gsub!(/{item}/i) {"#{@steal_item}"} 
+        @help_window.set_text(text, 1) 
+      end 
+      @steal_item = nil 
+      @wait_count = 30 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? (??????? ???? 6 : ??????) 
+  #-------------------------------------------------------------------------- 
+  alias update_phase4_step6_KGC_Steal update_phase4_step6 
+  def update_phase4_step6 
+    # ??????????? 
+    @help_window.visible = false 
+    @help_window2.visible = false if @help_window2 != nil 
+
+    # ??????? 
+    update_phase4_step6_KGC_Steal 
+  end 
+end 

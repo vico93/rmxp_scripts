@@ -1,0 +1,221 @@
+#==============================================================================
+# ¦ Sprite_Sun
+# # Based on Sprite_Shadow, modified by Rataime
+#==============================================================================
+
+CATERPILLAR_COMPATIBLE = true
+SUN_WARN =true
+
+class Game_Party
+  attr_reader :characters
+end
+
+class Sprite_Sun < RPG::Sprite
+  attr_accessor :character           
+ 
+  def initialize(viewport, character = nil,id=0)
+    super(viewport)
+    @character = character
+    params=$sun_spriteset.sun[id]
+    self_angle=45
+    self_angle=params[0] if params.size>0
+    self_opacity=128
+    self_opacity=params[1] if params.size>1
+    @self_angle=self_angle
+    @self_opacity=self_opacity
+    update
+  end
+ 
+  def update
+    super
+    if @tile_id != @character.tile_id or
+       @character_name != @character.character_name or
+       @character_hue != @character.character_hue
+      @tile_id = @character.tile_id
+      @character_name = @character.character_name
+      @character_hue = @character.character_hue
+      if @tile_id >= 384
+        self.bitmap = RPG::Cache.tile($game_map.tileset_name,
+          @tile_id, @character.character_hue)
+        self.src_rect.set(0, 0, 32, 32)
+        self.ox = 16
+        self.oy = 32
+      else
+        self.bitmap = RPG::Cache.character(@character.character_name,
+          @character.character_hue)
+        @cw = bitmap.width / 4
+        @ch = bitmap.height / 4
+        self.ox = @cw / 2
+        self.oy = @ch
+      end
+    end
+    
+    self.visible = (not @character.transparent)
+
+    if @tile_id == 0
+     sx = @character.pattern * @cw
+     @direct=@character.direction
+     
+      if self.angle>90 or angle<-90
+   
+        if @direct== 6
+               sy = ( 4- 2) / 2 * @ch
+      end
+      if @direct== 4
+               sy = ( 6- 2) / 2 * @ch
+        end
+        if @direct != 4 and @direct !=6
+        sy = (@character.direction - 2) / 2 * @ch
+          end
+        else
+     sy = (@character.direction - 2) / 2 * @ch
+     end
+       self.src_rect.set(sx, sy, @cw, @ch)
+    end
+    self.x = @character.screen_x
+    self.y = @character.screen_y-5
+    self.z = @character.screen_z(@ch)-1
+    self.opacity = @self_opacity
+    self.blend_type = @character.blend_type
+    self.bush_depth = @character.bush_depth
+    if @character.animation_id != 0
+      animation = $data_animations[@character.animation_id]
+      animation(animation, true)
+      @character.animation_id = 0
+    end
+    self.angle = @self_angle.to_i-90
+    self.color = Color.new(0, 0, 0)
+  end
+end
+
+#===================================================
+# ? CLASS Sprite_Character edit
+#===================================================
+
+class Sprite_Character < RPG::Sprite
+  alias sun_initialize initialize
+  
+  def initialize(viewport, character = nil)
+    @character = character
+    super(viewport)
+    @sunlist=[]
+    if character.is_a?(Game_Event) and $sun_spriteset.sun!=[]
+      params = XPML_read("Shadow",@character.id,2)
+      if params!=nil
+        for i in 0...$sun_spriteset.sun.size
+          @sunlist.push(Sprite_Sun.new(viewport, @character,i))
+        end
+      end
+    end
+   if character.is_a?(Game_Player) and $sun_spriteset.sun!=[]
+      for i in 0...$sun_spriteset.sun.size
+        @sunlist.push(Sprite_Sun.new(viewport, $game_player,i))
+      end
+      #===================================================
+      # ? Compatibility with fukuyama's caterpillar script
+      #===================================================
+      if CATERPILLAR_COMPATIBLE and $game_party.characters!=nil
+        for member in $game_party.characters
+          for i in 0...$sun_spriteset.sun.size
+            @sunlist.push(Sprite_Sun.new(viewport, member,i))
+          end
+        end
+      end
+      #===================================================
+      # ? End of the compatibility
+      #===================================================
+    end
+    sun_initialize(viewport, @character)
+  end
+  
+  alias sun_update update
+  
+  def update
+    sun_update
+    if @sunlist!=[]
+      for i in 0...@sunlist.size
+        @sunlist[i].update
+      end
+    end
+  end  
+  
+end
+
+#===================================================
+# ? CLASS Game_Event edit
+#===================================================
+class Game_Event
+  attr_accessor :id
+end
+
+#===================================================
+# ? CLASS Spriteset_Map edit
+#===================================================
+class Spriteset_Map
+  attr_accessor :sun
+  alias sun_initialize initialize
+  
+  def initialize
+    @sun=[]
+    $sun_spriteset=self
+    warn=false
+    for k in $game_map.events.keys.sort
+      warn=true if ($game_map.events[k].list!=nil and $game_map.events[k].list[0].code == 108 and ($game_map.events[k].list[0].parameters == ["sun"] or $game_map.events[k].list[0].parameters == ["o"]))
+      params = XPML_read("Sun",k,2)
+      $sun_spriteset.sun.push(params) if params!=nil
+    end
+    p "Warning : At least one event on this map uses the obsolete way to add a sun effect" if warn == true and SUN_WARN
+    sun_initialize
+  end  
+end
+
+
+
+#===================================================
+# ? XPML Definition, by Rataime, using ideas from Near Fantastica
+#
+#   Returns nil if the markup wasn't present at all,
+#   returns [] if there wasn't any parameters, else
+#   returns a parameters list with "int" converted as int
+#   eg :
+#   begin first
+#   begin second
+#   param1 1
+#   param2 two
+#   begin third
+#   anything 3
+#
+#   p XPML_read("first", event_id) -> []
+#   p XPML_read("second", event_id) -> [1,"two"]
+#   p XPML_read("third", event_id) -> [3]
+#   p XPML_read("forth", event_id) -> nil
+#===================================================
+
+  def XPML_read(markup,event_id,max_param_number=0)
+    parameter_list = nil
+    event=$game_map.events[event_id]
+    return if event.list==nil
+      for i in 0...event.list.size
+        if event.list[i].code == 108 and event.list[i].parameters[0].downcase == "begin "+markup.downcase
+          parameter_list = [] if parameter_list == nil
+          for j in i+1...event.list.size
+            if event.list[j].code == 108
+              parts = event.list[j].parameters[0].split
+              if parts.size!=1 and parts[0].downcase!="begin"
+                if parts[1].to_i!=0 or parts[1]=="0"
+                  parameter_list.push(parts[1].to_i)
+                else
+                  parameter_list.push(parts[1])
+                end
+              else
+                return parameter_list
+              end
+            else
+              return parameter_list
+            end
+            return parameter_list if max_param_number!=0 and j==i+max_param_number
+          end
+        end
+      end
+    return parameter_list
+  end

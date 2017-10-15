@@ -1,0 +1,422 @@
+#################################################
+#           MODULO MESTRE  ver 2.00
+#################################################
+#   by ???
+#   by Minto
+#################################################
+module MINTO
+  RGSS = {}
+end
+class Game_Actor < Game_Battler
+  def actor
+    return RPG_Actors::data[@actor_id]
+  end
+  def equip?(type = 0)
+    case type
+    when 0
+      return (@weapon_id > 0)
+    when 1
+      return (@armor1_id > 0)
+    when 2
+      return (@armor2_id > 0)
+    when 3
+      return (@armor3_id > 0)
+    when 4
+      return (@armor4_id > 0)
+    end
+  end
+end
+class Game_Enemy < Game_Battler  
+  def equip?(type = 0)
+    return false
+  end
+end
+module Data_Actors
+  def self.initialize(in_battle = false)
+    if in_battle
+      data = load_data("Data/BT_Actors.rxdata")
+    else
+      data = load_data("Data/Actors.rxdata")
+    end    
+    @data = data
+  end
+  def self.data=(data)
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_Classes
+  def self.initialize(in_battle = false)
+    if in_battle
+      data = load_data("Data/BT_Classes.rxdata")
+    else
+      data = load_data("Data/Classes.rxdata")
+    end    
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_Weapons
+  def self.initialize(in_battle = false)
+    if in_battle
+      data_weapons = load_data("Data/BT_Weapons.rxdata")
+    else
+      data_weapons = load_data("Data/Weapons.rxdata")
+    end    
+    @data = data_weapons
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_Armors
+  def self.initialize(in_battle = false)
+    if in_battle
+      data = load_data("Data/BT_Armors.rxdata")
+    else
+      data = load_data("Data/Armors.rxdata")
+    end    
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_Items
+  def self.initialize(in_battle = false)
+    if in_battle
+      data = load_data("Data/BT_Items.rxdata")
+    else
+      data = load_data("Data/Items.rxdata")
+    end    
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_System
+  def self.initialize(in_battle = false)
+    if in_battle
+      data = load_data("Data/BT_System.rxdata")
+    else
+      data = load_data("Data/System.rxdata")
+    end    
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_Skills_Base
+  def self.initialize(in_battle = false)
+    if in_battle
+      data_skills = load_data("Data/BT_Skills.rxdata")
+    else
+      data_skills = load_data("Data/Skills.rxdata")
+    end    
+    @data = data_skills
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_Troops
+  def self.initialize(in_battle = false)
+    if in_battle
+      data_troops = load_data("Data/BT_Troops.rxdata")
+    else
+      data_troops = load_data("Data/Troops.rxdata")
+    end    
+    @data = data_troops
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_Enemies
+  def self.initialize(in_battle = false)
+    if in_battle
+      data_enemies = load_data("Data/BT_Enemies.rxdata")
+    else
+      data_enemies = load_data("Data/Enemies.rxdata")
+    end
+    @data = data_enemies
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_States
+  def self.initialize(in_battle = false)
+    if in_battle
+      data_states = load_data("Data/BT_States.rxdata")
+    else
+      data_states = load_data("Data/States.rxdata")
+    end
+    @data = data_states
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_Animations
+  def self.initialize(in_battle = false)
+    if in_battle
+      data_animations = load_data("Data/BT_Animations.rxdata")
+    else
+      data_animations = load_data("Data/Animations.rxdata")
+    end    
+    @data = data_animations
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_Tilesets
+  def self.initialize(in_battle = false)
+    if in_battle
+      data_tilesets = load_data("Data/BT_Tilesets.rxdata")
+    else
+      data_tilesets = load_data("Data/Tilesets.rxdata")
+    end    
+    @data = data_tilesets
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_Common_Events
+  def self.initialize(in_battle = false)
+    if in_battle
+      data_common_events = load_data("Data/BT_CommonEvents.rxdata")
+    else
+      data_common_events = load_data("Data/CommonEvents.rxdata")
+    end
+    @data = data_common_events
+  end
+  def self.data
+    return @data
+  end
+end
+module Data_Map
+  def self.initialize(data = nil)
+    if !data
+      @data = Game_Map.new
+    else
+      @data = data
+    end    
+  end
+  def self.data
+    return @data
+  end
+end
+module RPG_System
+  def self.initialize(data = nil)
+    if !data
+      @data = Game_System.new
+    else
+      @data = data
+    end    
+  end  
+  def self.data=(data)
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module RPG_Temp
+  def self.initialize(data = nil)
+    if !data
+      @data = Game_Temp.new
+    else
+      @data = data
+    end    
+  end  
+  def self.data=(data)
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module RPG_Switches
+  def self.initialize(data = nil)
+    if !data
+      @data = Game_Switches.new
+    else
+      @data = data
+    end    
+  end  
+  def self.data=(data)
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module RPG_Variables
+  def self.initialize(data = nil)
+    if !data
+      @data = Game_Variables.new
+    else
+      @data = data
+    end    
+  end  
+  def self.data=(data)
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module RPG_SelfSwitches
+  def self.initialize(data = nil)
+    if !data
+      @data = Game_SelfSwitches.new
+    else
+      @data = data
+    end    
+  end  
+  def self.data=(data)
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module RPG_Screen
+  def self.initialize(data = nil)
+    if !data
+      @data = Game_Screen.new
+    else
+      @data = data
+    end    
+  end  
+  def self.data=(data)
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module RPG_Actors
+  def self.initialize(data = nil)
+    if !data
+      @data = Game_Actors.new
+    else
+      @data = data
+    end    
+  end
+  def self.data=(data)
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module RPG_Party
+  def self.initialize(data = nil)
+    if !data
+      @data = Game_Party.new
+    else
+      @data = data
+    end    
+  end  
+  def self.data=(data)
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module RPG_Troop
+  def self.initialize(data = nil)
+    if !data
+      @data = Game_Troop.new
+    else
+      @data = data
+    end    
+  end  
+  def self.data=(data)
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module RPG_Player
+  def self.initialize(data = nil)
+    if !data
+      @data = Game_Player.new
+    else
+      @data = data
+    end    
+  end  
+  def self.data=(data)
+    @data = data
+  end
+  def self.data
+    return @data
+  end
+end
+module MINTO
+  def self.set_up_data_module(test_battle = false)
+    if !Data_Actors::data
+      Data_Actors::initialize(test_battle)
+      Data_Classes::initialize(test_battle)
+      Data_Items::initialize(test_battle)
+      Data_Armors::initialize(test_battle)
+      Data_System::initialize(test_battle)
+      Data_Enemies::initialize(test_battle)
+      Data_Troops::initialize(test_battle)
+      Data_Weapons::initialize(test_battle)
+      Data_Skills_Base::initialize(test_battle)
+      Data_Animations::initialize(test_battle)
+      Data_Tilesets::initialize(test_battle)
+      Data_States::initialize(test_battle)
+      Data_Common_Events::initialize(test_battle)
+    end
+  end
+  def self.set_up_game_object
+    RPG_Switches::initialize
+    RPG_Variables::initialize
+    RPG_SelfSwitches::initialize
+    RPG_Screen::initialize
+    RPG_Actors::initialize
+    RPG_Party::initialize
+    RPG_Troop::initialize
+    RPG_Player::initialize
+    Data_Map::initialize
+  end
+  def self.save_game_object(file)
+    Marshal.dump(RPG_System::data, file)
+    Marshal.dump(RPG_Switches::data, file)
+    Marshal.dump(RPG_Variables::data, file)
+    Marshal.dump(RPG_SelfSwitches::data, file)
+    Marshal.dump(RPG_Screen::data, file)
+    Marshal.dump(RPG_Actors::data, file)
+    Marshal.dump(RPG_Party::data, file)
+    Marshal.dump(RPG_Troop::data, file)
+    Marshal.dump(RPG_Player::data, file)
+    Marshal.dump(Data_Map::data, file)
+  end
+  def self.load_game_object(file)
+    RPG_System::initialize(Marshal.load(file))
+    RPG_Switches::initialize(Marshal.load(file))
+    RPG_Variables::initialize(Marshal.load(file))
+    RPG_SelfSwitches::initialize(Marshal.load(file))
+    RPG_Screen::initialize(Marshal.load(file))
+    RPG_Actors::initialize(Marshal.load(file))
+    RPG_Party::initialize(Marshal.load(file))
+    RPG_Troop::initialize(Marshal.load(file))
+    RPG_Player::initialize(Marshal.load(file))
+    Data_Map::initialize(Marshal.load(file))    
+  end
+end
+MINTO.set_up_data_module($BTEST)

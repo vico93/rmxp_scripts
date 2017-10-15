@@ -1,0 +1,131 @@
+#----------------------------------------------------------------- 
+# ¦ Guilink's barras de HP & MP  ¦ 
+#----------------------------------------------------------------- 
+# Ultimo  Update: 24/11/05 
+# - Adicionado barra de  MP 
+#----------------------------------------------------------------- 
+$hp_bar = true 
+$sp_bar = true 
+#----------------------------------------------------------------- 
+class Scene_Map 
+#----------------------------------------------------------------- 
+alias sk_bar_main main 
+def main 
+@bars = Window_Sk_Bars.new 
+sk_bar_main 
+@bars.dispose if @bars != nil 
+end 
+#----------------------------------------------------------------- 
+alias sk_bar_update update 
+def update 
+@bars.update if $hp_bar or $sp_bar 
+sk_bar_update 
+end 
+#----------------------------------------------------------------- 
+end 
+#----------------------------------------------------------------- 
+class Window_Base < Window 
+#----------------------------------------------------------------- 
+def sk_initialize(font=0,size=22) 
+font = "Tahoma" if font == 0 
+self.contents = Bitmap.new(self.width-32,self.height-32) 
+self.contents.font.name = font 
+self.contents.font.size = size 
+end 
+#----------------------------------------------------------------- 
+def draw_text_outline(x,y,w,h,str,c=normal_color,a=0) 
+self.contents.font.color = Color.new(0,0,0,255) 
+self.contents.draw_text(x-1,y,w,h,str,a) 
+self.contents.draw_text(x+1,y,w,h,str,a) 
+self.contents.draw_text(x,y+1,w,h,str,a) 
+self.contents.draw_text(x,y-1,w,h,str,a) 
+self.contents.font.color = c 
+self.contents.draw_text(x,y,w,h,str,a) 
+end 
+#----------------------------------------------------------------- 
+end 
+#----------------------------------------------------------------- 
+class Window_Sk_Bars < Window_Base 
+#----------------------------------------------------------------- 
+def initialize 
+super(444,-10,206,96) 
+sk_initialize("Arial") 
+self.opacity = 0 
+end 
+#----------------------------------------------------------------- 
+def update 
+self.contents.clear 
+actor = $game_party.actors[0] 
+if $hp_bar 
+draw_text_outline(0,0,64,26,"HP") 
+draw_actor_hp(actor,32,2) 
+end 
+if $sp_bar 
+draw_text_outline(0,24,64,26,"MP") 
+draw_actor_sp(actor,32,26) 
+end 
+end 
+#----------------------------------------------------------------- 
+def draw_actor_hp(actor,x,y) 
+width = 128 
+y += 4 
+w = width * actor.hp / actor.maxhp 
+# White border and black back 
+border_back(x,y,width) 
+# Generating the color 
+val = 255 * ((actor.hp*100)/actor.maxhp) 
+green = 255 - val/100 
+color = Color.new(224,green,0,255) 
+w_color = Color.new(255,green+32,96,255) 
+if green > 64 then green -= 32 
+elsif green > 128 then green -= 64 end 
+b_color = Color.new(172,green,0,255) 
+# Making the bar 
+make_bar(x,y,w,color,w_color,b_color) 
+end 
+#----------------------------------------------------------------- 
+def draw_actor_sp(actor,x,y) 
+width = 128 
+y += 4 
+w = width * actor.sp / actor.maxsp 
+# White border and black back 
+border_back(x,y,width) 
+# Generating the color 
+val = 255 * ((actor.sp*100)/actor.maxsp) 
+red = 255 - val/100 
+color = Color.new(red,0,224,255) 
+w_color = Color.new(red,64,255,255) 
+if red > 64 then red -= 32 
+elsif red > 128 then red -= 64 end 
+b_color = Color.new(red,0,172,255) 
+# Making the bar 
+make_bar(x,y,w,color,w_color,b_color) 
+end 
+#----------------------------------------------------------------- 
+def border_back(x,y,width) 
+white = Color.new(255,255,255,255) 
+black = Color.new(0,0,0,255) 
+# White border 
+self.contents.fill_rect(x+1, y-1, width-2, 1, white) 
+self.contents.fill_rect(x, y, width, 1, white) 
+self.contents.fill_rect(x-1, y+1, width+2, 9, white) 
+self.contents.fill_rect(x, y+10, width, 1, white) 
+self.contents.fill_rect(x+1, y+11, width-2, 1, white) 
+# Black back 
+self.contents.fill_rect(x+2, y, width-4, 1, black) 
+self.contents.fill_rect(x+1, y+1, width-2, 1, black) 
+self.contents.fill_rect(x, y+2, width, 7, black) 
+self.contents.fill_rect(x+1, y+9, width-2, 1, black) 
+self.contents.fill_rect(x+2, y+10, width-4, 1, black) 
+end 
+#----------------------------------------------------------------- 
+def make_bar(x,y,w,color,w_color,b_color) 
+self.contents.fill_rect(x+2, y, w-4, 1, w_color) 
+self.contents.fill_rect(x+1, y+1, w-2, 1, w_color) 
+self.contents.fill_rect(x, y+2, w, 7, color) 
+self.contents.fill_rect(x+1, y+9, w-2, 1, color) 
+self.contents.fill_rect(x+2, y+10, w-4, 1, b_color) 
+end 
+#----------------------------------------------------------------- 
+end 
+#-----------------------------------------------------------------

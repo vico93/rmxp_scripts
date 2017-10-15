@@ -1,0 +1,1090 @@
+#==============================================================================
+# ** Equipment Skills
+#------------------------------------------------------------------------------
+# SephirothSpawn
+# 2006-04-13
+# Version 2.01
+#------------------------------------------------------------------------------
+# * Instructions
+#
+#   ~ Skill Learning Types (Choose 1, or neither for cannot learn)
+#     - Learn_By_Level = true (On) or false (Off)
+#     - Learn_By_AP = true (On) or false (Off)
+#
+#   ~ Disabling Moves Until Learned
+#     - Disable_Until_Learned = true (On) or false (Off)
+#     - Only Required For Learn By AP
+#
+#   ~ Learn One Skill At A Time
+#     - Learn_One_Skill = true (On) or false (Off)
+#
+#   ~ Victory Window Options
+#     - Show Victory Window
+#       Show_Victory_Skills = true (On) or false (Off)
+#     - Show Only Newly Mastered Skills
+#       Show_Only_Mastered = true (On) or false (Off)
+#
+#   ~ Enemy AP Values
+#     - Default_Enemy_AP = Default Enemy AP
+#     - Enemy_AP_Values = { enemy_id => ap given, ... }
+#
+#   ~ Weapon Skills & Armor Skills
+#     - Weapon_Skills or Armor_Skills
+#     - = { equipment_id => { skill_id => Ap or Level Required, ... }, ... }
+#------------------------------------------------------------------------------
+# ~ One Skill At a Time Feature Requires 
+#     Near Fantastica's Keyboard Input Module
+#==============================================================================
+
+#------------------------------------------------------------------------------
+# * SDK Log Script
+#------------------------------------------------------------------------------
+SDK.log('Equipment Skills', 'SephirothSpawn', 1, '2006-03-12')
+
+#------------------------------------------------------------------------------
+# * Begin SDK Enable Test
+#------------------------------------------------------------------------------
+if SDK.state('Equipment Skills') == true
+
+#==============================================================================
+# ** Equipment_Skills
+#==============================================================================
+
+module Equipment_Skills
+  #--------------------------------------------------------------------------
+  # * Learning Types
+  #   (If Both are false, you cannot learn skills)
+  #--------------------------------------------------------------------------
+  Learn_By_Level = false
+  Learn_By_AP = true
+  #--------------------------------------------------------------------------
+  # * Disable Until Learned
+  #--------------------------------------------------------------------------
+  Disable_Until_Learned = false
+  #--------------------------------------------------------------------------
+  # * Only Learn One Skill at a time
+  #   (Must assign the current skill each time)
+  #--------------------------------------------------------------------------
+  Learn_One_Skill = false
+  #--------------------------------------------------------------------------
+  # * Show Victory Skills Window after Battle
+  # * Show Only Newly Learned Skills
+  #--------------------------------------------------------------------------
+  Show_Victory_Skills = false
+  Show_Only_Mastered = true
+  #--------------------------------------------------------------------------
+  # * Default AP Given By Enemy
+  #--------------------------------------------------------------------------
+  Default_Enemy_AP = 1
+  #--------------------------------------------------------------------------
+  # * Assigned AP for enemies
+  #   ~ enemy_id => ap
+  #--------------------------------------------------------------------------
+  Enemy_AP_Values = {
+    1 => 3
+  }
+  #--------------------------------------------------------------------------
+  # * Weapon Skills
+  #   ~ weapon_id => { skill_id, required_ap }
+  #--------------------------------------------------------------------------
+  Weapon_Skills = {
+    1 => { 57 => 25, 58 => 50, 59 => 100, 60 => 200 },
+    5 => { 61 => 25, 62 => 50, 63 => 100, 64 => 200 },
+    25 => { 73 => 25, 74 => 50, 75 => 100, 76 => 200 },
+    29 => { 77 => 25, 78 => 50, 79 => 100, 80 => 200 }
+  }
+  #--------------------------------------------------------------------------
+  # * Armor Skills
+  #   ~ armor_id => { skill_id, required_ap }
+  #--------------------------------------------------------------------------
+  Armor_Skills = {
+    1 => { 1 => 30, 4 => 40 },
+    5 => { 55 => 50 },
+    9 => { 33 => 25, 35 => 60 },
+    13 => { 56 => 60 },
+    17 => { 56 => 50 },
+    21 => { 37 => 25, 39 => 60 },
+    25 => { 53 => 35 },
+    26 => { 54 => 50 },
+    29 => { 7 => 25, 8 => 50, 9 => 100 },
+    30 => { 10 => 25, 11 => 50, 12 => 100 }
+  }
+end
+
+#==============================================================================
+# ** Game_Actor
+#==============================================================================
+
+class Game_Actor < Game_Battler
+  #--------------------------------------------------------------------------
+  # * Public Instance Variables
+  #--------------------------------------------------------------------------
+  attr_accessor :skill_ap_totals
+  attr_accessor :weapon_skill_target
+  attr_accessor :armor1_skill_target
+  attr_accessor :armor2_skill_target
+  attr_accessor :armor3_skill_target
+  attr_accessor :armor4_skill_target
+  #--------------------------------------------------------------------------
+  # * Alias Listings
+  #--------------------------------------------------------------------------
+  alias seph_weaponskills_gameactor_setup setup
+  alias seph_weaponskills_gameactor_equip equip
+  alias seph_weaponskills_gameactor_skills skills
+  alias seph_weaponskills_gameactor_scu skill_can_use?
+  #--------------------------------------------------------------------------
+  # * Setup
+  #     actor_id : actor ID
+  #--------------------------------------------------------------------------
+  def setup(actor_id)
+    # Creates Equipment AP 
+    @skill_ap_totals = {}
+    # Mastered Skills
+    @mastered_skills = []
+    # Sets Equipment Skill Targets to Nil
+    @weapon_skill_target = nil
+    @armor1_skill_target = nil
+    @armor2_skill_target = nil
+    @armor3_skill_target = nil
+    @armor4_skill_target = nil
+    # Adds In Weapon Skills and AP Amounts
+    weapon_skills = Equipment_Skills::Weapon_Skills
+    armor_skills = Equipment_Skills::Armor_Skills
+    equipment = weapon_skills.values + armor_skills.values
+    for skill_data in equipment
+      for skill_id in skill_data.keys
+        unless @skill_ap_totals.has_key?(skill_id)
+          @skill_ap_totals[skill_id] = 0
+        end
+      end
+    end
+    # Original Initialization
+    seph_weaponskills_gameactor_setup(actor_id)
+  end
+  #--------------------------------------------------------------------------
+  # * Change Equipment
+  #     equip_type : type of equipment
+  #     id    : weapon or armor ID (If 0, remove equipment)
+  #--------------------------------------------------------------------------
+  def equip(equip_type, id)
+    # Original Equip Method
+    seph_weaponskills_gameactor_equip(equip_type, id)
+    # Clears Skill Targets
+    case equip_type
+    when 0  # Weapon
+      if id == 0 or $game_party.weapon_number(id) > 0
+        @weapon_skill_target = nil
+      end
+    when 1  # Shield
+      if id == 0 or $game_party.armor_number(id) > 0
+        @armor1_skill_target = nil
+      end
+    when 2  # Head
+      if id == 0 or $game_party.armor_number(id) > 0
+        @armor2_skill_target = nil
+      end
+    when 3  # Body
+      if id == 0 or $game_party.armor_number(id) > 0
+        @armor3_skill_target = nil
+      end
+    when 4  # Accessory
+      if id == 0 or $game_party.armor_number(id) > 0
+        @armor4_skill_target = nil
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Determine if Skill can be Used
+  #     skill_id : skill ID
+  #--------------------------------------------------------------------------
+  def skill_can_use?(skill_id)
+    if self.skills.include?(skill_id)
+      return super
+    end
+    # Original Skill Can use Method
+    seph_weaponskills_gameactor_scu(skill_id)
+  end
+  #--------------------------------------------------------------------------
+  # * Skills
+  #--------------------------------------------------------------------------
+  def skills
+    # Gets Previous Skills
+    s = seph_weaponskills_gameactor_skills.dup
+    # Adds in Equipped Skills
+    s << get_current_equipped_skills
+    # Adds in Mastered Skills
+    s << get_mastered_skills
+    # Returns New Skills
+    return s.flatten.sort.uniq.dup
+  end
+  #--------------------------------------------------------------------------
+  # * Get Current Equipped Skills
+  #--------------------------------------------------------------------------
+  def get_current_equipped_skills
+    # Returns Empty if Cannot Learn Until Mastered
+    return [] if Equipment_Skills::Disable_Until_Learned
+    # Creates Skills Array
+    skills = []
+    # Gets Weapon & Armor Skills Contants
+    weapon_skills = Equipment_Skills::Weapon_Skills
+    armor_skills = Equipment_Skills::Armor_Skills
+    # Checks For Equipped Weapon
+    unless @weapon_id == 0
+      # If Weapon Has Skill
+      if weapon_skills.has_key?(@weapon_id)
+        # Adds Weapon Skills
+        weapon_skills[@weapon_id].each do | skill_id, value |
+          if Equipment_Skills::Learn_By_Level
+            unless skills.include?(skill_id)
+              skills << skill_id if @level >= value
+            end
+          else
+            skills << skill_id unless skills.include?(skill_id)
+          end
+        end
+      end
+    end
+    # Checks For Equipped Armor
+    for i in 1..4
+      unless (eval "@armor#{i}_id") == 0
+        # If Armor Has Skill
+        if armor_skills.has_key?(eval "@armor#{i}_id")
+          armor_skills[(eval "@armor#{i}_id")].each do | skill_id, value |
+            if Equipment_Skills::Learn_By_Level
+              unless skills.include?(skill_id)
+                skills << skill_id if @level >= value
+              end
+            else
+              skills << skill_id unless skills.include?(skill_id)
+            end
+          end
+        end
+      end
+    end
+    # Sends Skills Array
+    return skills
+  end
+  #--------------------------------------------------------------------------
+  # * Get Mastered Skills
+  #--------------------------------------------------------------------------
+  def get_mastered_skills
+    # Returns Empty if Cannot Learn Skills
+    return [] unless Equipment_Skills::Learn_By_AP
+    # Starts Skills Array
+    skills = []
+    # Gets Weapon & Armor Skills Contants
+    weapon_skills = Equipment_Skills::Weapon_Skills
+    armor_skills = Equipment_Skills::Armor_Skills
+    # Checks for Mastered AP
+    for skill_data in weapon_skills.values + armor_skills.values
+      # Checks Skill Data
+      skill_data.each do | skill_id, master |
+        # Unless 0
+        unless master == 0
+          # If AP Total is Reached
+          if @skill_ap_totals[skill_id] == master
+            # Adds Skills
+            skills << skill_id unless skills.include?(skill_id)
+          end
+        end
+      end
+    end
+    # Sends Skills Array
+    return skills
+  end
+  #--------------------------------------------------------------------------
+  # * Earn AP
+  #--------------------------------------------------------------------------
+  def earn_ap(amount = 0)
+    # Exits if Cannot Learn Skills or Learns By Level
+    return unless Equipment_Skills::Learn_By_AP
+    # Gets Weapon & Armor Skills Contants
+    weapon_skills = Equipment_Skills::Weapon_Skills
+    armor_skills = Equipment_Skills::Armor_Skills
+    # Earns Weapon AP
+    unless @weapon_id == 0
+      # If Weapon Has Skills
+      if weapon_skills.has_key?(@weapon_id)
+        # If One at a time
+        if Equipment_Skills::Learn_One_Skill
+          # If Skill has been Set
+          unless @weapon_skill_target.nil?
+            # Gets Current And Max
+            current = @skill_ap_totals[@weapon_skill_target]
+            max = weapon_skills[@weapon_id][@weapon_skill_target]
+            # Increases AP
+            @skill_ap_totals[@weapon_skill_target] = [current + amount, max].min
+          end
+        # If Learn All 
+        else
+          weapon_skills[@weapon_id].each do | skill_id, max |
+            # Gets Current AP
+            current = @skill_ap_totals[skill_id]
+            # Increases AP
+            @skill_ap_totals[skill_id] = [current + amount, max].min
+          end
+        end
+      end
+    end
+    # Earns Armor AP
+    for i in 1..4
+      # If Armor Equipped
+      unless (eval "@armor#{i}_id") == 0
+        # If Armor Has Skills
+        if armor_skills.has_key?(eval "@armor#{i}_id")
+          # If One at a time
+          if Equipment_Skills::Learn_One_Skill
+            # If Skill has been Set
+            unless (eval "@armor#{i}_skill_target.nil?")
+              # Gets Current And Max
+              current = @skill_ap_totals[(eval "@armor#{i}_skill_target")]
+              max = armor_skills[(eval "@armor#{i}_id")][(eval "@armor#{i}_skill_target")]
+              # Increases AP
+              @skill_ap_totals[(eval "@armor#{i}_skill_target")] = [current + amount, max].min
+            end
+          # If Learn All 
+          else
+            armor_skills[(eval "@armor#{i}_id")].each do | skill_id, max |
+              # Gets Current AP
+              current = @skill_ap_totals[skill_id]
+              # Increases AP
+              @skill_ap_totals[skill_id] = [current + amount, max].min
+            end
+          end
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Get Newly Mastered Skills
+  #--------------------------------------------------------------------------
+  def get_learning_skills
+    # Unless Learn By AP
+    return [] unless Equipment_Skills::Learn_By_AP
+    skills = []
+    # Gets Weapon & Armor Skills Contants
+    weapon_skills = Equipment_Skills::Weapon_Skills
+    armor_skills = Equipment_Skills::Armor_Skills
+    unless @weapon_id == 0
+      if weapon_skills.has_key?(@weapon_id)
+        weapon_skills[@weapon_id].each do |skill_id, max|
+          unless max == 0
+            skills << skill_id unless skills.include?(skill_id)
+          end
+        end
+      end
+    end
+    for i in 1..4
+      unless (eval "@armor#{i}_id") == 0
+        if armor_skills.has_key?(eval "@armor#{i}_id")
+          armor_skills[(eval "@armor#{i}_id")].each do |skill_id, max|
+            unless max == 0
+              skills << skill_id unless skills.include?(skill_id)
+            end
+          end
+        end
+      end
+    end
+    return skills.uniq.sort
+  end
+  #--------------------------------------------------------------------------
+  # * Get Newly Mastered Skills
+  #--------------------------------------------------------------------------
+  def get_newly_mastered_skills
+    # Unless Learn By AP
+    return [] unless Equipment_Skills::Learn_By_AP
+    mastered = []
+    for skill_id in get_mastered_skills.dup.uniq.sort
+      unless @mastered_skills.include?(skill_id)
+        mastered << skill_id
+        @mastered_skills << skill_id
+      end
+    end
+    return mastered.sort
+  end
+end
+
+#==============================================================================
+# ** Window_Base
+#==============================================================================
+
+class Window_Base < Window
+  #--------------------------------------------------------------------------
+  # Draw Bar
+  #--------------------------------------------------------------------------
+  def draw_bar(x, y, min, max, width = 152, height = 6,
+    bar_color = Color.new(150, 0, 0), end_color = Color.new(255, 255, 60))
+    # Draw Background
+    self.contents.fill_rect(x, y, width, height, Color.new(50, 50, 50, 255))
+    # Draws Bar
+    for i in 1..( (min.to_f / max.to_f) * width - 3)
+      r = bar_color.red * (width - i) / width + end_color.red * i / width
+      g = bar_color.green * (width - i) / width + end_color.green * i / width
+      b = bar_color.blue * (width - i) / width + end_color.blue * i / width
+      a = bar_color.alpha * (width - i) / width + end_color.alpha * i / width
+      self.contents.fill_rect(x + 1 + i, y + 1, 1, height - 2, 
+        Color.new(r, g, b, a))
+    end
+  end
+end
+
+#==============================================================================
+# ** Window_Skill
+#==============================================================================
+
+class Window_Skill < Window_Selectable
+  #--------------------------------------------------------------------------
+  # * Alias Listings
+  #--------------------------------------------------------------------------
+  alias seph_weaponskills_windskill_drawitem draw_item
+  #--------------------------------------------------------------------------
+  # * Draw Item
+  #     index : item number
+  #--------------------------------------------------------------------------
+  def draw_item(index)
+    # If Learn By AP
+    unless Equipment_Skills::Learn_By_AP
+      # Original Draw Item Method
+      seph_weaponskills_windskill_drawitem(index)
+      return
+    end
+    # If Equipment Skill
+    skill = @data[index]
+    # Unless In Battle
+    unless $game_temp.in_battle
+      # If Skill is a Equipment Skill
+      if @actor.skill_ap_totals.has_key?(skill.id)
+        # Gets AP
+        ap = @actor.skill_ap_totals[skill.id]
+        # Alters Font Properties
+        self.contents.font.size = 16
+        self.contents.font.bold = true
+        # Original Draw Item Method
+        seph_weaponskills_windskill_drawitem(index)
+        # Location Coordinate
+        x, y = 4 + index % 2 * (288 + 32), index / 2 * 32
+        # Default Max
+        max = 0
+        # Searches for Max
+        for weapon in Equipment_Skills::Weapon_Skills.keys
+          Equipment_Skills::Weapon_Skills[weapon].each do | skill_id, m |
+            max = m if skill.id == skill_id
+          end
+        end
+        for armor in Equipment_Skills::Armor_Skills.keys
+          Equipment_Skills::Armor_Skills[armor].each do | skill_id, m |
+            max = m if skill.id == skill_id
+          end
+        end
+        # Draws Status Bar
+        draw_bar(x + 132, y + 10, ap, max, 96, 14)
+        # Draws Progress
+        text = ap == max ? 'Mastered' : "#{ap} / #{max}"
+        temp_font = contents.font.dup
+        self.contents.font.color = Color.new(0, 0, 0)
+        self.contents.draw_text(x + 133, y + 1, 92, 32, text, 2)
+        self.contents.font = temp_font
+        self.contents.draw_text(x + 132, y, 92, 32, text, 2)
+      end
+      return
+    end
+    # Alters Font Properties
+    self.contents.font.size = 22
+    self.contents.font.bold = false
+    # Original Draw Item Method
+    seph_weaponskills_windskill_drawitem(index)
+  end
+end
+
+#==============================================================================
+# ** Window_BattleStatus
+#==============================================================================
+
+class Window_BattleStatus < Window_Base
+  #--------------------------------------------------------------------------
+  # * Refresh Skill Status
+  #--------------------------------------------------------------------------
+  def refresh_skills_status
+    # Unless Can Learn By AP
+    unless Equipment_Skills::Learn_By_AP
+      refresh
+      return
+    end
+    # Actors Skills
+    @actors_skills = []
+    # Alters Windows Contents
+    if Equipment_Skills::Show_Only_Mastered
+      for i in 0...$game_party.actors.size
+        actor = $game_party.actors[i]
+        @actors_skills << actor.get_newly_mastered_skills
+      end
+    else
+      for i in 0...$game_party.actors.size
+        actor = $game_party.actors[i]
+        @actors_skills << actor.get_learning_skills
+      end
+    end
+    max = 128
+    for i in 0..3
+      max = [max, @actors_skills[i].size * 32 + 32].max
+    end
+    self.contents = Bitmap.new(width - 32, max)
+    # Draws Skill Stuff
+    for i in 0...$game_party.actors.size
+      # Gets Actor
+      actor = $game_party.actors[i]
+      actor_x = i * 160 + 4
+      # Sets Font
+      self.contents.font.size = 22
+      self.contents.font.bold = false
+      # If No Skills
+      if @actors_skills[i].size == 0
+        draw_actor_name(actor, actor_x, 0)
+        draw_actor_hp(actor, actor_x, 32, 120)
+        draw_actor_sp(actor, actor_x, 64, 120)
+        if @level_up_flags[i]
+          self.contents.font.color = normal_color
+          self.contents.draw_text(actor_x, 96, 120, 32, "LEVEL UP!")
+        else
+          draw_actor_state(actor, actor_x, 96)
+        end
+        next
+      end
+      # Draws Heading
+      self.contents.draw_text(actor_x, 0, 120, 32, 'Skill Progress', 1)
+      # Fixes Font
+      self.contents.font.size = 14
+      self.contents.font.bold = true
+      # Draws Skills
+      for j in 0...@actors_skills[i].size
+        y = j * 32 + 32
+        # Gets AP Amouts
+        ap = actor.skill_ap_totals[@actors_skills[i][j]]
+        max = get_max_ap(@actors_skills[i][j])
+        # Draws Progress
+        draw_skill_progress(@actors_skills[i][j], ap, max, actor_x, y, 120)
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Get Max AP Points
+  #--------------------------------------------------------------------------
+  def get_max_ap(skill_id)
+    for weapon_id in Equipment_Skills::Weapon_Skills.keys
+      Equipment_Skills::Weapon_Skills[weapon_id].each do |s_id, value|
+        if s_id == skill_id
+          return value
+        end
+      end
+    end
+    for armor_id in Equipment_Skills::Armor_Skills.keys
+      Equipment_Skills::Armor_Skills[armor_id].each do |s_id, value|
+        if s_id == skill_id
+          return value
+        end
+      end
+    end
+    return 0
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Skill Progress
+  #--------------------------------------------------------------------------
+  def draw_skill_progress(skill_id, min, max, x, y, width)
+    # Gets Skill
+    skill = $data_skills[skill_id]
+    # Gets Icon
+    bitmap = RPG::Cache.icon(skill.icon_name)
+    # Draws Icon
+    self.contents.blt(x + 4, y + 4, bitmap, Rect.new(0, 0, 24, 24))
+    # Draws Skill Name
+    self.contents.draw_text(x + 32, y, width - 32, 16, skill.name)
+    # Draws Status Bar
+    draw_bar(x + width - 64, y + 16, min, max, 64, 14)
+    # Draws Progress
+    text = min == max ? 'Mastered' : "#{min} / #{max}"
+    self.contents.font.color = Color.new(0, 0, 0)
+    self.contents.draw_text(x + width - 63, y + 16, 60, 14, text, 2)
+    self.contents.font.color = normal_color
+    self.contents.draw_text(x + width - 64, y + 16, 60, 14, text, 2)
+  end
+end
+
+#==============================================================================
+# ** Window_BattleResult_AP
+#==============================================================================
+
+class Window_BattleResult_AP < Window_Base
+  #--------------------------------------------------------------------------
+  # * Object Initialization
+  #--------------------------------------------------------------------------
+  def initialize(y)
+    super(160, y, 320, $game_troop.enemies.size * 24 + 56)
+    self.contents = Bitmap.new(width - 32, height - 32)
+    self.back_opacity = 160
+    self.visible = false
+    self.z = 9999
+    refresh
+  end
+  #--------------------------------------------------------------------------
+  # * Refresh
+  #--------------------------------------------------------------------------
+  def refresh
+    self.contents.clear
+    # Gets Troop ID
+    troop_id = $game_temp.battle_troop_id
+    # Gets Enemy Ap Value
+    enemy_ap_values = Equipment_Skills::Enemy_AP_Values
+    # Gets AP Earned
+    ap = 0
+    for enemy in $data_troops[troop_id].members
+      enemy = $data_enemies[enemy.enemy_id]
+      ap += (enemy_ap_values.has_key?(enemy.id) ?
+        enemy_ap_values[enemy.id] : Equipment_Skills::Default_Enemy_AP)
+    end
+    # Draws Heading
+    self.contents.font.color = system_color
+    self.contents.draw_text(16, 0, contents.width - 32, 24, 'AP Aquired:')
+    self.contents.draw_text(16, 0, contents.width - 32, 24, ap.to_s, 2)
+    # Draws Enemies Names, and AP Given
+    self.contents.font.color = normal_color
+    enemies = $data_troops[troop_id].members
+    for i in 0...enemies.size
+      enemy = $data_enemies[enemies[i].enemy_id]
+      self.contents.draw_text(4, i * 24 + 24, 280, 24, enemy.name)
+      ap = enemy_ap_values.has_key?(enemy.id) ? 
+        enemy_ap_values[enemy.id] : Equipment_Skills::Default_Enemy_AP
+      self.contents.draw_text(4, i * 24 + 24, contents.width - 8, 24, 
+        ap.to_s, 2)
+    end
+  end
+end
+
+#==============================================================================
+# ** Window_EquipmentSkills
+#==============================================================================
+
+class Window_EquipmentSkills < Window_Base
+  #--------------------------------------------------------------------------
+  # * Public Instance Variables
+  #--------------------------------------------------------------------------
+  attr_reader :item_max
+  attr_reader :skills
+  attr_accessor :target_index
+  #--------------------------------------------------------------------------
+  # * Object Initialization
+  #--------------------------------------------------------------------------
+  def initialize
+    super(0, 64, 272, 192)
+    self.contents = Bitmap.new(width - 32, height - 32)
+    self.visible = false
+    self.z = 9999
+  end
+  #--------------------------------------------------------------------------
+  # * Refresh
+  #--------------------------------------------------------------------------
+  def refresh(actor_id, equipment)
+    # Gets Actor
+    @actor = $game_party.actors[actor_id]
+    # Sets Up Skills & Target index
+    @skills = []
+    @target_index = nil
+    @item_max = 0
+    # Clears & Sets Up Contents 
+    self.contents.clear
+    self.contents.font.color = system_color
+    self.contents.font.size = 22
+    self.contents.font.bold = false
+    # If No Equipment
+    if equipment.nil?
+      self.contents.draw_text(0, 0, 240, 32, 'Nothing Equipped', 1)
+      return
+    end
+    # If Equipment is a item
+    if equipment.is_a?(RPG::Item)
+      self.contents.draw_text(0, 0, 240, 32, 'No Skills for Items', 1)
+      return
+    end
+    # Draws Equipment
+    bitmap = RPG::Cache.icon(equipment.icon_name)
+    self.contents.blt(4, 4, bitmap, Rect.new(0, 0, 24, 24))
+    self.contents.draw_text(32, 0, 208, 32, equipment.name, 1)
+    # Gets Equipment Skills
+    if equipment.is_a?(RPG::Weapon)
+      equipment_skills = Equipment_Skills::Weapon_Skills.has_key?(equipment.id) ?
+        Equipment_Skills::Weapon_Skills[equipment.id] : []
+    elsif equipment.is_a?(RPG::Armor)
+      equipment_skills = Equipment_Skills::Armor_Skills.has_key?(equipment.id) ?
+        Equipment_Skills::Armor_Skills[equipment.id] : []
+    end
+    # Draws Skills
+    self.contents.font.color = normal_color
+    self.contents.font.size = 14
+    self.contents.font.bold = true
+    if equipment_skills.size == 0
+      self.contents.draw_text(0, 32, 240, 32, 'None', 1)
+      return
+    else
+      equipment_skills.each {| skill_id, max | @skills << [skill_id, max]}
+      @skills.sort! {|a, b| a[0] <=> b[0]}
+      for i in 0...@skills.size
+        # Gets AP Total
+        actor = $game_party.actors[actor_id]
+        skill_id = @skills[i][0]
+        ap = actor_id == - 1 ? 0 :actor.skill_ap_totals[skill_id]
+        max = @skills[i][1]
+        draw_skill_progress(skill_id, ap, max, 0, 40 + i * 24, 236)
+      end
+    end
+    @item_max = @skills.size
+    # If One Target
+    if Equipment_Skills::Learn_One_Skill
+      case equipment
+      when RPG::Weapon
+        skill_target = @actor.weapon_skill_target
+      when RPG::Armor
+        case equipment.kind
+        when 0
+          skill_target = @actor.armor1_skill_target
+        when 1
+          skill_target = @actor.armor2_skill_target
+        when 2
+          skill_target = @actor.armor3_skill_target
+        when 3
+          skill_target = @actor.armor4_skill_target
+        end
+      end
+      for i in 0...@skills.size
+        if @skills[i][0] == skill_target
+          @target_index = i + 1
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Frame Update
+  #--------------------------------------------------------------------------
+  def update
+    super
+    if Equipment_Skills::Learn_One_Skill
+      update_cursor_rect
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Cursor Rectangle Update
+  #--------------------------------------------------------------------------
+  def update_cursor_rect
+    if @target_index.nil?
+      self.cursor_rect.empty
+    else
+      self.cursor_rect.set(0, 40 + (@target_index - 1) * 24, 240, 24)
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Draw Skill Progress
+  #--------------------------------------------------------------------------
+  def draw_skill_progress(skill_id, min, max, x, y, width)
+    # Gets Skill
+    skill = $data_skills[skill_id]
+    # Gets Icon
+    bitmap = RPG::Cache.icon(skill.icon_name)
+    # Draws Icon
+    self.contents.blt(x + 4, y, bitmap, Rect.new(0, 0, 24, 24))
+    # Draws Skill Name
+    self.contents.draw_text(x + 32, y, 240 - x - 32, 24, skill.name)
+    # Draws Status Bar
+    draw_bar(x + width - 96, y + 2, min, max, 96, 20)
+    # Draws Progress
+    text = min == max ? 'Mastered' : "#{min} / #{max}"
+    self.contents.font.color = Color.new(0, 0, 0, 255)
+    self.contents.draw_text(x + width - 99, y + 1, 96, 24, text, 2)
+    self.contents.font.color = normal_color
+    self.contents.draw_text(x + width - 100, y, 96, 24, text, 2)
+  end
+end
+
+#==============================================================================
+# ** Scene_Equip
+#==============================================================================
+
+class Scene_Equip
+  #--------------------------------------------------------------------------
+  # * Alias Listings
+  #--------------------------------------------------------------------------
+  alias seph_weaponskills_sceneequip_main main
+  alias seph_weaponskills_sceneequip_update update
+  #--------------------------------------------------------------------------
+  # * Main Processing
+  #--------------------------------------------------------------------------
+  def main
+    # Equipment Skill Status Window
+    @equipment_skill_status = Window_EquipmentSkills.new
+    # Stores Indexes
+    @r_index, @i_index = @equip_index, 0
+    # Original Main Method
+    seph_weaponskills_sceneequip_main
+    # Disposes Skill Status Window
+    @equipment_skill_status.dispose
+  end
+  #--------------------------------------------------------------------------
+  # * Frame Update
+  #--------------------------------------------------------------------------
+  def update
+    # Update Keyboard Input Module
+    Keyboard.update
+    # Updates Equipment Skills Window
+    @equipment_skill_status.update
+    # If A Button is Pressed
+    if Input.trigger?(Input::A)
+      # Play Cursor SE
+      $game_system.se_play($data_system.cursor_se)
+      # If Window is off
+      unless @equipment_skill_status.visible
+        # Turn On Window
+        @equipment_skill_status.visible = true
+        # Refresh Window
+        refresh_equipment_skills
+      else
+        # Turns Off Window
+        @equipment_skill_status.visible = false
+      end
+    end
+    # If Window On
+    if @equipment_skill_status.visible
+      # If Right Window Active
+      if @right_window.active
+        # If Index is different
+        unless @right_window.index == @r_index
+          @r_index = @right_window.index
+          # Refresh Weappn Skills
+          refresh_equipment_skills
+        end
+      elsif @item_window.active
+        # If Index is different
+        unless @item_window.index == @i_index
+          @i_index = @item_window.index
+          # Refresh Equipment Skills
+          refresh_equipment_skills
+        end
+      end
+    end
+    # Original Update Method
+    seph_weaponskills_sceneequip_update
+    # One Skill Assignment
+    if Equipment_Skills::Learn_One_Skill
+      if @equipment_skill_status.visible
+        max = @equipment_skill_status.item_max
+        return if max == 0
+        @help_window.set_text("Press 1 - #{max} to Assign Skill Target")
+        # If Key is Pressed
+        for i in 1..max
+          if Keyboard.trigger?(Keyboard::Numberkeys[i])
+            @equipment_skill_status.target_index = i
+            skill_id = @equipment_skill_status.skills[i - 1][0]
+            case @right_window.item
+            when RPG::Weapon
+              @actor.weapon_skill_target = skill_id
+            when RPG::Armor
+              case @right_window.item.kind
+              when 0
+                @actor.armor1_skill_target = skill_id
+              when 1
+                @actor.armor2_skill_target = skill_id
+              when 2
+                @actor.armor3_skill_target = skill_id
+              when 3
+                @actor.armor4_skill_target = skill_id
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Refresh : Weappn Skills Window
+  #--------------------------------------------------------------------------
+  def refresh_equipment_skills
+    # Refresh Window
+    if @right_window.active
+      @equipment_skill_status.refresh(@actor_index, @right_window.item)
+    elsif @item_window.active
+      @equipment_skill_status.refresh(@actor_index, @item_window.item)
+    end
+  end
+end
+
+#==============================================================================
+# ** Scene_Battle
+#==============================================================================
+
+class Scene_Battle
+  #--------------------------------------------------------------------------
+  # * Alias Listings
+  #--------------------------------------------------------------------------
+  alias seph_weaponskills_scenebattle_main main
+  alias seph_weaponskills_scenebattle_sp5 start_phase5
+  alias seph_weaponskills_scenebattle_up5 update_phase5
+  #--------------------------------------------------------------------------
+  # * Main Processing
+  #--------------------------------------------------------------------------
+  def main
+    # Original Main Method
+    seph_weaponskills_scenebattle_main
+    # Disposes AP Aquired Window
+    @ap_result_window.dispose unless @ap_result_window.nil?
+  end
+  #--------------------------------------------------------------------------
+  # * Start After Battle Phase
+  #--------------------------------------------------------------------------
+  def start_phase5
+    # Orignal Start Phase 5 Method
+    seph_weaponskills_scenebattle_sp5
+    # If Learn By AP
+    if Equipment_Skills::Learn_By_AP
+      # Gets Enemy AP Values
+      enemy_ap_values = Equipment_Skills::Enemy_AP_Values
+      # Gets AP Total
+      ap = 0
+      for enemy in $data_troops[@troop_id].members
+        enemy = $data_enemies[enemy.enemy_id]
+        ap += (enemy_ap_values.has_key?(enemy.id) ?
+          enemy_ap_values[enemy.id] : Equipment_Skills::Default_Enemy_AP)
+      end
+      # Earns AP
+      for actor in $game_party.actors
+        actor.earn_ap(ap)
+      end
+    end
+    # If Show Results Window
+    if Equipment_Skills::Show_Victory_Skills
+      # Creates Aquired Ap Window
+      @ap_result_window = Window_BattleResult_AP.new(160 + @result_window.height / 2)
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Frame Update (after battle phase)
+  #--------------------------------------------------------------------------
+  def update_phase5
+    # Orignal Update Phase 5 Method
+    seph_weaponskills_scenebattle_up5
+    # Return
+    return unless Equipment_Skills::Show_Victory_Skills
+    # Show AP Result Window
+    unless @ap_result_window.nil?
+      @ap_result_window.visible = @result_window.visible
+    end
+    if @phase5_wait_count == 0
+      @phase5_wait_count -= 1
+      @status_window.refresh_skills_status
+    end
+    if @status_window.contents.height > 128
+      if Input.press?(Input::UP)
+        if @status_window.oy > 0
+          @status_window.oy -= 8
+        end
+      elsif Input.press?(Input::DOWN)
+        if @status_window.oy < @status_window.contents.height - 128
+          @status_window.oy += 8
+        end
+      end
+    end
+  end
+end
+
+#==============================================================================
+# ** Scene_Shop
+#==============================================================================
+
+class Scene_Shop
+  #--------------------------------------------------------------------------
+  # * Alias Listings
+  #--------------------------------------------------------------------------
+  alias seph_weaponskills_sceneshop_main main
+  alias seph_weaponskills_sceneshop_update update
+  #--------------------------------------------------------------------------
+  # * Main Processing
+  #--------------------------------------------------------------------------
+  def main
+    # Weapon Skill Status Window
+    @equipment_skill_status = Window_EquipmentSkills.new
+    @equipment_skill_status.x = 368
+    @equipment_skill_status.y = 288
+    # Stores Index
+    @b_index, @s_index = 0, 0
+    # Original Main Method
+    seph_weaponskills_sceneshop_main
+    # Disposes Skill Status Window
+    @equipment_skill_status.dispose
+  end
+  #--------------------------------------------------------------------------
+  # * Frame Update
+  #--------------------------------------------------------------------------
+  def update
+    # If buy window is active: call update_buy
+    if @buy_window.active || @sell_window.active
+      # Update Weapon Skills
+      update_seph_equipment_skills
+    else
+      if @equipment_skill_status.visible
+        @equipment_skill_status.visible = false
+      end
+    end
+    # Orignal Update Method
+    seph_weaponskills_sceneshop_update
+  end
+  #--------------------------------------------------------------------------
+  # * Frame Update : Equipment Skills
+  #--------------------------------------------------------------------------
+  def update_seph_equipment_skills
+    # If A Button is Pressed
+    if Input.trigger?(Input::A)
+      # Play Cursor SE
+      $game_system.se_play($data_system.cursor_se)
+      # If Window is off
+      unless @equipment_skill_status.visible
+        # Turn On Window
+        @equipment_skill_status.visible = true
+        # Refresh Equipment Skills
+        refresh_equipment_skills
+      else
+        # Turns Off Window
+        @equipment_skill_status.visible = false
+      end
+    end
+    # If Equipment Skills On
+    if @equipment_skill_status.visible
+      # If Right Window Active
+      if @buy_window.active
+        # If Index is different
+        unless @buy_window.index == @b_index
+          @b_index = @buy_window.index
+          # Refresh Equipment Skills
+          refresh_equipment_skills
+        end
+      elsif @sell_window.active
+        # If Index is different
+        unless @sell_window.index == @s_index
+          @s_index = @sell_window.index
+          # Refresh Equipment Skills
+          refresh_equipment_skills
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  # * Refresh : Equipment Skills Window
+  #--------------------------------------------------------------------------
+  def refresh_equipment_skills
+    # Refresh Window
+    if @buy_window.active
+      @equipment_skill_status.refresh(-1, @buy_window.item)
+    elsif @sell_window.active
+      @equipment_skill_status.refresh(-1, @sell_window.item)
+    end
+  end
+end
+
+#--------------------------------------------------------------------------
+# * End SDK Enable Test
+#--------------------------------------------------------------------------
+end

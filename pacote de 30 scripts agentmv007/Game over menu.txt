@@ -1,0 +1,349 @@
+#=============================================================================== 
+# ** GameOver Menu Script                                            By Sasuke89     
+#-------------------------------------------------------------------------------
+#  Adds a Menu to your Gameover Scene.
+#  ~~Allows the Player to Load a past Game
+#  ~~Allows Player to Go to the Title
+#  ~~Allows Player to Dispose of the Game Window.
+#===============================================================================
+class Scene_Gameover
+def main
+  $newvar2 = 0
+# Gameover Settings
+# Make game over graphic
+@sprite = Sprite.new
+@sprite.bitmap = RPG::Cache.gameover($data_system.gameover_name)
+# Play game over ME
+$game_system.me_play($data_system.gameover_me)
+# Saving Settings
+s1 = "Load Game"
+s2 = "Exit Game"
+c1 = "To Title"
+c2 = "End Game"
+@command_window = Window_Command.new(192, [s1, s2])
+@command_window.back_opacity = 160
+@command_window.x = 320 - @command_window.width / 2
+@command_window.y = 288
+@command_window.visible = true
+@command_window.active = true
+# Continue enabled determinant
+# Check if at least one save file exists
+# If enabled, make @continue_enabled true; if disabled, make it false
+@continue_enabled = false
+for i in 0..3
+if FileTest.exist?("Save#{i+1}.rxdata")
+@continue_enabled = true
+end
+end
+# If continue is enabled, move cursor to "Continue"
+# If disabled, display "Continue" text in gray
+if @continue_enabled
+@command_window.index = 1
+else
+@command_window.disable_item(1)
+end
+ #Execute transition
+    Graphics.transition(120)
+    # Main loop
+    loop do
+      # Update game screen
+      Graphics.update
+      # Update input information
+      Input.update
+      # Frame update
+      update
+      # Abort loop if screen is changed
+      if $scene != self
+        break
+      end
+    end
+    # Prepare for transition
+    Graphics.freeze
+    # Dispose of game over graphic
+    @sprite.bitmap.dispose
+    @sprite.dispose
+    # Execute transition
+    Graphics.transition(40)
+    # Prepare for transition
+    Graphics.freeze
+    # If battle test
+    if $BTEST
+      $scene = nil
+    end
+# Prepare for transition
+Graphics.freeze
+# Dispose of command window
+@command_window.dispose
+end
+#--------------------------------------------------------------------------
+# * Frame Update
+#--------------------------------------------------------------------------
+def update
+# Update command window
+@command_window.update
+# If C button was pressed
+if Input.trigger?(Input::C)
+# Branch by command window cursor position
+case @command_window.index
+when 0 # Continue
+# Play decision SE
+if $newvar2 == 0
+$game_system.se_play($data_system.decision_se)
+# Switch to load screen
+$scene = Scene_Load2.new
+else
+$game_system.se_play($data_system.decision_se)
+# Fade out BGM, BGS, and ME
+Audio.bgm_fade(800)
+Audio.bgs_fade(800)
+Audio.me_fade(800)
+# Switch to title screen
+$scene = Scene_Title.new
+end
+when 1 # Shutdown
+if $newvar2 == 0
+@command_window.index = 0
+@command_window.dispose
+$newvar2 = 1
+s1 = "Load Game"
+s2 = "Exit Game"
+c1 = "To Title"
+c2 = "End Game"
+@command_window = Window_Command.new(192, [c1, c2])
+@command_window.back_opacity = 160
+@command_window.x = 320 - @command_window.width / 2
+@command_window.y = 288
+else
+command_shutdown
+#command_shutdown
+end
+end
+end
+if Input.trigger?(Input::B)
+  if $newvar2 >= 0
+    @command_window.dispose
+    s1 = "Load Game"
+    s2 = "Exit Game"
+    c1 = "To Title"
+    c2 = "End Game"
+    @command_window = Window_Command.new(192, [s1, s2])
+    @command_window.back_opacity = 160
+    @command_window.x = 320 - @command_window.width / 2
+    @command_window.y = 288
+    $newvar2 = 0
+  end
+end
+end
+#--------------------------------------------------------------------------
+# * Command: New Game
+#--------------------------------------------------------------------------
+def command_new_game
+# Play decision SE
+    $game_system.se_play($data_system.decision_se)
+    # Stop BGM
+    Audio.bgm_stop
+    # Reset frame count for measuring play time
+    Graphics.frame_count = 0
+    # Make each type of game object
+    $game_temp          = Game_Temp.new
+    $game_system        = Game_System.new
+    $game_switches      = Game_Switches.new
+    $game_variables     = Game_Variables.new
+    $game_self_switches = Game_SelfSwitches.new
+    $game_screen        = Game_Screen.new
+    $game_actors        = Game_Actors.new
+    $game_party         = Game_Party.new
+    $game_troop         = Game_Troop.new
+    $game_map           = Game_Map.new
+    $game_player        = Game_Player.new
+    # Set up initial party
+    $game_party.setup_starting_members
+    # Set up initial map position
+    $game_map.setup($data_system.start_map_id)
+    # Move player to initial position
+    $game_player.moveto($data_system.start_x, $data_system.start_y)
+    # Refresh player
+    $game_player.refresh
+    # Run automatic change for BGM and BGS set with map
+    $game_map.autoplay
+    # Update map (run parallel process event)
+    $game_map.update
+    # Switch to map screen
+    $scene = Scene_Map.new
+    $scene = Scene_Options.new
+end
+#--------------------------------------------------------------------------
+# * Command: Continue
+#--------------------------------------------------------------------------
+def command_continue
+# If continue is disabled
+unless @continue_enabled
+# Play buzzer SE
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+# Play decision SE
+$game_system.se_play($data_system.decision_se)
+# Switch to load screen
+$scene = Scene_Load.new
+end
+#--------------------------------------------------------------------------
+# * Command: Shutdown
+#--------------------------------------------------------------------------
+def command_shutdown
+# Play decision SE
+$game_system.se_play($data_system.decision_se)
+# Fade out BGM, BGS, and ME
+Audio.bgm_fade(800)
+Audio.bgs_fade(800)
+Audio.me_fade(800)
+# Shutdown
+$scene = nil
+end
+#--------------------------------------------------------------------------
+# * Battle Test
+#--------------------------------------------------------------------------
+def battle_test
+# Load database (for battle test)
+$data_actors = load_data("Data/BT_Actors.rxdata")
+$data_classes = load_data("Data/BT_Classes.rxdata")
+$data_skills = load_data("Data/BT_Skills.rxdata")
+$data_items = load_data("Data/BT_Items.rxdata")
+$data_weapons = load_data("Data/BT_Weapons.rxdata")
+$data_armors = load_data("Data/BT_Armors.rxdata")
+$data_enemies = load_data("Data/BT_Enemies.rxdata")
+$data_troops = load_data("Data/BT_Troops.rxdata")
+$data_states = load_data("Data/BT_States.rxdata")
+$data_animations = load_data("Data/BT_Animations.rxdata")
+$data_tilesets = load_data("Data/BT_Tilesets.rxdata")
+$data_common_events = load_data("Data/BT_CommonEvents.rxdata")
+$data_system = load_data("Data/BT_System.rxdata")
+# Reset frame count for measuring play time
+Graphics.frame_count = 0
+# Make each game object
+$game_temp = Game_Temp.new
+$game_system = Game_System.new
+$game_switches = Game_Switches.new
+$game_variables = Game_Variables.new
+$game_self_switches = Game_SelfSwitches.new
+$game_screen = Game_Screen.new
+$game_actors = Game_Actors.new
+$game_party = Game_Party.new
+$game_troop = Game_Troop.new
+$game_map = Game_Map.new
+$game_player = Game_Player.new
+# Set up party for battle test
+$game_party.setup_battle_test_members
+# Set troop ID, can escape flag, and battleback
+$game_temp.battle_troop_id = $data_system.test_troop_id
+$game_temp.battle_can_escape = true
+$game_map.battleback_name = $data_system.battleback_name
+# Play battle start SE
+$game_system.se_play($data_system.battle_start_se)
+# Play battle BGM
+$game_system.bgm_play($game_system.battle_bgm)
+# Switch to battle screen
+$scene = Scene_Battle.new
+end
+end
+#==============================================================================
+# ** Scene_Load
+#------------------------------------------------------------------------------
+#  This class performs load screen processing.
+#==============================================================================
+
+class Scene_Load2 < Scene_File
+  #--------------------------------------------------------------------------
+  # * Object Initialization
+  #--------------------------------------------------------------------------
+  def initialize
+    # Remake temporary object
+    $game_temp = Game_Temp.new
+    # Timestamp selects new file
+    $game_temp.last_file_index = 0
+    latest_time = Time.at(0)
+    for i in 0..3
+      filename = make_filename(i)
+      if FileTest.exist?(filename)
+        file = File.open(filename, "r")
+        if file.mtime > latest_time
+          latest_time = file.mtime
+          $game_temp.last_file_index = i
+        end
+        file.close
+      end
+    end
+    super("Which file would you like to load?")
+  end
+  #--------------------------------------------------------------------------
+  # * Decision Processing
+  #--------------------------------------------------------------------------
+  def on_decision(filename)
+    # If file doesn't exist
+    unless FileTest.exist?(filename)
+      # Play buzzer SE
+      $game_system.se_play($data_system.buzzer_se)
+      return
+    end
+    # Play load SE
+    $game_system.se_play($data_system.load_se)
+    # Read save data
+    file = File.open(filename, "rb")
+    read_save_data(file)
+    file.close
+    # Restore BGM and BGS
+    $game_system.bgm_play($game_system.playing_bgm)
+    $game_system.bgs_play($game_system.playing_bgs)
+    # Update map (run parallel process event)
+    $game_map.update
+    # Switch to map screen
+    $scene = Scene_Map.new
+  end
+  #--------------------------------------------------------------------------
+  # * Cancel Processing
+  #--------------------------------------------------------------------------
+  def on_cancel
+    # Play cancel SE
+    $game_system.se_play($data_system.cancel_se)
+    # Switch to title screen
+    $scene = Scene_Title.new
+  end
+  #--------------------------------------------------------------------------
+  # * Read Save Data
+  #     file : file object for reading (opened)
+  #--------------------------------------------------------------------------
+  def read_save_data(file)
+    # Read character data for drawing save file
+    characters = Marshal.load(file)
+    # Read frame count for measuring play time
+    Graphics.frame_count = Marshal.load(file)
+    # Read each type of game object
+    $game_system        = Marshal.load(file)
+    $game_switches      = Marshal.load(file)
+    $game_variables     = Marshal.load(file)
+    $game_self_switches = Marshal.load(file)
+    $game_screen        = Marshal.load(file)
+    $game_actors        = Marshal.load(file)
+    $game_party         = Marshal.load(file)
+    $game_troop         = Marshal.load(file)
+    $game_map           = Marshal.load(file)
+    $game_player        = Marshal.load(file)
+    $completion         = Marshal.load(file)
+    # If magic number is different from when saving
+    # (if editing was added with editor)
+    if $game_system.magic_number != $data_system.magic_number
+      # Load map
+      $game_map.setup($game_map.map_id)
+      $game_player.center($game_player.x, $game_player.y)
+    end
+    # Refresh party members
+    $game_party.refresh
+  end
+  #--------------------------------------------------------------------------
+  # ? cancel key pressed
+  #--------------------------------------------------------------------------
+  def cancel
+    $game_system.se_play($data_system.cancel_se)
+    $scene = Scene_Gameover.new
+  end
+end

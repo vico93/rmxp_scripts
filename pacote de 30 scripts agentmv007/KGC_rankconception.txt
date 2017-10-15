@@ -1,0 +1,256 @@
+#####################################################################
+####################### KGC_RankConception ##########################
+#####################################################################
+# O script adiciona o sistema de posição.
+#Algo semelhante a Final Fantasy, personagens na linha de frente
+#causam + dano, e personagens na retaguarda sofrem menos dano.
+#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
+
+
+class Game_Battler
+
+  DEFAULT_RANGE = 4
+end
+
+
+$imported["RankConception"] = true
+
+$game_special_elements["rank"] = $data_system.elements.index("rank")
+$game_special_elements["range"] = /??(\d)/
+$game_special_elements["move_rank"] = /(F|M|P)teste/
+
+
+#==============================================================================
+# ¦ Game_Actor
+#==============================================================================
+
+class Game_Actor < Game_Battler
+  alias setup_KGC_RankConception setup
+  def setup(actor_id)
+    setup_KGC_RankConception(actor_id)
+
+    @position = $data_classes[@class_id].position
+  end
+  def position
+    @position = $data_classes[@class_id].position if @position == nil
+    return @position
+  end
+  def position=(p)
+    @position = p
+  end
+end
+
+
+#==============================================================================
+# ¦ Game_Battler (???? 2)
+#==============================================================================
+
+class Game_Battler
+  #--------------------------------------------------------------------------
+  # ? ??????
+  #     attacker : ???
+  #     action   : ????
+  #--------------------------------------------------------------------------
+  def within_range?(attacker, action = nil)
+    # ?????
+    if action != nil
+      for element in action.element_set.compact
+        element_name = $data_system.elements[element]
+        # ????????????
+        if $game_special_elements["range"] =~ element_name
+          range = $1.to_i if $1 != nil
+          break
+        end
+      end
+    end
+    # ???????
+    if action == nil || range == nil
+      range = DEFAULT_RANGE
+    end
+    # ?????????
+    if attacker.is_a?(Game_Actor)
+      a_pos = attacker.position
+    else
+      if $game_special_elements["rank"] != nil
+        case $data_enemies[attacker.id].element_ranks[$game_special_elements["rank"]]
+        when 1..2  # ??(A,B)
+          a_pos = 0
+        when 3  # ??(C)
+          a_pos = 1
+        when 4..6  # ??(D,E,F)
+          a_pos = 2
+        end
+      else
+        a_pos = 1
+      end
+    end
+    # ??????????
+    if self.is_a?(Game_Actor)
+      t_pos = self.position
+    else
+      if $game_special_elements["rank"] != nil
+        case $data_enemies[self.id].element_ranks[$game_special_elements["rank"]]
+        when 1..2  # ??(A,B)
+          t_pos = 0
+        when 3  # ??(C)
+          t_pos = 1
+        when 4..6  # ??(D,E,F)
+          t_pos = 2
+        end
+      else
+        t_pos = 1
+      end
+    end
+    # ???????
+    return a_pos + t_pos <= range
+  end
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Game_Battler (???? 3)
+#==============================================================================
+
+class Game_Battler
+  #--------------------------------------------------------------------------
+  # ? ?????????
+  #--------------------------------------------------------------------------
+  alias attack_effect_KGC_RankConception attack_effect
+  def attack_effect(attacker)
+    # ??????
+    action = attacker.is_a?(Game_Actor) ? ($imported["EquipExtension"] ? 
+      $data_weapons[attacker.weapon_id(attacker.attack_count)] :
+      $data_weapons[attacker.weapon_id]) : nil
+    unless self.within_range?(attacker, action)
+      # ????? "Miss" ???
+      self.damage = "Miss"
+      # ?????????????
+      self.critical = false
+      # ????
+      return false
+    end
+
+    # ???????
+    return attack_effect_KGC_RankConception(attacker)
+  end
+  #--------------------------------------------------------------------------
+  # ? ????????
+  #--------------------------------------------------------------------------
+  alias skill_effect_KGC_RankConception skill_effect
+  def skill_effect(user, skill)
+    # ??????
+    unless self.within_range?(user, skill)
+      # ????? "Miss" ???
+      self.damage = "Miss"
+      # ?????????????
+      self.critical = false
+      # ????
+      return false
+    end
+    # ????????
+    for element in skill.element_set.compact
+      element_name = $data_system.elements[element]
+      # ????????????
+      if $game_special_elements["move_rank"] =~ element_name
+        move_position = $1
+        break
+      end
+    end
+    # ???????????????
+    if move_position == nil
+      # ???????
+      return skill_effect_KGC_RankConception(user, skill)
+    end
+
+    # ?????????????
+    self.critical = false
+    # ????????? HP 1 ?????????? HP ? 0?
+    # ???????????? HP 0 ???????? HP ? 1 ?????
+    if ((skill.scope == 3 || skill.scope == 4) && self.hp == 0) ||
+       ((skill.scope == 5 || skill.scope == 6) && self.hp >= 1)
+      # ??????
+      return false
+    end
+    # ?????????
+    @effective = false
+    # ??????? ID ????????????????
+    @effective |= skill.common_event_id > 0
+    # ??????
+    hit = skill.hit
+    if skill.atk_f > 0
+      hit *= user.hit / 100
+    end
+    hit_result = (rand(100) < hit)
+    # ????????????????????
+    @effective |= hit < 100
+    # ?????
+    if hit_result == true
+      # ??????
+      @state_changed = false
+      effective |= states_plus(skill.plus_state_set)
+      effective |= states_minus(skill.minus_state_set)
+      # ???????
+      case move_position
+      when "?"
+        if self.is_a?(Game_Actor)
+          self.position = 0
+        else
+          self.element_ranks[$game_special_elements["rank"]] = 1
+        end
+      when "?"
+        if self.is_a?(Game_Actor)
+          self.position = 1
+        else
+          self.element_ranks[$game_special_elements["rank"]] = 3
+        end
+      when "?"
+        if self.is_a?(Game_Actor)
+          self.position = 2
+        else
+          self.element_ranks[$game_special_elements["rank"]] = 4
+        end
+      end
+      # ??
+      return true
+    end
+    return false
+  end
+end
+
+#???????????????????????????????????????
+
+#==============================================================================
+# ¦ Window_BattleStatus
+#==============================================================================
+
+class Window_BattleStatus < Window_Base
+  #--------------------------------------------------------------------------
+  # ? ??????
+  #--------------------------------------------------------------------------
+  alias refresh_KGC_RankConception refresh
+  def refresh
+    self.contents.font.size = 22
+    self.contents.font.color = normal_color
+
+    # ???????
+    refresh_KGC_RankConception
+
+    # ?????
+    self.contents.font.size = 18
+    self.contents.font.color = text_color(3)
+    for actor in $game_party.actors
+      actor_x = actor.screen_x - 48
+      w = $imported["HPSPAlter"] && KGC::HPSP_DRAW_NAME_LUMP ? 16 : 120
+      case actor.position
+      when 0
+        text = "F"
+      when 1
+        text = "M"
+      when 2
+        text = "R"
+      end
+      self.contents.draw_shadow_text(actor_x - 24, 0, w, 32, text, 2)
+    end
+  end
+end

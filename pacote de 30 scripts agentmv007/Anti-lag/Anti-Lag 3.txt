@@ -1,0 +1,20 @@
+module RPG
+class Sprite < ::Sprite
+def dispose_animation
+if @_animation_sprites != nil
+sprite = @_animation_sprites[0]
+if sprite != nil
+@@_reference_count[sprite.bitmap] -= 1
+# if @@_reference_count[sprite.bitmap] == 0
+# sprite.bitmap.dispose
+# end
+end
+for sprite in @_animation_sprites
+sprite.dispose
+end
+@_animation_sprites = nil
+@_animation = nil
+end
+end
+end
+end

@@ -1,0 +1,601 @@
+Esse incrível script mostra as barras de HP, MP e Exp no mapa sem precisar 
+de nenhuma imagem. Realmente muito bom para Actions RPG. Creditos para 
+Zebraman e Slipknot.
+
+Crie um script acima do Main e coloque esse:
+Codigo:
+
+# HP/SP/EXPƒQ?[ƒW•\Ž¦ƒXƒNƒŠƒvƒg Ver 1.00
+# ”z•zŒ³?EƒTƒ|?[ƒgURL
+# http://members.jcom.home.ne.jp/cogwheel/
+
+#==============================================================================
+# ?¡ Game_Actor
+#------------------------------------------------------------------------------
+# ?@ƒAƒNƒ^?[‚ðˆµ‚¤ƒNƒ‰ƒX‚Å‚·?B‚±‚ÌƒNƒ‰ƒX‚Í Game_Actors ƒNƒ‰ƒX ($game_actors)
+# ‚Ì“à•”‚ÅŽg—p‚³‚ê?AGame_Party ƒNƒ‰ƒX ($game_party) ‚©‚ç‚àŽQ?Æ‚³‚ê‚Ü‚·?B
+#==============================================================================
+
+class Game_Actor < Game_Battler
+def now_exp
+return @exp - @exp_list[@level]
+end
+def next_exp
+return @exp_list[@level+1] > 0 ? @exp_list[@level+1] - @exp_list[@level] : 0
+end
+end
+
+#===========================================
+# ?¡ Window_Base
+#------------------------------------------------------------------------------
+# ?@ƒQ?[ƒ€’†‚Ì‚·‚×‚Ä‚ÌƒEƒBƒ“ƒhƒE‚ÌƒX?[ƒp?[ƒNƒ‰ƒX‚Å‚·?B
+#===========================================
+
+class Window_Base < Window
+#--------------------------------------------------------------------------
+# ?œ HP ƒQ?[ƒW‚Ì•`‰æ
+#--------------------------------------------------------------------------
+# ƒIƒŠƒWƒiƒ‹‚ÌHP•`‰æ‚ð draw_actor_hp_original ‚Æ–¼‘O•Ï?X
+alias :draw_actor_hp_original :draw_actor_hp
+def draw_actor_hp(actor, x, y, width = 144)
+# •Ï?”rate‚É Œ»?Ý‚ÌHP/MHP‚ð‘ã“ü
+if actor.maxhp != 0
+rate = actor.hp.to_f / actor.maxhp
+else
+rate = 0
+end
+# plus_x:X?À•W‚ÌˆÊ’u•â?³ rate_x:X?À•W‚ÌˆÊ’u•â?³(%) plus_y:Y?À•W‚ÌˆÊ’u•â?³
+# plus_width:•?‚Ì•â?³ rate_width:•?‚Ì•â?³(%) height:?c•?
+# align1:•`‰æƒ^ƒCƒv1 0:?¶‹l‚ß 1:’†‰›‘µ‚¦ 2:‰E‹l‚ß
+# align2:•`‰æƒ^ƒCƒv2 0:?ã‹l‚ß 1:’†‰›‘µ‚¦ 2:‰º‹l‚ß
+# align3:ƒQ?[ƒWƒ^ƒCƒv 0:?¶‹l‚ß 1:‰E‹l‚ß
+plus_x = 0
+rate_x = 0
+plus_y = 25
+plus_width = 0
+rate_width = 50
+height = 7
+align1 = 0
+align2 = 1
+align3 = 0
+# ƒOƒ‰ƒf?[ƒVƒ‡ƒ“?Ý’è grade1:‹óƒQ?[ƒW grade2:ŽÀƒQ?[ƒW
+# (0:‰¡‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“ 1:?c‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“ 2:ŽÎ‚ß‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“(Œƒ?d)?j
+grade1 = 1
+grade2 = 0
+# ?F?Ý’è?Bcolor1:ŠO˜g?Ccolor2:’†˜g
+# color3:‹óƒQ?[ƒWƒ_?[ƒNƒJƒ‰?[?Ccolor4:‹óƒQ?[ƒWƒ‰ƒCƒgƒJƒ‰?[
+# color5:ŽÀƒQ?[ƒWƒ_?[ƒNƒJƒ‰?[?Ccolor6:ŽÀƒQ?[ƒWƒ‰ƒCƒgƒJƒ‰?[
+color1 = Color.new(0, 0, 0, 192)
+color2 = Color.new(255, 255, 192, 192)
+color3 = Color.new(0, 0, 0, 192)
+color4 = Color.new(64, 0, 0, 192)
+color5 = Color.new(80 - 24 * rate, 80 * rate, 14 * rate, 192)
+color6 = Color.new(240 - 72 * rate, 240 * rate, 62 * rate, 192)
+# •Ï?”sp‚É•`‰æ‚·‚éƒQ?[ƒW‚Ì•?‚ð‘ã“ü
+if actor.maxhp != 0
+hp = (width + plus_width) * actor.hp * rate_width / 100 / actor.maxhp
+else
+hp = 0
+end
+# ƒQ?[ƒW‚Ì•`‰æ
+gauge_rect(x + plus_x + width * rate_x / 100, y + plus_y,
+width, plus_width + width * rate_width / 100,
+height, hp, align1, align2, align3,
+color1, color2, color3, color4, color5, color6, grade1, grade2)
+# ƒIƒŠƒWƒiƒ‹‚ÌHP•`‰æ?ˆ—?‚ðŒÄ‚Ñ?o‚µ
+draw_actor_hp_original(actor, x, y, width)
+end
+#--------------------------------------------------------------------------
+# ?œ SP ƒQ?[ƒW‚Ì•`‰æ
+#--------------------------------------------------------------------------
+# ƒIƒŠƒWƒiƒ‹‚ÌSP•`‰æ‚ð draw_actor_sp_original ‚Æ–¼‘O•Ï?X
+alias :draw_actor_sp_original :draw_actor_sp
+def draw_actor_sp(actor, x, y, width = 144)
+# •Ï?”rate‚É Œ»?Ý‚ÌSP/MSP‚ð‘ã“ü
+if actor.maxsp != 0
+rate = actor.sp.to_f / actor.maxsp
+else
+rate = 1
+end
+# plus_x:X?À•W‚ÌˆÊ’u•â?³ rate_x:X?À•W‚ÌˆÊ’u•â?³(%) plus_y:Y?À•W‚ÌˆÊ’u•â?³
+# plus_width:•?‚Ì•â?³ rate_width:•?‚Ì•â?³(%) height:?c•?
+# align1:•`‰æƒ^ƒCƒv1 0:?¶‹l‚ß 1:’†‰›‘µ‚¦ 2:‰E‹l‚ß
+# align2:•`‰æƒ^ƒCƒv2 0:?ã‹l‚ß 1:’†‰›‘µ‚¦ 2:‰º‹l‚ß
+# align3:ƒQ?[ƒWƒ^ƒCƒv 0:?¶‹l‚ß 1:‰E‹l‚ß
+plus_x = 0
+rate_x = 0
+plus_y = 25
+plus_width = 0
+rate_width = 50
+height = 7
+align1 = 0
+align2 = 1
+align3 = 0
+# ƒOƒ‰ƒf?[ƒVƒ‡ƒ“?Ý’è grade1:‹óƒQ?[ƒW grade2:ŽÀƒQ?[ƒW
+# (0:‰¡‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“ 1:?c‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“ 2:ŽÎ‚ß‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“(Œƒ?d)?j
+grade1 = 1
+grade2 = 0
+# ?F?Ý’è?Bcolor1:ŠO˜g?Ccolor2:’†˜g
+# color3:‹óƒQ?[ƒWƒ_?[ƒNƒJƒ‰?[?Ccolor4:‹óƒQ?[ƒWƒ‰ƒCƒgƒJƒ‰?[
+# color5:ŽÀƒQ?[ƒWƒ_?[ƒNƒJƒ‰?[?Ccolor6:ŽÀƒQ?[ƒWƒ‰ƒCƒgƒJƒ‰?[
+color1 = Color.new(0, 0, 0, 192)
+color2 = Color.new(255, 255, 192, 192)
+color3 = Color.new(0, 0, 0, 192)
+color4 = Color.new(0, 64, 0, 192)
+color5 = Color.new(14 * rate, 80 - 24 * rate, 80 * rate, 192)
+color6 = Color.new(62 * rate, 240 - 72 * rate, 240 * rate, 192)
+# •Ï?”sp‚É•`‰æ‚·‚éƒQ?[ƒW‚Ì•?‚ð‘ã“ü
+if actor.maxsp != 0
+sp = (width + plus_width) * actor.sp * rate_width / 100 / actor.maxsp
+else
+sp = (width + plus_width) * rate_width / 100
+end
+# ƒQ?[ƒW‚Ì•`‰æ
+gauge_rect(x + plus_x + width * rate_x / 100, y + plus_y,
+width, plus_width + width * rate_width / 100,
+height, sp, align1, align2, align3,
+color1, color2, color3, color4, color5, color6, grade1, grade2)
+# ƒIƒŠƒWƒiƒ‹‚ÌSP•`‰æ?ˆ—?‚ðŒÄ‚Ñ?o‚µ
+draw_actor_sp_original(actor, x, y, width)
+end
+#--------------------------------------------------------------------------
+# ?œ EXP ƒQ?[ƒW‚Ì•`‰æ
+#--------------------------------------------------------------------------
+# ƒIƒŠƒWƒiƒ‹‚ÌEXP•`‰æ‚ð draw_actor_sp_original ‚Æ–¼‘O•Ï?X
+alias :draw_actor_exp_original :draw_actor_exp
+def draw_actor_exp(actor, x, y, width = 204)
+# •Ï?”rate‚É Œ»?Ý‚Ìexp/nextexp‚ð‘ã“ü
+if actor.next_exp != 0
+rate = actor.now_exp.to_f / actor.next_exp
+else
+rate = 1
+end
+# plus_x:X?À•W‚ÌˆÊ’u•â?³ rate_x:X?À•W‚ÌˆÊ’u•â?³(%) plus_y:Y?À•W‚ÌˆÊ’u•â?³
+# plus_width:•?‚Ì•â?³ rate_width:•?‚Ì•â?³(%) height:?c•?
+# align1:•`‰æƒ^ƒCƒv1 0:?¶‹l‚ß 1:’†‰›‘µ‚¦ 2:‰E‹l‚ß
+# align2:•`‰æƒ^ƒCƒv2 0:?ã‹l‚ß 1:’†‰›‘µ‚¦ 2:‰º‹l‚ß
+# align3:ƒQ?[ƒWƒ^ƒCƒv 0:?¶‹l‚ß 1:‰E‹l‚ß
+plus_x = 0
+rate_x = 0
+plus_y = 25
+plus_width = 0
+rate_width = 50
+height = 7
+align1 = 0
+align2 = 1
+align3 = 0
+# ƒOƒ‰ƒf?[ƒVƒ‡ƒ“?Ý’è grade1:‹óƒQ?[ƒW grade2:ŽÀƒQ?[ƒW
+# (0:‰¡‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“ 1:?c‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“ 2:ŽÎ‚ß‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“(Œƒ?d)?j
+grade1 = 1
+grade2 = 0
+# ?F?Ý’è?Bcolor1:ŠO˜g?Ccolor2:’†˜g
+# color3:‹óƒQ?[ƒWƒ_?[ƒNƒJƒ‰?[?Ccolor4:‹óƒQ?[ƒWƒ‰ƒCƒgƒJƒ‰?[
+# color5:ŽÀƒQ?[ƒWƒ_?[ƒNƒJƒ‰?[?Ccolor6:ŽÀƒQ?[ƒWƒ‰ƒCƒgƒJƒ‰?[
+color1 = Color.new(0, 0, 0, 192)
+color2 = Color.new(255, 255, 192, 192)
+color3 = Color.new(0, 0, 0, 192)
+color4 = Color.new(64, 0, 0, 192)
+color5 = Color.new(80 * rate, 80 - 80 * rate ** 2, 80 - 80 * rate, 192)
+color6 = Color.new(240 * rate, 240 - 240 * rate ** 2, 240 - 240 * rate, 192)
+# •Ï?”exp‚É•`‰æ‚·‚éƒQ?[ƒW‚Ì•?‚ð‘ã“ü
+if actor.next_exp != 0
+exp = (width + plus_width) * actor.now_exp * rate_width /
+100 / actor.next_exp
+else
+exp = (width + plus_width) * rate_width / 100
+end
+# ƒQ?[ƒW‚Ì•`‰æ
+gauge_rect(x + plus_x + width * rate_x / 100, y + plus_y,
+width, plus_width + width * rate_width / 100,
+height, exp, align1, align2, align3,
+color1, color2, color3, color4, color5, color6, grade1, grade2)
+# ƒIƒŠƒWƒiƒ‹‚ÌEXP•`‰æ?ˆ—?‚ðŒÄ‚Ñ?o‚µ
+draw_actor_exp_original(actor, x, y)
+end
+#--------------------------------------------------------------------------
+# ?œ ƒQ?[ƒW‚Ì•`‰æ
+#--------------------------------------------------------------------------
+def gauge_rect(x, y, rect_width, width, height, gauge, align1, align2, 
+align3,
+color1, color2, color3, color4, color5, color6, grade1, grade2)
+case align1
+when 1
+x += (rect_width - width) / 2
+when 2
+x += rect_width - width
+end
+case align2
+when 1
+y -= height / 2
+when 2
+y -= height
+end
+# ˜g•`‰æ
+self.contents.fill_rect(x, y, width, height, color1)
+self.contents.fill_rect(x + 1, y + 1, width - 2, height - 2, color2)
+if align3 == 0
+if grade1 == 2
+grade1 = 3
+end
+if grade2 == 2
+grade2 = 3
+end
+end
+if (align3 == 1 and grade1 == 0) or grade1 > 0
+color = color3
+color3 = color4
+color4 = color
+end
+if (align3 == 1 and grade2 == 0) or grade2 > 0
+color = color5
+color5 = color6
+color6 = color
+end
+# ‹óƒQ?[ƒW‚Ì•`‰æ
+self.contents.gradation_rect(x + 2, y + 2, width - 4, height - 4,
+color3, color4, grade1)
+if align3 == 1
+x += width - gauge
+end
+# ŽÀƒQ?[ƒW‚Ì•`‰æ
+self.contents.gradation_rect(x + 2, y + 2, gauge - 4, height - 4,
+color5, color6, grade2)
+end
+end
+
+#------------------------------------------------------------------------------
+# ?@BitmapƒNƒ‰ƒX‚É?V‚½‚È‹@”\‚ð’Ç‰Á‚µ‚Ü‚·?B
+#============================================
+
+class Bitmap
+#--------------------------------------------------------------------------
+# ?œ ‹éŒ`‚ðƒOƒ‰ƒf?[ƒVƒ‡ƒ“•\Ž¦
+# color1 : ƒXƒ^?[ƒgƒJƒ‰?[
+# color2 : ƒGƒ“ƒhƒJƒ‰?[
+# align : 0:‰¡‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“
+# 1:?c‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“
+# 2:ŽÎ‚ß‚ÉƒOƒ‰ƒf?[ƒVƒ‡ƒ“?iŒƒ?d‚É‚Â‚«’?ˆÓ?j
+#--------------------------------------------------------------------------
+def gradation_rect(x, y, width, height, color1, color2, align = 0)
+if align == 0
+for i in x...x + width
+red = color1.red + (color2.red - color1.red) * (i - x) / (width - 1)
+green = color1.green +
+(color2.green - color1.green) * (i - x) / (width - 1)
+blue = color1.blue +
+(color2.blue - color1.blue) * (i - x) / (width - 1)
+alpha = color1.alpha +
+(color2.alpha - color1.alpha) * (i - x) / (width - 1)
+color = Color.new(red, green, blue, alpha)
+fill_rect(i, y, 1, height, color)
+end
+elsif align == 1
+for i in y...y + height
+red = color1.red +
+(color2.red - color1.red) * (i - y) / (height - 1)
+green = color1.green +
+(color2.green - color1.green) * (i - y) / (height - 1)
+blue = color1.blue +
+(color2.blue - color1.blue) * (i - y) / (height - 1)
+alpha = color1.alpha +
+(color2.alpha - color1.alpha) * (i - y) / (height - 1)
+color = Color.new(red, green, blue, alpha)
+fill_rect(x, i, width, 1, color)
+end
+elsif align == 2
+for i in x...x + width
+for j in y...y + height
+red = color1.red + (color2.red - color1.red) *
+((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+green = color1.green + (color2.green - color1.green) *
+((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+blue = color1.blue + (color2.blue - color1.blue) *
+((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+alpha = color1.alpha + (color2.alpha - color1.alpha) *
+((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+color = Color.new(red, green, blue, alpha)
+set_pixel(i, j, color)
+end
+end
+elsif align == 3
+for i in x...x + width
+for j in y...y + height
+red = color1.red + (color2.red - color1.red) *
+((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+green = color1.green + (color2.green - color1.green) *
+((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+blue = color1.blue + (color2.blue - color1.blue) *
+((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+alpha = color1.alpha + (color2.alpha - color1.alpha) *
+((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+color = Color.new(red, green, blue, alpha)
+set_pixel(i, j, color)
+end
+end
+end
+end
+end
+
+#============================================
+# ?¡ Spriteƒ‚ƒWƒ…?[ƒ‹
+#------------------------------------------------------------------------------
+# ?@ƒAƒjƒ??[ƒVƒ‡ƒ“‚ÌŠÇ—?‚ð?s‚¤ƒ‚ƒWƒ…?[ƒ‹‚Å‚·?B
+#============================================
+
+module RPG
+class Sprite < ::Sprite
+def damage(value, critical)
+dispose_damage
+if value.is_a?(Numeric)
+damage_string = value.abs.to_s
+else
+damage_string = value.to_s
+end
+bitmap = Bitmap.new(160, 48)
+bitmap.font.name = "Arial Black"
+bitmap.font.size = 32
+bitmap.font.color.set(0, 0, 0)
+bitmap.draw_text(-1, 12-1, 160, 36, damage_string, 1)
+bitmap.draw_text(+1, 12-1, 160, 36, damage_string, 1)
+bitmap.draw_text(-1, 12+1, 160, 36, damage_string, 1)
+bitmap.draw_text(+1, 12+1, 160, 36, damage_string, 1)
+if value.is_a?(Numeric) and value < 0
+bitmap.font.color.set(176, 255, 144)
+else
+bitmap.font.color.set(255, 255, 255)
+end
+bitmap.draw_text(0, 12, 160, 36, damage_string, 1)
+if critical
+bitmap.font.size = 20
+bitmap.font.color.set(0, 0, 0)
+bitmap.draw_text(-1, -1, 160, 20, "CRITICAL", 1)
+bitmap.draw_text(+1, -1, 160, 20, "CRITICAL", 1)
+bitmap.draw_text(-1, +1, 160, 20, "CRITICAL", 1)
+bitmap.draw_text(+1, +1, 160, 20, "CRITICAL", 1)
+bitmap.font.color.set(255, 255, 255)
+bitmap.draw_text(0, 0, 160, 20, "CRITICAL", 1)
+end
+@_damage_sprite = ::Sprite.new
+@_damage_sprite.bitmap = bitmap
+@_damage_sprite.ox = 80 + self.viewport.ox
+@_damage_sprite.oy = 20 + self.viewport.oy
+@_damage_sprite.x = self.x + self.viewport.rect.x
+@_damage_sprite.y = self.y - self.oy / 2 + self.viewport.rect.y
+@_damage_sprite.z = 3000
+@_damage_duration = 40
+end
+def animation(animation, hit)
+dispose_animation
+@_animation = animation
+return if @_animation == nil
+@_animation_hit = hit
+@_animation_duration = @_animation.frame_max
+animation_name = @_animation.animation_name
+animation_hue = @_animation.animation_hue
+bitmap = RPG::Cache.animation(animation_name, animation_hue)
+if @@_reference_count.include?(bitmap)
+@@_reference_count[bitmap] += 1
+else
+@@_reference_count[bitmap] = 1
+end
+@_animation_sprites = []
+if @_animation.position != 3 or not @@_animations.include?(animation)
+for i in 0..15
+sprite = ::Sprite.new
+sprite.bitmap = bitmap
+sprite.visible = false
+@_animation_sprites.push(sprite)
+end
+unless @@_animations.include?(animation)
+@@_animations.push(animation)
+end
+end
+update_animation
+end
+def loop_animation(animation)
+return if animation == @_loop_animation
+dispose_loop_animation
+@_loop_animation = animation
+return if @_loop_animation == nil
+@_loop_animation_index = 0
+animation_name = @_loop_animation.animation_name
+animation_hue = @_loop_animation.animation_hue
+bitmap = RPG::Cache.animation(animation_name, animation_hue)
+if @@_reference_count.include?(bitmap)
+@@_reference_count[bitmap] += 1
+else
+@@_reference_count[bitmap] = 1
+end
+@_loop_animation_sprites = []
+for i in 0..15
+sprite = ::Sprite.new
+sprite.bitmap = bitmap
+sprite.visible = false
+@_loop_animation_sprites.push(sprite)
+end
+update_loop_animation
+end
+def animation_set_sprites(sprites, cell_data, position)
+for i in 0..15
+sprite = sprites[i]
+pattern = cell_data[i, 0]
+if sprite == nil or pattern == nil or pattern == -1
+sprite.visible = false if sprite != nil
+next
+end
+sprite.visible = true
+sprite.src_rect.set(pattern % 5 * 192, pattern / 5 * 192, 192, 192)
+if position == 3
+if self.viewport != nil
+sprite.x = self.viewport.rect.width / 2
+sprite.y = self.viewport.rect.height - 160
+else
+sprite.x = 320
+sprite.y = 240
+end
+else
+sprite.x = self.x + self.viewport.rect.x -
+self.ox + self.src_rect.width / 2
+sprite.y = self.y + self.viewport.rect.y -
+self.oy + self.src_rect.height / 2
+sprite.y -= self.src_rect.height / 4 if position == 0
+sprite.y += self.src_rect.height / 4 if position == 2
+end
+sprite.x += cell_data[i, 1]
+sprite.y += cell_data[i, 2]
+sprite.z = 2000
+sprite.ox = 96
+sprite.oy = 96
+sprite.zoom_x = cell_data[i, 3] / 100.0
+sprite.zoom_y = cell_data[i, 3] / 100.0
+sprite.angle = cell_data[i, 4]
+sprite.mirror = (cell_data[i, 5] == 1)
+sprite.opacity = cell_data[i, 6] * self.opacity / 255.0
+sprite.blend_type = cell_data[i, 7]
+end
+end
+end
+end
+
+
+
+Crie outro acima do main e coloque esse script:
+Codigo:
+#-----------------------------------------------------------------
+# ¦ SlipKnot's HP & MP bars ¦
+#-----------------------------------------------------------------
+# Last Update: 24/11/05
+# - Added the MP (SP) bar
+# - Added the global bars to show or no the bars
+# - Fixed some things in the script
+#-----------------------------------------------------------------
+$hp_bar = true
+$sp_bar = true
+#-----------------------------------------------------------------
+class Scene_Map
+#-----------------------------------------------------------------
+alias sk_bar_main main
+def main
+@bars = Window_Sk_Bars.new
+sk_bar_main
+@bars.dispose if @bars != nil
+end
+#-----------------------------------------------------------------
+alias sk_bar_update update
+def update
+@bars.update if $hp_bar or $sp_bar
+sk_bar_update
+end
+#-----------------------------------------------------------------
+end
+#-----------------------------------------------------------------
+class Window_Base < Window
+#-----------------------------------------------------------------
+def sk_initialize(font=0,size=22)
+font = "Tahoma" if font == 0
+self.contents = Bitmap.new(self.width-32,self.height-32)
+self.contents.font.name = font
+self.contents.font.size = size
+end
+#-----------------------------------------------------------------
+def draw_text_outline(x,y,w,h,str,c=normal_color,a=0)
+self.contents.font.color = Color.new(0,0,0,255)
+self.contents.draw_text(x-1,y,w,h,str,a)
+self.contents.draw_text(x+1,y,w,h,str,a)
+self.contents.draw_text(x,y+1,w,h,str,a)
+self.contents.draw_text(x,y-1,w,h,str,a)
+self.contents.font.color = c
+self.contents.draw_text(x,y,w,h,str,a)
+end
+#-----------------------------------------------------------------
+end
+#-----------------------------------------------------------------
+class Window_Sk_Bars < Window_Base
+#-----------------------------------------------------------------
+def initialize
+super(444,-10,206,96)
+sk_initialize("Arial")
+self.opacity = 0
+end
+#-----------------------------------------------------------------
+def update
+self.contents.clear
+actor = $game_party.actors[0]
+if $hp_bar
+draw_text_outline(0,3,64,26,"HP")
+draw_actor_hp(actor,32,4)
+end
+if $sp_bar
+draw_text_outline(0,24,64,26,"MP")
+draw_actor_sp(actor,32,26)
+
+draw_text_outline(0,42,64,26,"")
+draw_actor_exp(actor,32,35)
+end
+end
+#-----------------------------------------------------------------
+def draw_actor_hp(actor,x,y)
+width = 128
+y += 4
+w = width * actor.hp / actor.maxhp
+# White border and black back
+border_back(x,y,width)
+# Generating the color
+val = 255 * ((actor.hp*100)/actor.maxhp)
+green = 255 - val/100
+color = Color.new(224,green,0,255)
+w_color = Color.new(255,green+32,96,255)
+if green > 64 then green -= 32
+elsif green > 128 then green -= 64 end
+b_color = Color.new(172,green,0,255)
+# Making the bar
+make_bar(x,y,w,color,w_color,b_color)
+end
+#-----------------------------------------------------------------
+def draw_actor_sp(actor,x,y)
+width = 128
+y += 4
+w = width * actor.sp / actor.maxsp
+# White border and black back
+border_back(x,y,width)
+# Generating the color
+val = 255 * ((actor.sp*100)/actor.maxsp)
+red = 255 - val/100
+color = Color.new(red,0,224,255)
+w_color = Color.new(red,64,255,255)
+if red > 64 then red -= 32
+elsif red > 128 then red -= 64 end
+b_color = Color.new(red,0,172,255)
+# Making the bar
+make_bar(x,y,w,color,w_color,b_color)
+end
+#-----------------------------------------------------------------
+def border_back(x,y,width)
+white = Color.new(255,255,255,255)
+black = Color.new(0,0,0,255)
+# White border
+self.contents.fill_rect(x+1, y-1, width-2, 1, white)
+self.contents.fill_rect(x, y, width, 1, white)
+self.contents.fill_rect(x-1, y+1, width+2, 9, white)
+self.contents.fill_rect(x, y+10, width, 1, white)
+self.contents.fill_rect(x+1, y+11, width-2, 1, white)
+# Black back
+self.contents.fill_rect(x+2, y, width-4, 1, black)
+self.contents.fill_rect(x+1, y+1, width-2, 1, black)
+self.contents.fill_rect(x, y+2, width, 7, black)
+self.contents.fill_rect(x+1, y+9, width-2, 1, black)
+self.contents.fill_rect(x+2, y+10, width-4, 1, black)
+end
+#-----------------------------------------------------------------
+def make_bar(x,y,w,color,w_color,b_color)
+self.contents.fill_rect(x+2, y, w-4, 1, w_color)
+self.contents.fill_rect(x+1, y+1, w-2, 1, w_color)
+self.contents.fill_rect(x, y+2, w, 7, color)
+self.contents.fill_rect(x+1, y+9, w-2, 1, color)
+self.contents.fill_rect(x+2, y+10, w-4, 1, b_color)
+end
+#-----------------------------------------------------------------
+end
+#-----------------------------------------------------------------
+
+

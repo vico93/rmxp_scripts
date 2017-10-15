@@ -1,0 +1,1076 @@
+#======================================
+# ¦ Game ABS Enemy
+#======================================
+
+class Game_ABS_Enemy < Game_Battler
+  #--------------------------------------------------------------------------
+  attr_accessor :event_id
+  attr_accessor :behavior
+  attr_accessor :detection
+  attr_accessor :aggressiveness
+  attr_accessor :trigger
+  attr_accessor :speed
+  attr_accessor :frequency
+  attr_accessor :engaged
+  attr_accessor :linking
+  attr_accessor :move_type
+  attr_accessor :move_frequency
+  attr_accessor :move_speed
+  attr_accessor :ranged
+  #--------------------------------------------------------------------------
+  def initialize(enemy_id)
+    super()
+    @event_id= 0
+    @behavior = 0
+    @detection  = []
+    @aggressiveness = 1
+    @trigger = []
+    @enemy_id = enemy_id
+    @engaged = []
+    @linking = false
+    @speed = 0
+    @frequency = 0
+    @move_type = 0
+    @move_frequency = 0
+    @move_speed = 0
+    @ranged = nil
+    @hp = maxhp
+    @sp = maxsp
+  end
+  #--------------------------------------------------------------------------
+  def id
+    return @enemy_id
+  end
+  #--------------------------------------------------------------------------
+  def index
+    return @member_index
+  end
+  #--------------------------------------------------------------------------
+  def name
+    return $data_enemies[@enemy_id].name
+  end
+  #--------------------------------------------------------------------------
+  def base_maxhp
+    return $data_enemies[@enemy_id].maxhp
+  end
+  #--------------------------------------------------------------------------
+  def base_maxsp
+    return $data_enemies[@enemy_id].maxsp
+  end
+  #--------------------------------------------------------------------------
+  def base_str
+    return $data_enemies[@enemy_id].str
+  end
+  #--------------------------------------------------------------------------
+  def base_dex
+    return $data_enemies[@enemy_id].dex
+  end
+  #--------------------------------------------------------------------------
+  def base_agi
+    return $data_enemies[@enemy_id].agi
+  end
+  #--------------------------------------------------------------------------
+  def base_int
+    return $data_enemies[@enemy_id].int
+  end
+  #--------------------------------------------------------------------------
+  def base_atk
+    return $data_enemies[@enemy_id].atk
+  end
+  #--------------------------------------------------------------------------
+  def base_pdef
+    return $data_enemies[@enemy_id].pdef
+  end
+  #--------------------------------------------------------------------------
+  def base_mdef
+    return $data_enemies[@enemy_id].mdef
+  end
+  #--------------------------------------------------------------------------
+  def base_eva
+    return $data_enemies[@enemy_id].eva
+  end
+  #--------------------------------------------------------------------------
+  def animation1_id
+    return $data_enemies[@enemy_id].animation1_id
+  end
+  #--------------------------------------------------------------------------
+  def animation2_id
+    return $data_enemies[@enemy_id].animation2_id
+  end
+  #--------------------------------------------------------------------------
+  def element_rate(element_id)
+    table = [0,200,150,100,50,0,-100]
+    result = table[$data_enemies[@enemy_id].element_ranks[element_id]]
+    for i in @states
+      if $data_states[i].guard_element_set.include?(element_id)
+        result /= 2
+      end
+    end
+    return result
+  end
+  #--------------------------------------------------------------------------
+  def state_ranks
+    return $data_enemies[@enemy_id].state_ranks
+  end
+  #--------------------------------------------------------------------------
+  def state_guard?(state_id)
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def element_set
+    return []
+  end
+  #--------------------------------------------------------------------------
+  def plus_state_set
+    return []
+  end
+  #--------------------------------------------------------------------------
+  def minus_state_set
+    return []
+  end
+  #--------------------------------------------------------------------------
+  def actions
+    return $data_enemies[@enemy_id].actions
+  end
+  #--------------------------------------------------------------------------
+  def exp
+    return $data_enemies[@enemy_id].exp
+  end
+  #--------------------------------------------------------------------------
+  def gold
+    return $data_enemies[@enemy_id].gold
+  end
+  #--------------------------------------------------------------------------
+  def item_id
+    return $data_enemies[@enemy_id].item_id
+  end
+  #--------------------------------------------------------------------------
+  def weapon_id
+    return $data_enemies[@enemy_id].weapon_id
+  end
+  #--------------------------------------------------------------------------
+  def armor_id
+    return $data_enemies[@enemy_id].armor_id
+  end
+  #--------------------------------------------------------------------------
+  def treasure_prob
+    return $data_enemies[@enemy_id].treasure_prob
+  end
+end
+
+#======================================
+# ¦ Game Battler
+#======================================
+
+class Game_Battler
+  #--------------------------------------------------------------------------
+  def can_use_skill?(skill)
+    if skill.sp_cost > self.sp
+      return false
+    end
+    if dead?
+      return false
+    end
+    if skill.atk_f == 0 and self.restriction == 1
+      return false
+    end
+    occasion = skill.occasion
+    case occasion
+    when 0..1
+      return true
+    when 2..3
+      return false
+    end
+  end
+  #--------------------------------------------------------------------------
+  def effect_skill(user, skill)
+    self.critical = false
+    if ((skill.scope == 3 or skill.scope == 4) and self.hp == 0) or
+       ((skill.scope == 5 or skill.scope == 6) and self.hp >= 1)
+      return false
+    end
+    effective = false
+    effective |= skill.common_event_id > 0
+    hit = skill.hit
+    if skill.atk_f > 0
+      hit *= user.hit / 100
+    end
+    hit_result = (rand(100) < hit)
+    effective |= hit < 100
+    if hit_result == true
+      power = skill.power + user.atk * skill.atk_f / 100
+      if power > 0
+        power -= self.pdef * skill.pdef_f / 200
+        power -= self.mdef * skill.mdef_f / 200
+        power = [power, 0].max
+      end
+      rate = 20
+      rate += (user.str * skill.str_f / 100)
+      rate += (user.dex * skill.dex_f / 100)
+      rate += (user.agi * skill.agi_f / 100)
+      rate += (user.int * skill.int_f / 100)
+      self.damage = power * rate / 20
+      self.damage *= elements_correct(skill.element_set)
+      self.damage /= 100
+      if self.damage > 0
+        if self.guarding?
+          self.damage /= 2
+        end
+      end
+      if skill.variance > 0 and self.damage.abs > 0
+        amp = [self.damage.abs * skill.variance / 100, 1].max
+        self.damage += rand(amp+1) + rand(amp+1) - amp
+      end
+      eva = 8 * self.agi / user.dex + self.eva
+      hit = self.damage < 0 ? 100 : 100 - eva * skill.eva_f / 100
+      hit = self.cant_evade? ? 100 : hit
+      hit_result = (rand(100) < hit)
+      effective |= hit < 100
+    end
+    if hit_result == true
+      if skill.power != 0 and skill.atk_f > 0
+        remove_states_shock
+        effective = true
+      end
+      last_hp = self.hp
+      self.hp -= self.damage
+      effective |= self.hp != last_hp
+      @state_changed = false
+      effective |= states_plus(skill.plus_state_set)
+      effective |= states_minus(skill.minus_state_set)
+      if skill.power == 0
+        self.damage = ""
+        unless @state_changed
+          self.damage = "Raté"
+        end
+      end
+    else
+      self.damage = "Raté"
+    end
+    return effective
+  end
+end
+  
+#======================================
+# ¦ Game Party
+#======================================
+
+class Game_Party
+  #--------------------------------------------------------------------------
+  alias abs_game_party_initialize initialize
+  #--------------------------------------------------------------------------
+  attr_accessor :party_max
+  #--------------------------------------------------------------------------
+  def initialize
+    @allies_active = true
+    @party_max = 6
+    @player_trans = false
+    @locked = false
+    abs_game_party_initialize
+  end
+  #--------------------------------------------------------------------------
+  def add_actor(actor_id)
+    actor = $game_actors[actor_id]
+    if @actors.size < @party_max and not @actors.include?(actor)
+      @actors.push(actor)
+      $game_player.refresh
+      id = @actors.size-1
+      $game_allies[id] = Game_Ally.new(id)
+      $game_allies[id].refresh
+      $game_allies[id].moveto($game_player.x,$game_player.y)    
+      if $scene.spriteset != nil
+        $scene.spriteset.add_ally(id)
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def kill_actor(actor_id)
+    actor = $game_actors[actor_id]
+    if @actors.include?(actor)
+      id = @actors.index(actor)
+      if id == 0
+        if all_dead? == false
+          shift_forward
+          $game_allies[$game_party.actors.size-1].dead = true
+          $game_allies[$game_party.actors.size-1].refresh
+        end
+      else
+        $game_allies[id].dead = true
+        $game_allies[id].refresh
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def remove_actor(actor_id)
+    actor = $game_actors[actor_id]
+    if @actors.include?(actor)
+      id = @actors.size - 1
+      @actors.delete(actor)
+      $game_player.refresh
+      for key in $game_allies.keys
+        $game_allies[key].refresh
+      end
+      $game_allies.delete(id)
+    end
+  end
+  #--------------------------------------------------------------------------
+  def shift_forward
+    new_x = 0
+    new_y = 0
+    loop do
+      temp = @actors.shift
+      @actors.push(temp)
+      if $game_party.actors.size <= 1
+        return
+      end
+      x = $game_player.x
+      y = $game_player.y
+      direction = $game_player.direction
+      wait = $game_player.wait_command
+      map_id = $game_player.map_id
+      transparent = $game_player.transparent
+      $game_player.move_to($game_allies[1].x,$game_allies[1].y)
+      $game_player.center($game_allies[1].x, $game_allies[1].y)
+      new_x = $game_allies[1].x
+      new_y = $game_allies[1].y
+      $game_player.direction = $game_allies[1].direction
+      $game_player.wait_command = false
+      $game_player.map_id = $game_allies[1].map_id
+      $game_player.transparent = false
+      @player_trans = $game_allies[1].transparent
+      for i in 1...$game_party.actors.size-1
+        $game_allies[i].move_to($game_allies[i+1].x,$game_allies[i+1].y)
+        $game_allies[i].direction = $game_allies[i+1].direction
+        $game_allies[i].wait_command = $game_allies[i+1].wait_command
+        $game_allies[i].map_id = $game_allies[i+1].map_id
+        $game_allies[i].transparent = $game_allies[i+1].transparent
+      end
+      $game_allies[$game_party.actors.size-1].move_to(x,y)
+      $game_allies[$game_party.actors.size-1].direction = direction
+      $game_allies[$game_party.actors.size-1].wait_command = wait
+      $game_allies[$game_party.actors.size-1].map_id = map_id
+      $game_allies[$game_party.actors.size-1].transparent = @player_trans
+      $game_player.refresh
+      for ally in $game_allies.values
+        ally.refresh
+      end
+      if @actors[0].dead? == false
+        break
+      end
+    end
+    new_map(new_x, new_y)
+  end
+  #--------------------------------------------------------------------------
+  def shift_backward
+    new_x = 0
+    new_y = 0
+    loop do
+      temp = @actors.pop
+      @actors.unshift(temp)
+      if $game_party.actors.size <= 1
+        return
+      end
+      x = $game_player.x
+      y = $game_player.y
+      direction = $game_player.direction
+      wait = $game_player.wait_command
+      map_id = $game_player.map_id
+      transparent = $game_player.transparent
+      id = $game_party.actors.size-1
+      $game_player.move_to($game_allies[id].x, $game_allies[id].y)
+      $game_player.direction = $game_allies[id].direction
+      $game_player.wait_command = false
+      $game_player.map_id = $game_allies[id].map_id
+      $game_player.transparent = false
+      @player_trans = $game_allies[id].transparent
+      for i in 1...$game_party.actors.size-1
+        id = $game_party.actors.size-i
+        $game_allies[id].move_to($game_allies[id -1].x,$game_allies[id-1].y)
+        $game_allies[id].direction = $game_allies[id -1].direction
+        $game_allies[id].wait_command = $game_allies[id -1].wait_command
+        $game_allies[id].map_id = $game_allies[id -1].map_id
+        $game_allies[id].transparent = $game_allies[id -1].transparent
+      end
+      $game_allies[1].move_to(x,y)
+      $game_allies[1].direction = direction
+      $game_allies[1].wait_command = wait
+      $game_allies[1].map_id = map_id
+      $game_allies[1].transparent = @player_trans
+      $game_player.refresh
+      for ally in $game_allies.values
+        ally.refresh
+      end
+      if @actors[0].dead? == false
+        break
+      end
+    end
+    new_map(new_x, new_y)
+  end
+  #--------------------------------------------------------------------------
+  def new_map(new_x, new_y)
+    if $game_player.map_id != $game_map.map_id
+      $game_map.setup($game_player.map_id)
+      $game_player.moveto(new_x,new_y)
+      for ally in $game_allies.values
+        if ally.map_id != $game_map.map_id
+          ally.wait_command = true
+        end
+      end
+      $ABS.transer_player = true
+      $game_temp.transition_processing = true
+    end
+  end
+end
+
+#=====================================
+# ¦ Game Character
+#=====================================
+
+class Game_Character
+  #--------------------------------------------------------------------------
+  attr_accessor   :character_name
+  attr_accessor   :character_hue
+  attr_accessor   :direction
+  attr_accessor   :direction_fix
+  attr_accessor   :wait_command
+  attr_accessor   :map_id
+  attr_accessor   :move_type
+  attr_accessor   :move_frequency
+  attr_accessor   :move_speed
+  attr_accessor   :object
+  #--------------------------------------------------------------------------
+  alias abs_game_character_initialize initialize
+  alias abs_game_character_update update
+  #--------------------------------------------------------------------------
+  def initialize
+    abs_game_character_initialize
+    @wait_command = false
+    @map_id = 0
+    @object = nil
+  end
+  #--------------------------------------------------------------------------
+  def move_to(x, y)
+    @x = x
+    @y = y
+    @real_x = @x * 128
+    @real_y = @y * 128
+    @prelock_direction = 0
+  end
+  #--------------------------------------------------------------------------
+  def update
+    abs_game_character_update
+    if @stop_count > (40 - @move_frequency * 2) * (6 - @move_frequency)
+      if @move_type == 4
+        move_toward_object
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def move_toward_object
+    sx = @x - @object.x
+    sy = @y - @object.y
+    if sx == 0 and sy == 0
+      return
+    end
+    abs_sx = sx.abs
+    abs_sy = sy.abs
+    if abs_sx == abs_sy
+      rand(2) == 0 ? abs_sx += 1 : abs_sy += 1
+    end
+    if abs_sx > abs_sy
+      sx > 0 ? move_left : move_right
+      if not moving? and sy != 0
+        sy > 0 ? move_up : move_down
+      end
+    else
+      sy > 0 ? move_up : move_down
+      if not moving? and sx != 0
+        sx > 0 ? move_left : move_right
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def move_away_from_object
+    sx = @x - @object.x
+    sy = @y - @object.y
+    if sx == 0 and sy == 0
+      return
+    end
+    abs_sx = sx.abs
+    abs_sy = sy.abs
+    if abs_sx == abs_sy
+      rand(2) == 0 ? abs_sx += 1 : abs_sy += 1
+    end
+    if abs_sx > abs_sy
+      sx > 0 ? move_right : move_left
+      if not moving? and sy != 0
+        sy > 0 ? move_down : move_up
+      end
+    else
+      sy > 0 ? move_down : move_up
+      if not moving? and sx != 0
+        sx > 0 ? move_right : move_left
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def turn_toward_object
+    sx = @x - @object.x
+    sy = @y - @object.y
+    if sx == 0 and sy == 0
+      return
+    end
+    if sx.abs > sy.abs
+      sx > 0 ? turn_left : turn_right
+    else
+      sy > 0 ? turn_up : turn_down
+    end
+  end
+  #--------------------------------------------------------------------------
+  def move_ally(ally)
+    ally.move_away_from_player
+  end
+  #--------------------------------------------------------------------------
+  def passable?(x, y, d)
+    new_x = x + (d == 6 ? 1 : d == 4 ? -1 : 0)
+    new_y = y + (d == 2 ? 1 : d == 8 ? -1 : 0)
+    unless $game_map.valid?(new_x, new_y)
+      return false
+    end
+    if @through
+      return true
+    end
+    unless $game_map.passable?(x, y, d, self)
+      return false
+    end
+    unless $game_map.passable?(new_x, new_y, 10 - d)
+      return false
+    end
+    for event in $game_map.events.values
+      if event.x == new_x and event.y == new_y
+        unless event.through
+          if self != $game_player and !self.is_a?(Game_Ally)
+            return false
+          end
+          if event.character_name != ""
+            return false
+          end
+        end
+      end
+    end
+    for ally in $game_allies.values
+      if ally.map_id == $game_map.map_id
+        if ally.x == new_x and ally.y == new_y
+          unless ally.through
+            if self != $game_player and ally.dead == false
+              return false
+            else
+              move_ally(ally) if ally.dead == false
+              return true
+            end
+          end
+        end
+      end
+    end
+    if $game_player.x == new_x and $game_player.y == new_y
+      unless $game_player.through
+        if @character_name != ""
+          return false
+        end
+      end
+    end
+    return true
+  end
+end
+
+#=====================================
+# ¦ Game Ranged
+#=====================================
+
+class Game_Ranged < Game_Character
+  #--------------------------------------------------------------------------
+  attr_accessor   :running
+  attr_accessor   :ending
+  #--------------------------------------------------------------------------
+  def initialize(type, event, enemy, attack = nil)
+    super()
+    @move_speed = 5
+    @type = type
+    @event = event
+    @enemy = enemy
+    @move_direction = event.direction
+    @attack = attack
+    @running = false
+    @ending = false
+    refresh(event)
+  end
+  #--------------------------------------------------------------------------
+  def refresh(event)
+    moveto(event.x, event.y)
+    case @type
+    when "Magic"
+      @character_name = "Magic Balls.png"
+    when "Weapon"
+      display = $RANGE_DISPLAY[@attack]
+      @character_name = display[0]
+    end
+  end
+  #--------------------------------------------------------------------------
+  def move_down(turn_enabled = true)
+    if turn_enabled
+      turn_down
+    end
+    if passable?(@x, @y, 2)
+      turn_down
+      @y += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  def move_left(turn_enabled = true)
+    if turn_enabled
+      turn_left
+    end
+    if passable?(@x, @y, 4)
+      turn_left
+      @x -= 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  def move_right(turn_enabled = true)
+    if turn_enabled
+      turn_right
+    end
+    if passable?(@x, @y, 6)
+      turn_right
+      @x += 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  def move_up(turn_enabled = true)
+    if turn_enabled
+      turn_up
+    end
+    if passable?(@x, @y, 8)
+      turn_up
+      @y -= 1
+    end
+  end
+  #--------------------------------------------------------------------------
+  def hit_actor(object, enemy)
+    object.jump(0, 0)
+  end
+  #--------------------------------------------------------------------------
+  def set_event_movement(enemy)
+    event = $game_map.events[enemy.event_id]
+    enemy.move_type = event.move_type
+    enemy.move_frequency = event.move_frequency
+    enemy.move_speed = event.move_speed
+    if enemy.engaged[1] == 0
+        event.object = $game_player
+    else
+        event.object = $game_allies[enemy.engaged[1]]
+    end
+    event.move_type = 4
+    event.move_toward_object
+    event.move_frequency = enemy.frequency 
+    event.move_speed = enemy.speed
+  end
+  #--------------------------------------------------------------------------
+  def return_event_movement(enemy)
+    event = $game_map.events[enemy.event_id]
+    event.move_type = enemy.move_type
+    event.move_frequency = enemy.move_frequency
+    event.move_speed = enemy.move_speed
+  end
+  #--------------------------------------------------------------------------
+  def actor_non_dead?(actor, enemy)
+    if actor.dead?
+      return true if enemy.is_a?(Game_Actor)
+      if enemy.engaged[1] == 0
+        $ABS.player_engaged = false
+      else
+        $game_allies[enemy.engaged[1]].under_attack = false
+      end
+      return_event_movement(enemy)
+      enemy.engaged[0] = false
+      enemy.engaged[1] = 0
+      $game_party.kill_actor(actor.id)
+      if $game_party.all_dead?
+        $game_temp.gameover = true
+      end
+      return false
+    end
+    return true
+  end
+#--------------------------------------------------------------------------
+  def event_non_dead?(actor, event, event_actor)
+    if actor.dead?
+      if event_actor.engaged[1] == 0
+        $ABS.player_engaged = false
+      else
+        $game_allies[event_actor.engaged[1]].under_attack = false
+      end
+      id = event_actor.event_id
+      $ABS.enemies.delete(id)
+      event = $game_map.events[event_actor.event_id]
+      event.character_name = ""
+      case event_actor.trigger[0]
+      when 0
+        event.erase
+      when 1
+        print "EVENT " + event.id.to_s + "Trigger Not Set Right ~!" if event_actor.trigger[1] == 0
+        $game_switches[event_actor.trigger[1]] = true
+        $game_map.need_refresh = true
+      when 2
+        print "EVENT " + event.id.to_s + "Trigger Not Set Right ~!" if event_actor.trigger[1] == 0
+         if event_actor.trigger[2] == 0
+           $game_variables[event_actor.trigger[1]] += 1
+          $game_map.need_refresh = true
+        else
+          $game_variables[event_actor.trigger[1]] = event_actor.trigger[2]
+          $game_map.need_refresh = true
+        end
+      when 3
+        value = "A" if event_actor.trigger[1] == 1
+        value = "B" if event_actor.trigger[1] == 2
+        value = "C" if event_actor.trigger[1] == 3
+        value = "D" if event_actor.trigger[1] == 4
+        print "EVENT " + event.id.to_s + "Trigger Not Set Right ~!" if value == 0
+        key = [$game_map.map_id, event.id, value]
+        $game_self_switches[key] = true
+        $game_map.need_refresh = true
+      end
+      return false
+    end
+    return true
+  end
+  #--------------------------------------------------------------------------
+  def set_engaged(enemy,type)
+    if type == 0
+      @player_engaged = true
+      @player_obect = $game_map.events[enemy.event_id]
+    else
+      $game_allies[type].object = $game_map.events[enemy.event_id]
+      $game_allies[type].under_attack = true
+    end
+  end
+  #--------------------------------------------------------------------------
+  def update
+    super
+    if !moving?
+      if !passable?(@x, @y, @move_direction) and @ending == false
+        @ending = true
+        @through = true
+        case @move_direction
+        when 2
+          move_down
+        when 4
+          move_left
+        when 6
+          move_right
+        when 8
+          move_up
+        end
+        @transparent = true
+        if @x == $game_player.x and @y == $game_player.y
+          actor = $game_party.actors[0]
+          case @type
+          when "Magic"
+            actor.effect_skill(@enemy, @attack)
+            if $game_party.actors[0].damage != "Miss" and $game_party.actors[0].damage != 0
+              @animation_id = @attack.animation2_id
+            end
+            if not @enemy.is_a?(Game_Actor)
+              set_engaged(@enemy, 0)
+            end
+          when "Weapon"
+            actor.attack_effect(@enemy)
+            if $game_party.actors[0].damage != "Miss" and $game_party.actors[0].damage != 0
+              hit_actor($game_player, @enemy)
+              display = $RANGE_DISPLAY[@enemy.weapon_id]
+              if display == nil
+                animation = @enemy.animation2_id
+              else
+                animation = display[1]
+              end
+              @animation_id = animation
+            end
+          end
+          if not @enemy.is_a?(Game_Actor)
+            set_engaged(@enemy, 0)
+          end
+          actor_non_dead?(actor, @enemy) 
+        end        
+        for event in $game_map.events.values
+          if @x == event.x and @y == event.y
+            event_actor = $ABS.enemies[event.id]
+            next if event_actor == nil
+            case @type
+            when "Magic"
+              event_actor.effect_skill(@enemy, @attack)
+              if event_actor.damage != "Miss" and event_actor.damage != 0
+                @animation_id = @attack.animation2_id
+              end
+            when "Weapon"
+              event_actor.attack_effect(@enemy)
+              if event_actor.damage != "Miss" and event_actor.damage != 0
+                hit_actor(event, @enemy)
+                display = $RANGE_DISPLAY[@enemy.weapon_id]
+                if display == nil
+                  animation = @enemy.animation2_id
+                else
+                  animation = display[1]
+                end
+                @animation_id = animation
+              end
+            end
+            if  event_non_dead?(event_actor, event, event_actor)
+              if @event.is_a?(Game_Player)
+                event_actor.engaged[0] = true
+                event_actor.engaged[1]= 0
+                set_event_movement(event_actor)
+              elsif @event.is_a?(Game_Ally) 
+                event_actor.engaged[0] = true
+                event_actor.engaged[1]= @event.actor_id
+                set_event_movement(event_actor)
+              end
+            end
+          end
+        end
+        for ally in $game_allies.values
+          if @x == ally.x and @y == ally.y
+            ally_actor = $game_party.actors[ally.actor_id]
+            next if ally.dead
+            case @type
+            when "Magic"
+              ally_actor.effect_skill(@enemy, @attack)
+               if ally_actor.damage != "Miss" and ally_actor.damage != 0
+                @animation_id = @attack.animation2_id
+              end
+              if not @enemy.is_a?(Game_Actor)
+                set_engaged(@enemy, ally.actor_id)
+              end
+            when "Weapon"
+              ally_actor.attack_effect(@enemy)
+              if ally_actor.damage != "Miss" and ally_actor.damage != 0
+                hit_actor(ally, @enemy)
+                display = $RANGE_DISPLAY[@enemy.weapon_id]
+                if display == nil
+                  animation = @enemy.animation2_id
+                else
+                  animation = display[1]
+                end
+                @animation_id = animation
+              end
+            end
+            if not @enemy.is_a?(Game_Actor)
+              set_engaged(@enemy, ally.actor_id)
+            end
+            actor_non_dead?(ally_actor, @enemy)
+          end
+        end
+      end
+      return if @ending
+      case @move_direction
+      when 2
+        move_down
+      when 4
+        move_left
+      when 6
+        move_right
+      when 8
+        move_up
+      end
+    end
+  end
+end
+
+#=====================================
+# ¦ Game Ally
+#=====================================
+
+class Game_Ally < Game_Character
+  #--------------------------------------------------------------------------
+  attr_accessor   :actor_id
+  attr_accessor   :dead
+  attr_accessor   :under_attack
+  attr_accessor   :forced_attack
+  #--------------------------------------------------------------------------
+  def initialize(actor_id)
+    super()
+    @forced_attack = false
+    @actor_id = actor_id
+    @map_id = $game_player.map_id
+    @dead = false
+    @under_attack = false
+    @attacker = 0
+    refresh
+  end
+  #--------------------------------------------------------------------------
+  def refresh
+   if $game_party.actors.size == 0
+      @character_name = ""
+      @character_hue = 0
+      return
+    end
+    if $game_party.actors[@actor_id] == nil
+      @character_name = ""
+      @character_hue = 0
+      return
+    end
+    if $game_party.actors[@actor_id].dead?
+      @dead = true
+    else
+      @dead = false
+    end
+    if @dead == true
+      actor = $game_party.actors[@actor_id]
+      if $DEAD_DISPLAY[actor.id] != nil
+        display = $DEAD_DISPLAY[actor.id]
+        @character_name = display[0]
+        @direction = display[1]
+        @direction_fix = true
+        @pattern = display[2]
+        @original_pattern = display[2]
+      else
+        @character_name = ""
+      end
+      return
+    end
+    actor = $game_party.actors[@actor_id]
+    @character_name = actor.character_name
+    @character_hue = actor.character_hue
+    @opacity = 255
+    @blend_type = 0
+    @direction_fix = false
+  end
+  #--------------------------------------------------------------------------
+  def update
+    if $game_party.actors[@actor_id].dead? and @dead == false
+      refresh
+    end
+    if @wait_command == false and @map_id == $game_map.map_id and @dead == false and moving? == false
+      if @forced_attack == true and $ABS.player_engaged == false
+        @forced_attack = false
+        @under_attack = false
+      end
+      if $ABS.ally_ai_active == true and @under_attack == true
+        return if @object == nil
+        position = $data_classes[$game_party.actors[@actor_id].class_id].position
+        return if $ABS.enemies[@object.id] == nil
+        max_range = [$ABS.enemies[@object.id].detection[0], $ABS.enemies[@object.id].detection[1]].max
+        case position
+        when 0
+          return if $ABS.ally_range_attack?(self, @object.id)
+          if $RANGE_DISPLAY[$game_party.actors[@actor_id].weapon_id]  == nil
+            if in_range?(1, @object)
+              move_toward_object
+              $ABS.ally_melee_attack(self, @object.id)
+            else
+              move_toward_object
+            end
+          else
+            if in_range?(1, @object)
+              move_away_from_object
+            elsif in_range?(max_range, @object)
+              move_away_from_object
+            elsif in_range?(max_range+1, @object)
+              turn_toward_object
+              @under_attack = false
+            else
+              move_toward_object
+            end
+          end
+        when 1
+          return if $ABS.ally_range_attack?(self, @object.id)
+          if $RANGE_DISPLAY[$game_party.actors[@actor_id].weapon_id]  == nil
+            if in_range?(1, @object)
+              move_toward_object
+              $ABS.ally_melee_attack(self, @object.id)
+            else
+              move_toward_object
+            end
+          else
+            if in_range?(1, @object)
+              move_away_from_object
+            elsif in_range?(max_range, @object)
+              move_away_from_object
+            elsif in_range?(max_range+1, @object)
+              turn_toward_object
+              @under_attack = false
+            else
+              move_toward_object
+            end
+          end
+        when 2
+          return if $ABS.ally_range_attack?(self, @object.id)
+          if in_range?(1, @object)
+            move_away_from_object
+          elsif in_range?(max_range, @object)
+            move_away_from_object
+          elsif in_range?(max_range+1, @object)
+            turn_toward_object
+            @under_attack = false
+          else
+            move_toward_object
+          end
+        end
+      else
+        $ABS.ally_range_help(self) if Graphics.frame_count % 80 == 0
+        normal_movement
+      end
+    end
+    super
+  end
+  #--------------------------------------------------------------------------
+  def normal_movement
+    range = $data_classes[$game_party.actors[@actor_id].class_id].position
+    if $ABS.close_follow == false
+      range += 2
+    end
+    if !in_range?(range)
+      move_toward_player
+    end
+  end
+  #--------------------------------------------------------------------------
+  def in_range?(range, element = $game_player, object = self)
+    x = (element.x - object.x) * (element.x - object.x)
+    y = (element.y - object.y) * (element.y - object.y)
+    r = x +y
+    if r <= (range * range)
+       return true
+    else
+      return false
+    end
+  end
+  #--------------------------------------------------------------------------
+  def facing?(object = $game_player)
+    playerx = object.x
+    playery = object.y
+    if @direction == 2
+      if playery >= @y
+        return true
+      end
+    end
+    if @direction == 4
+      if playerx <= @x
+        return true
+      end
+    end
+    if @direction == 6
+      if playerx >= @x
+        return true
+      end
+    end
+    if @direction == 8
+      if playery <= @y
+        return true
+      end
+    end
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def check_event_trigger_touch(x, y)
+    return false
+  end
+end

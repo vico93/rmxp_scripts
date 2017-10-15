@@ -1,0 +1,736 @@
+#======================================
+#
+# Script Novo Shop v-Final                      Script por: Firewords
+#
+#======================================
+
+#======================================
+# Window_ShopCommand
+#======================================
+class Window_ShopCommand < Window_Selectable
+  #------------------------------------------------------------------
+  # Iniciando
+  #------------------------------------------------------------------
+  def initialize
+    super(0, 64, 480, 64)
+    self.contents = Bitmap.new(width - 32, height - 32)
+    @item_max = 3
+    @column_max = 3
+    @commands = ["Compra", "Venda", "Sair"]
+    refresh
+    self.index = 0
+  end
+  #------------------------------------------------------------------
+  # Definindo janelas
+  #------------------------------------------------------------------
+  def refresh
+    self.contents.clear
+    for i in 0...@item_max
+      draw_item(i)
+    end
+  end
+  #------------------------------------------------------------------
+  # Definindo cursor
+  #------------------------------------------------------------------
+  def draw_item(index)
+    x = 4 + index * 160
+    self.contents.draw_text(x, 0, 128, 32, @commands[index])
+  end
+end
+
+#=====================================
+# Window_ShopBuy
+#=====================================
+
+class Window_ShopBuy < Window_Selectable
+  #------------------------------------------------------------------
+  # Iniciando
+  #------------------------------------------------------------------
+  def initialize(shop_goods)
+    x=0
+    super(x-20, 128, 360, 277)
+    @shop_goods = shop_goods
+    refresh
+    self.index = 0
+  end
+  #------------------------------------------------------------------
+  # Definindo numero de itens
+  #------------------------------------------------------------------
+  def item
+    return @data[self.index]
+  end
+  #------------------------------------------------------------------
+  # Desenhando janela
+  #------------------------------------------------------------------
+  def refresh
+    if self.contents != nil
+      self.contents.dispose
+      self.contents = nil
+    end
+    @data = []
+    for goods_item in @shop_goods
+      case goods_item[0]
+      when 0
+        item = $data_items[goods_item[1]]
+      when 1
+        item = $data_weapons[goods_item[1]]
+      when 2
+        item = $data_armors[goods_item[1]]
+      end
+      if item != nil
+        @data.push(item)
+      end
+    end
+    @item_max = @data.size
+    if @item_max > 0
+      self.contents = Bitmap.new(width - 32, row_max * 32)
+      for i in 0...@item_max
+        draw_item(i)
+      end
+    end
+  end
+  #-------------------------------------------------------------------
+  # Mostrando itens
+  #-------------------------------------------------------------------
+  def draw_item(index)
+    item = @data[index]
+    #
+    case item
+    when RPG::Item
+      number = $game_party.item_number(item.id)
+    when RPG::Weapon
+      number = $game_party.weapon_number(item.id)
+    when RPG::Armor
+      number = $game_party.armor_number(item.id)
+    end
+    if item.price <= $game_party.gold and number < 99
+      self.contents.font.color = normal_color
+    else
+      self.contents.font.color = disabled_color
+    end
+    x = 4
+    y = index * 32
+    rect = Rect.new(x, y, self.width - 32, 32)
+    self.contents.fill_rect(rect, Color.new(0, 0, 0, 0))
+    bitmap = RPG::Cache.icon(item.icon_name)
+    opacity = self.contents.font.color == normal_color ? 255 : 128
+    self.contents.blt(x, y + 4, bitmap, Rect.new(0, 0, 24, 24), opacity)
+    self.contents.draw_text(x + 28, y, 212, 32, item.name, 0)
+    self.contents.draw_text(x + 240, y, 16, 32, ":", 1)
+    self.contents.draw_text(x + 230, y, 88, 32, item.price.to_s, 2)
+  end
+  #-------------------------------------------------------------------
+  # Mostrando definições na Help_window
+  #-------------------------------------------------------------------
+  def update_help
+    @help_window.set_text(self.item == nil ? "" : self.item.description)
+  end
+end
+
+#======================================
+# Window_ShopSell
+#======================================
+
+class Window_ShopSell < Window_Selectable
+  #-------------------------------------------------------------------
+  # Iniciando
+  #-------------------------------------------------------------------
+  def initialize
+    super(0, 128, 640, 278)
+    @column_max = 2
+    refresh
+    self.index = 0
+  end
+  #-------------------------------------------------------------------
+  # Definindo quantidade de itens
+  #-------------------------------------------------------------------
+  def item
+    return @data[self.index]
+  end
+  #-------------------------------------------------------------------
+  # Desenhando janelas
+  #-------------------------------------------------------------------
+  def refresh
+    if self.contents != nil
+      self.contents.dispose
+      self.contents = nil
+    end
+    @data = []
+    for i in 1...$data_items.size
+      if $game_party.item_number(i) > 0
+        @data.push($data_items[i])
+      end
+    end
+    for i in 1...$data_weapons.size
+      if $game_party.weapon_number(i) > 0
+        @data.push($data_weapons[i])
+      end
+    end
+    for i in 1...$data_armors.size
+      if $game_party.armor_number(i) > 0
+        @data.push($data_armors[i])
+      end
+    end
+    @item_max = @data.size
+    if @item_max > 0
+      self.contents = Bitmap.new(width - 32, row_max * 32)
+      for i in 0...@item_max
+        draw_item(i)
+      end
+    end
+  end
+  #-------------------------------------------------------------------
+  # Mostrando itens
+  #-------------------------------------------------------------------
+  def draw_item(index)
+    item = @data[index]
+    case item
+    when RPG::Item
+      number = $game_party.item_number(item.id)
+    when RPG::Weapon
+      number = $game_party.weapon_number(item.id)
+    when RPG::Armor
+      number = $game_party.armor_number(item.id)
+    end
+    if item.price > 0
+      self.contents.font.color = normal_color
+    else
+      self.contents.font.color = disabled_color
+    end
+    x = 4 + index % 2 * (288 + 32)
+    y = index / 2 * 32
+    rect = Rect.new(x, y, self.width / @column_max - 32, 32)
+    self.contents.fill_rect(rect, Color.new(0, 0, 0, 0))
+    bitmap = RPG::Cache.icon(item.icon_name)
+    opacity = self.contents.font.color == normal_color ? 255 : 128
+    self.contents.blt(x, y + 4, bitmap, Rect.new(0, 0, 24, 24), opacity)
+    self.contents.draw_text(x + 28, y, 212, 32, item.name, 0)
+    self.contents.draw_text(x + 240, y, 16, 32, ":", 1)
+    self.contents.draw_text(x + 256, y, 24, 32, number.to_s, 2)
+  end
+  #-------------------------------------------------------------------
+  # Mostrando informações na janela de window
+  #-------------------------------------------------------------------
+  def update_help
+    @help_window.set_text(self.item == nil ? "" : self.item.description)
+  end
+end
+
+#======================================
+# Window_ShopNumber
+#======================================
+
+class Window_ShopNumber < Window_Base
+  #-------------------------------------------------------------------
+  # Iniciando
+  #-------------------------------------------------------------------
+  def initialize
+    x=0
+    super(x-20, 128, 360, 277)
+    self.contents = Bitmap.new(width - 32, height - 32)
+    @item = nil
+    @max = 1
+    @price = 0
+    @number = 1
+  end
+  #-------------------------------------------------------------------
+  # Definindo itens de acordo com o dinheiro
+  #-------------------------------------------------------------------
+  def set(item, max, price)
+    @item = item
+    @max = max
+    @price = price
+    @number = 1
+    refresh
+  end
+  #-------------------------------------------------------------------
+  # Verificando numeros atuais
+  #-------------------------------------------------------------------
+  def number
+    return @number
+  end
+  #-------------------------------------------------------------------
+  # Desenhando janela
+  #-------------------------------------------------------------------
+  def refresh
+    self.contents.clear
+    draw_item_name(@item, 60, 66)
+    self.contents.font.color = normal_color
+    self.contents.draw_text(162, 96, 32, 32, "×")
+    self.contents.draw_text(198, 96, 24, 32, @number.to_s, 2)
+    self.cursor_rect.set(195, 96, 32, 32)
+    domination = $data_system.words.gold
+    cx = contents.text_size(domination).width
+    total_price = @price * @number
+    self.contents.font.color = normal_color
+    self.contents.draw_text(-15, 210, 328-cx-2, 32, total_price.to_s, 2)
+    self.contents.font.color = system_color
+    self.contents.draw_text(332-cx-15, 210, cx, 32, domination, 2)
+  end
+  #-------------------------------------------------------------------
+  # Atualizando
+  #-------------------------------------------------------------------
+  def update
+    super
+    if self.active
+      if Input.repeat?(Input::RIGHT) and @number < @max
+        $game_system.se_play($data_system.cursor_se)
+        @number += 1
+        refresh
+      end
+      if Input.repeat?(Input::LEFT) and @number > 1
+        $game_system.se_play($data_system.cursor_se)
+        @number -= 1
+        refresh
+      end
+      if Input.repeat?(Input::UP) and @number < @max
+        $game_system.se_play($data_system.cursor_se)
+        @number = [@number + 10, @max].min
+        refresh
+      end
+      if Input.repeat?(Input::DOWN) and @number > 1
+        $game_system.se_play($data_system.cursor_se)
+        @number = [@number - 10, 1].max
+        refresh
+      end
+    end
+  end
+end
+
+#======================================
+# Window_ShopStatus
+#======================================
+class Window_ShopStatus < Window_Base
+  #-------------------------------------------------------------------
+  # Iniciando
+  #-------------------------------------------------------------------
+  def initialize
+    super(398, 128, 281, 277)
+    self.contents = Bitmap.new(width - 32, height - 32)
+    self.contents.font.size = 18
+    @item = nil
+    refresh
+  end
+  #-------------------------------------------------------------------
+  # Desenhando janela
+  #-------------------------------------------------------------------
+  def refresh
+    self.contents.clear
+    if @item == nil
+      return
+    end
+    case @item
+    when RPG::Item
+      number = $game_party.item_number(@item.id)
+    when RPG::Weapon
+      number = $game_party.weapon_number(@item.id)
+    when RPG::Armor
+      number = $game_party.armor_number(@item.id)
+    end
+    self.contents.font.color = system_color
+    self.contents.draw_text(0, 0, 200, 32, "Obtidos")
+    self.contents.font.color = normal_color
+    self.contents.draw_text(204, 0, 32, 32, number.to_s, 2)
+    if @item.is_a?(RPG::Item)
+      return
+    end
+    for i in 0...$game_party.actors.size
+      actor = $game_party.actors[i]
+      char =
+      if actor.equippable?(@item)
+        self.contents.font.color = normal_color
+      else
+        self.contents.font.color = disabled_color
+      end
+      draw_actor_graphic(actor,10, 64 + 50 * i + 18)
+      if @item.is_a?(RPG::Weapon)
+        item1 = $data_weapons[actor.weapon_id]
+      elsif @item.kind == 0
+        item1 = $data_armors[actor.armor1_id]
+      elsif @item.kind == 1
+        item1 = $data_armors[actor.armor2_id]
+      elsif @item.kind == 2
+        item1 = $data_armors[actor.armor3_id]
+      else
+        item1 = $data_armors[actor.armor4_id]
+      end
+      if actor.equippable?(@item)
+        if @item.is_a?(RPG::Weapon)
+          atk1 = item1 != nil ? item1.atk : 0
+          atk2 = @item != nil ? @item.atk : 0
+          change = atk2 - atk1
+        end
+        if @item.is_a?(RPG::Armor)
+          pdef1 = item1 != nil ? item1.pdef : 0
+          mdef1 = item1 != nil ? item1.mdef : 0
+          pdef2 = @item != nil ? @item.pdef : 0
+          mdef2 = @item != nil ? @item.mdef : 0
+          change = pdef2 - pdef1 + mdef2 - mdef1
+        end
+        self.contents.draw_text(124, 5 + 50 * i + 40, 112, 32,
+          sprintf("%+d", change), 2)
+      end
+      if item1 != nil
+        x = 4
+        y = 64 + 64 * i + 32
+        bitmap = RPG::Cache.icon(item1.icon_name)
+        opacity = self.contents.font.color == normal_color ? 255 : 128
+        self.contents.blt(x, y + 4, bitmap, Rect.new(0, 0-40, 24, 24), 
+opacity)
+        self.contents.draw_text(x + 25, 5 + 50 * i + 40, 212, 32, 
+item1.name)
+      end
+    end
+  end
+  #-------------------------------------------------------------------
+  # Verificando item
+  #-------------------------------------------------------------------
+  def item=(item)
+    if @item != item
+      @item = item
+      refresh
+    end
+  end
+end
+
+#==========================================
+# Window_Help
+#==========================================
+
+class Window_HelpShop < Window_Base
+  
+#--------------------------------------------------------------------------
+  # Iniciando
+  
+#--------------------------------------------------------------------------
+  def initialize
+    super(0, 0, 580, 64)
+    self.contents = Bitmap.new(width - 32, height - 32)
+  end
+  
+#--------------------------------------------------------------------------
+  # Definindo texto
+  
+#--------------------------------------------------------------------------
+  def set_text(text, align = 0)
+    if text != @text or align != @align
+      self.contents.clear
+      self.contents.font.color = normal_color
+      self.contents.draw_text(4, 0, self.width - 40, 32, text, align)
+      @text = text
+      @align = align
+      @actor = nil
+    end
+    self.visible = true
+  end
+  
+#--------------------------------------------------------------------------
+  # Verificando heroi
+  
+#--------------------------------------------------------------------------
+  def set_actor(actor)
+    if actor != @actor
+      self.contents.clear
+      draw_actor_name(actor, 4, 0)
+      draw_actor_state(actor, 140, 0)
+      draw_actor_hp(actor, 284, 0)
+      draw_actor_sp(actor, 460, 0)
+      @actor = actor
+      @text = nil
+      self.visible = true
+    end
+  end
+  
+#--------------------------------------------------------------------------
+  # Verificando inimigo
+  
+#--------------------------------------------------------------------------
+  def set_enemy(enemy)
+    text = enemy.name
+    state_text = make_battler_state_text(enemy, 112, false)
+    if state_text != ""
+      text += "  " + state_text
+    end
+    set_text(text, 1)
+  end
+end
+
+#======================================
+# Scene_Shop
+#---------------------------------------------------------------------
+#  Comando principal
+#======================================
+
+class Scene_Shop
+  #-------------------------------------------------------------------
+  # Definindo janelas
+  #-------------------------------------------------------------------
+  def main
+    #Mapa no fundo
+    @spriteset = Spriteset_Map.new
+    #Janela de ajuda
+    @help_window = Window_HelpShop.new
+    @help_window.x = 30
+    @help_window.y = 68
+    @help_window.back_opacity = 192
+    #Janela de comandos
+    @command_window = Window_ShopCommand.new
+    @command_window.x = 320 - @command_window.width / 2
+    @command_window.y = 440 - @command_window.height / 2
+    @command_window.back_opacity = 192
+    #Janela de dinheiro
+    @gold_window = Window_Gold.new
+    @gold_window.x = 320 - @gold_window.width / 2
+    @gold_window.y = 5
+    @gold_window.back_opacity = 192
+    #Janela de compra
+    @buy_window = Window_ShopBuy.new($game_temp.shop_goods)
+    @buy_window.active = false
+    @buy_window.visible = false
+    @buy_window.x = 0
+    @buy_window.y += 3
+    @buy_window.back_opacity = 192
+    @buy_window.help_window = @help_window
+    #Janela de vendas
+    @sell_window = Window_ShopSell.new
+    @sell_window.active = false
+    @sell_window.visible = false
+    @sell_window.x += 0
+    @sell_window.y += 3
+    @sell_window.back_opacity = 192
+    @sell_window.help_window = @help_window
+    #Janela de numeros
+    @number_window = Window_ShopNumber.new
+    @number_window.active = false
+    @number_window.visible = false
+    @number_window.x = 0
+    @number_window.y += 3
+    @number_window.back_opacity = 192
+    #Janela de status
+    @status_window = Window_ShopStatus.new
+    @status_window.visible = false
+    @status_window.x -= 39
+    @status_window.y += 3
+    @status_window.back_opacity = 192
+    Graphics.transition
+    loop do
+      Graphics.update
+      Input.update
+      update
+      if $scene != self
+        break
+      end
+    end
+    Graphics.freeze
+    @help_window.dispose
+    @command_window.dispose
+    @gold_window.dispose
+    @buy_window.dispose
+    @sell_window.dispose
+    @number_window.dispose
+    @status_window.dispose
+    @spriteset.dispose
+  end
+  #-------------------------------------------------------------------
+  # Atualizações principais
+  #-------------------------------------------------------------------
+  def update
+    @help_window.update
+    @command_window.update
+    @gold_window.update
+    @buy_window.update
+    @sell_window.update
+    @number_window.update
+    @status_window.update
+    if @command_window.active
+      update_command
+      return
+    end
+    if @buy_window.active
+      update_buy
+      return
+    end
+    if @sell_window.active
+      update_sell
+      return
+    end
+    if @number_window.active
+      update_number
+      return
+    end
+  end
+  #-------------------------------------------------------------------
+  # Atualizando comandos
+  #-------------------------------------------------------------------
+  def update_command
+    if Input.trigger?(Input::B)
+      $game_system.se_play($data_system.cancel_se)
+      $scene = Scene_Map.new
+      return
+    end
+    if Input.trigger?(Input::C)
+      case @command_window.index
+      when 0
+        $game_system.se_play($data_system.decision_se)
+        @command_window.active = false
+        @buy_window.active = true
+        @buy_window.visible = true
+        @buy_window.refresh
+        @status_window.visible = true
+      when 1
+        $game_system.se_play($data_system.decision_se)
+        @command_window.active = false
+        @sell_window.active = true
+        @sell_window.visible = true
+        @sell_window.refresh
+      when 2
+        $game_system.se_play($data_system.decision_se)
+        $scene = Scene_Map.new
+      end
+      return
+    end
+  end
+  #--------------------------------------------------------------------
+  # Atualizando janelas de compras
+  #--------------------------------------------------------------------
+  def update_buy
+    @status_window.item = @buy_window.item
+    if Input.trigger?(Input::B)
+      $game_system.se_play($data_system.cancel_se)
+      @command_window.active = true
+      @buy_window.active = false
+      @buy_window.visible = false
+      @status_window.visible = false
+      @status_window.item = nil
+      @help_window.set_text("")
+      return
+    end
+    if Input.trigger?(Input::C)
+      @item = @buy_window.item
+      if @item == nil or @item.price > $game_party.gold
+        $game_system.se_play($data_system.buzzer_se)
+        return
+      end
+      case @item
+      when RPG::Item
+        number = $game_party.item_number(@item.id)
+      when RPG::Weapon
+        number = $game_party.weapon_number(@item.id)
+      when RPG::Armor
+        number = $game_party.armor_number(@item.id)
+      end
+      if number == 99
+        $game_system.se_play($data_system.buzzer_se)
+        return
+      end
+      $game_system.se_play($data_system.decision_se)
+      max = @item.price == 0 ? 99 : $game_party.gold / @item.price
+      max = [max, 99 - number].min
+      @buy_window.active = false
+      @buy_window.visible = false
+      @number_window.set(@item, max, @item.price)
+      @number_window.active = true
+      @number_window.visible = true
+    end
+  end
+  #------------------------------------------------------------------
+  # Atualizando janela de vendas
+  #------------------------------------------------------------------
+  def update_sell
+    if Input.trigger?(Input::B)
+      $game_system.se_play($data_system.cancel_se)
+      @command_window.active = true
+      @sell_window.active = false
+      @sell_window.visible = false
+      @status_window.item = nil
+      @help_window.set_text("")
+      return
+    end
+    if Input.trigger?(Input::C)
+      @item = @sell_window.item
+      @status_window.item = @item
+      if @item == nil or @item.price == 0
+        $game_system.se_play($data_system.buzzer_se)
+        return
+      end
+      $game_system.se_play($data_system.decision_se)
+      case @item
+      when RPG::Item
+        number = $game_party.item_number(@item.id)
+      when RPG::Weapon
+        number = $game_party.weapon_number(@item.id)
+      when RPG::Armor
+        number = $game_party.armor_number(@item.id)
+      end
+      max = number
+      @sell_window.active = false
+      @sell_window.visible = false
+      @number_window.set(@item, max, @item.price / 2)
+      @number_window.active = true
+      @number_window.visible = true
+      @status_window.visible = true
+    end
+  end
+  #------------------------------------------------------------------
+  # Atualizando numeros
+  #------------------------------------------------------------------
+  def update_number
+    if Input.trigger?(Input::B)
+      $game_system.se_play($data_system.cancel_se)
+      @number_window.active = false
+      @number_window.visible = false
+      case @command_window.index
+      when 0
+        @buy_window.active = true
+        @buy_window.visible = true
+      when 1
+        @sell_window.active = true
+        @sell_window.visible = true
+        @status_window.visible = false
+      end
+      return
+    end
+    if Input.trigger?(Input::C)
+      $game_system.se_play($data_system.shop_se)
+      @number_window.active = false
+      @number_window.visible = false
+      case @command_window.index
+      when 0
+        $game_party.lose_gold(@number_window.number * @item.price)
+        case @item
+        when RPG::Item
+          $game_party.gain_item(@item.id, @number_window.number)
+        when RPG::Weapon
+          $game_party.gain_weapon(@item.id, @number_window.number)
+        when RPG::Armor
+          $game_party.gain_armor(@item.id, @number_window.number)
+        end
+        @gold_window.refresh
+        @buy_window.refresh
+        @status_window.refresh
+        @buy_window.active = true
+        @buy_window.visible = true
+      when 1
+        $game_party.gain_gold(@number_window.number * (@item.price / 2))
+        case @item
+        when RPG::Item
+          $game_party.lose_item(@item.id, @number_window.number)
+        when RPG::Weapon
+          $game_party.lose_weapon(@item.id, @number_window.number)
+        when RPG::Armor
+          $game_party.lose_armor(@item.id, @number_window.number)
+        end
+        @gold_window.refresh
+        @sell_window.refresh
+        @status_window.refresh
+        @sell_window.active = true
+        @sell_window.visible = true
+        @status_window.visible = false
+      end
+      return
+    end
+  end
+end
+
+
+

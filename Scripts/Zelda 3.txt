@@ -1,0 +1,860 @@
+#=====================================
+# ¦ Game Map
+#=====================================
+
+class Game_Map
+  #--------------------------------------------------------------------------
+  alias abs_game_map_setup setup
+  #--------------------------------------------------------------------------
+  def setup(map_id)
+    $ABS.enemies = {}
+    abs_game_map_setup(map_id)
+  end
+  #--------------------------------------------------------------------------
+  def passable?(x, y, d, self_event = nil)
+    unless valid?(x, y)
+      return false
+    end
+    bit = (1 << (d / 2 - 1)) & 0x0f
+    for event in events.values
+      if event.tile_id >= 0 and event != self_event and
+         event.x == x and event.y == y and not event.through
+        if @passages[event.tile_id] & bit != 0
+          return false
+        elsif @passages[event.tile_id] & 0x0f == 0x0f
+          return false
+        elsif @priorities[event.tile_id] == 0
+          return true
+        end
+      end
+    end
+    for ally in $game_allies.values
+      if ally.map_id == $game_map.map_id
+        if ally.dead == false
+          if ally.tile_id >= 0 and ally != self_event and
+            ally.x == x and ally.y == y and not ally.through
+            if @passages[ally.tile_id] & bit != 0
+              return false
+            elsif @passages[ally.tile_id] & 0x0f == 0x0f
+              return false
+            elsif @priorities[ally.tile_id] == 0
+              return true
+            end
+          end
+        end
+      end
+    end
+    for i in [2, 1, 0]
+      tile_id = data[x, y, i]
+      if tile_id == nil
+        return false
+      elsif @passages[tile_id] & bit != 0
+        return false
+      elsif @passages[tile_id] & 0x0f == 0x0f
+        return false
+      elsif @priorities[tile_id] == 0
+        return true
+      end
+    end
+    return true
+  end
+end
+
+#======================================
+# ¦ Game Event
+#======================================
+
+class Game_Event < Game_Character
+  #--------------------------------------------------------------------------
+  alias abs_game_event_refresh refresh
+  #--------------------------------------------------------------------------
+  def name
+    return @event.name
+  end
+  #--------------------------------------------------------------------------
+  def id
+    return @id
+  end
+  #--------------------------------------------------------------------------
+  def refresh
+    abs_game_event_refresh
+    $ABS.refresh(@event, @list, @character_name)
+  end
+end
+
+#======================================
+# ¦ Game Player
+#======================================
+
+class Game_Player < Game_Character
+  #--------------------------------------------------------------------------
+  alias abs_game_player_update update
+  #--------------------------------------------------------------------------
+  def update
+    abs_game_player_update
+    if $game_party.actors[0].dead?
+      actor = $game_party.actors[0]
+      $game_party.kill_actor(actor.id)
+    end
+  end
+end
+
+#======================================
+# ¦ Sprite Display
+#======================================
+
+class Sprite_Display < Sprite
+  #--------------------------------------------------------------------------
+  def initialize
+    @counter = 0
+    super
+    self.bitmap = Bitmap.new(120, 48)
+    self.bitmap.font.name = $defaultfonttype
+    self.bitmap.font.size = $defaultfontsize
+    self.x = 0
+    self.y = 0
+    self.z = 500
+    update
+  end
+  #--------------------------------------------------------------------------
+  def dispose
+    if self.bitmap != nil
+      self.bitmap.dispose
+    end
+    super
+  end
+  #--------------------------------------------------------------------------
+  def update
+    super
+    if @counter == 1
+      self.x = (-0.25 * $game_map.display_x) + ($game_player.x * 32) - 40
+      self.y = (-0.25 * $game_map.display_y) + ($game_player.y * 32) - 40
+    end
+    if $ABS.display[0]
+      @counter += 1
+    end
+    self.visible = $ABS.display[0]
+    self.bitmap.clear
+    if @counter != 60 and $ABS.display[0] == true
+      text = $ABS.display[1]
+      self.bitmap.font.color.set(255, 255, 255)
+      self.bitmap.draw_text(self.bitmap.rect, text, 1)
+    else
+      self.visible = false
+      @counter = 0
+      self.bitmap.clear
+      $ABS.display[0] = false
+    end
+  end
+end
+
+#======================================
+# ¦ Sprite Character
+#======================================
+
+class Sprite_Character < RPG::Sprite
+  #--------------------------------------------------------------------------
+  attr_accessor :enemy_id
+  attr_accessor :actor_id
+  #--------------------------------------------------------------------------
+  alias abs_spriteset_character_update update
+  #--------------------------------------------------------------------------
+  def initialize(viewport, character = nil)
+    super(viewport)
+    @enemy_id = 0
+    @actor_id = -1
+    @character = character
+    update
+  end
+  #--------------------------------------------------------------------------
+  def update
+    abs_spriteset_character_update
+    if @character.is_a?(Game_Player)
+      if !$game_party.actors[0].dead?
+        if $game_party.actors[0].damage != nil
+          self.damage($game_party.actors[0].damage, $game_party.actors[0].critical)
+          $game_party.actors[0].damage = nil
+        end
+        animation = $data_animations[$game_party.actors[0].state_animation_id]
+        self.loop_animation(animation)
+      end
+    end
+    if @character.is_a?(Game_Event)
+      if $ABS.enemies[@character.id] != nil
+        if $ABS.enemies[@character.id].damage != nil
+          self.damage($ABS.enemies[@character.id].damage, $ABS.enemies[@character.id].critical)
+          $ABS.enemies[@character.id].damage = nil
+        end
+        animation = $data_animations[$ABS.enemies[@character.id].state_animation_id]
+        self.loop_animation(animation)
+      end
+    end
+    if @character.is_a?(Game_Ally)
+      if @character.dead == false
+        return if $game_party.actors[@character.actor_id]. == nil
+        if $game_party.actors[@character.actor_id].damage != nil
+          self.damage($game_party.actors[@character.actor_id].damage, $game_party.actors[@character.actor_id].critical)
+          $game_party.actors[@character.actor_id].damage = nil
+        end
+        animation = $data_animations[$game_party.actors[@character.actor_id].state_animation_id]
+        self.loop_animation(animation)
+      else
+        self.dispose_loop_animation
+        self.z = 10
+      end
+    end
+  end
+end
+
+#======================================
+# ¦ Spriteset Map
+#======================================
+
+class Spriteset_Map
+  #--------------------------------------------------------------------------
+  alias abs_spriteset_map_initialize initialize
+  alias abs_spriteset_map_dispose dispose
+  alias abs_spriteset_map_update update
+  #--------------------------------------------------------------------------
+  def initialize
+    @ranged = []
+    @display = Sprite_Display.new
+    abs_spriteset_map_initialize
+    for ally in $game_allies.values
+      if ally.map_id != $game_map.map_id
+        ally.transparent = true
+      else
+        ally.transparent = false
+      end
+      sprite = Sprite_Character.new(@viewport1, ally)
+      @character_sprites.push(sprite)
+    end
+  end
+  #--------------------------------------------------------------------------
+  def dispose
+    @display.dispose
+    for range in @ranged
+      range.dispose
+    end
+    for enemy in $ABS.enemies.values
+      enemy.ranged = nil
+    end
+    for range in $ABS.ranged.values
+      range = nil
+    end
+    abs_spriteset_map_dispose
+  end
+  #--------------------------------------------------------------------------
+  def update
+    @display.update
+    for sprite in @character_sprites
+      if sprite.character.is_a?(Game_Ally)
+        if $game_party.actors[sprite.character.actor_id] == nil
+          temp = @character_sprites.delete(sprite)
+          temp.dispose
+        end
+      end
+    end
+    abs_spriteset_map_update
+    for range in @ranged
+      range.update
+      next if range.enemy_id == 0
+      if $ABS.enemies[range.enemy_id] == nil
+        temp = @ranged.delete(range)
+        temp.dispose
+      end
+    end
+    for actor_ranged in $ABS.ranged.values
+      next if actor_ranged == nil
+      if actor_ranged.running == false
+        actor_ranged.running = true
+        sprite = Sprite_Character.new(@viewport1, actor_ranged)
+        sprite.actor_id = $ABS.ranged.index(actor_ranged)
+        @ranged.push(sprite)
+      end
+    end
+    for enemy in $ABS.enemies.values
+      next if enemy.ranged == nil
+      if enemy.ranged.running == false
+        enemy.ranged.running = true
+        sprite = Sprite_Character.new(@viewport1, enemy.ranged)
+        sprite.enemy_id = $ABS.enemies.index(enemy)
+        @ranged.push(sprite)
+      end
+    end
+    for sprite in @ranged
+      next if sprite.enemy_id == 0
+      enemy= $ABS.enemies[sprite.enemy_id]
+      return if enemy == nil or enemy.ranged == nil or enemy.ranged.ending == nil
+      if enemy.ranged.ending == true
+        if !sprite.effect?
+          $ABS.enemies[sprite.enemy_id].ranged = nil
+          temp = @ranged.delete(sprite)
+          temp.dispose
+        end
+      end
+    end
+    for sprite in @ranged
+      next if sprite.actor_id == -1
+      range = $ABS.ranged[sprite.actor_id]
+      if range.ending == true
+        if !sprite.effect?
+          $ABS.ranged.delete(sprite.actor_id)
+          temp = @ranged.delete(sprite)
+          temp.dispose
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def add_ally(id)
+    sprite = Sprite_Character.new(@viewport1, $game_allies[id])
+    @character_sprites.push(sprite)
+  end
+end
+
+#======================================
+# ¦ Window Base
+#======================================
+
+class Window_Base < Window
+#--------------------------------------------------------------------------
+  def draw_actor_hp_bar(actor, x, y, width = 70, height = 10, bar_color = Color.new(255, 0, 0, 255))
+    self.contents.fill_rect(x, y, width, height, Color.new(255, 255, 255, 100)) 
+    return if actor.maxhp == 0
+    w = width * actor.hp / actor.maxhp
+    for i in 0..height
+      r = bar_color.red   * (height -i)/height  + 0   * i/height 
+      g = bar_color.green * (height -i)/height  + 0 * i/height 
+      b = bar_color.blue  * (height -i)/height  + 0 * i/height 
+      a = bar_color.alpha * (height -i)/height  + 255 * i/height 
+      self.contents.fill_rect(x, y+i, w , 1, Color.new(r, g, b, a)) 
+    end
+  end
+  #--------------------------------------------------------------------------
+  def draw_actor_sp_bar(actor, x, y, width = 70, height = 10, bar_color = Color.new(0, 0, 255, 255))
+    self.contents.fill_rect(x, y, width, height, Color.new(255, 255, 255, 100)) 
+    return if actor.maxsp == 0
+    w = width * actor.sp / actor.maxsp
+    for i in 0..height
+      r = bar_color.red   * (height -i)/height  + 0   * i/height 
+      g = bar_color.green * (height -i)/height  + 0 * i/height 
+      b = bar_color.blue  * (height -i)/height  + 0 * i/height 
+      a = bar_color.alpha * (height -i)/height  + 255 * i/height 
+      self.contents.fill_rect(x, y+i, w , 1, Color.new(r, g, b, a)) 
+    end
+  end
+  #--------------------------------------------------------------------------
+  def draw_dash_bar(x, y, width = 50, height = 10)
+    self.contents.fill_rect(x, y, width, height, Color.new(255, 255, 255, 100)) 
+    case $ABS.dash_level
+    when 0 .. 1 
+      bar_color = Color.new(255, 0, 0, 255)
+    when 2 .. 3
+      bar_color = Color.new(255, 255, 0, 255) 
+    else
+      bar_color = Color.new(0, 255, 0, 255) 
+    end
+    w = width * $ABS.dash_level / 5
+    for i in 0..height
+      r = bar_color.red   * (height -i)/height  + 0   * i/height 
+      g = bar_color.green * (height -i)/height  + 0 * i/height 
+      b = bar_color.blue  * (height -i)/height  + 0 * i/height 
+      a = bar_color.alpha * (height -i)/height  + 255 * i/height 
+      self.contents.fill_rect(x, y+i, w , 1, Color.new(r, g, b, a)) 
+    end
+  end
+  #--------------------------------------------------------------------------
+  def draw_sneak_bar(x, y, width = 50, height = 10)
+    self.contents.fill_rect(x, y, width, height, Color.new(255, 255, 255, 100)) 
+    case $ABS.sneak_level
+    when 0 .. 1 
+      bar_color = Color.new(255, 0, 0, 255)
+    when 2 .. 3
+      bar_color = Color.new(255, 255, 0, 255) 
+    else
+      bar_color = Color.new(0, 255, 0, 255) 
+    end
+    w = width * $ABS.sneak_level / 5
+    for i in 0..height
+      r = bar_color.red   * (height -i)/height  + 0   * i/height 
+      g = bar_color.green * (height -i)/height  + 0 * i/height 
+      b = bar_color.blue  * (height -i)/height  + 0 * i/height 
+      a = bar_color.alpha * (height -i)/height  + 255 * i/height 
+      self.contents.fill_rect(x, y+i, w , 1, Color.new(r, g, b, a)) 
+    end
+  end
+end
+
+#======================================
+# ¦ Window HUB
+#======================================
+
+class Window_HUD < Window_Base
+  #--------------------------------------------------------------------------
+  def initialize
+    super(0, 400, 640, 80)
+    self.contents = Bitmap.new(width - 32, height - 32)
+    self.contents.font.name = $defaultfonttype  
+    self.contents.font.size = $defaultfontsize
+    self.opacity = 100
+    update
+  end
+  #--------------------------------------------------------------------------
+  def refresh
+    self.contents.clear
+    self.contents.draw_text(-20, 0, 50, 30, "L", 1)
+    self.contents.draw_text(-20, 15, 50, 30, "E", 1)
+    self.contents.draw_text(-10, 0, 50, 30, "A", 1)
+    self.contents.draw_text(-10, 15, 50, 30, "D", 1)
+    for i in 0...4
+      actor =  $game_party.actors[i]
+      next if actor == nil
+      if $game_allies[i] != nil
+        if $game_allies[i].under_attack == true and actor.dead? == false
+          self.contents.draw_text(60 + (i*110), -5, 70, 32, "Engagé", 1)
+        else
+          draw_actor_state(actor, 60 + (i*110), -5, width = 70)
+        end
+      else
+        if $ABS.player_engaged == true and actor.dead? == false
+          self.contents.draw_text(60 + (i*110), -5, 70, 32, "Engagé", 1)
+        else
+          draw_actor_state(actor, 60 + (i*110), -5, width = 70)
+        end
+      end
+      self.contents.font.color = normal_color
+      draw_actor_graphic(actor, 40 + (i*110), 45)
+      draw_actor_hp_bar(actor, 60 + (i*110), 25)
+      draw_actor_sp_bar(actor, 60 + (i*110), 40)
+    end
+    self.contents.draw_text(480, -5, 50, 32, "Dash", 1)
+    draw_dash_bar(480, 30)
+    self.contents.draw_text(550, -5, 50, 32, "Sneak", 1)
+    draw_sneak_bar(550, 30)
+    Graphics.frame_reset
+  end
+  #--------------------------------------------------------------------------
+  def update
+    return if Graphics.frame_count % 20 != 0
+    return if self.visible == false
+    refresh
+    Graphics.frame_reset
+  end
+end
+
+#======================================
+# ¦ Scene Title
+#======================================
+
+class Scene_Title
+  #--------------------------------------------------------------------------
+  alias abs_scene_title_cng command_new_game
+  #--------------------------------------------------------------------------
+  def command_new_game
+    $game_system.se_play($data_system.decision_se)
+    Audio.bgm_stop
+    Graphics.frame_count = 0
+    $game_temp          = Game_Temp.new
+    $game_system        = Game_System.new
+    $game_switches      = Game_Switches.new
+    $game_variables     = Game_Variables.new
+    $game_self_switches = Game_SelfSwitches.new
+    $game_screen        = Game_Screen.new
+    $game_actors        = Game_Actors.new
+    $game_party         = Game_Party.new
+    $game_troop         = Game_Troop.new
+    $game_map           = Game_Map.new
+    $game_player         = Game_Player.new
+    
+    $ABS = Action_Battle_System.new
+    $game_allies = {}
+    for i in 1...$data_system.party_members.size
+      $game_allies[i] = Game_Ally.new(i)
+    end
+    $game_party.setup_starting_members
+    $game_map.setup($data_system.start_map_id)
+    for ally in $game_allies.values
+      ally.moveto($data_system.start_x, $data_system.start_y)
+      ally.refresh
+      ally.map_id = $data_system.start_map_id
+    end
+    
+    $game_player.map_id = $data_system.start_map_id  
+    $game_player.moveto($data_system.start_x, $data_system.start_y)
+    $game_player.refresh
+    $game_map.autoplay
+    $game_map.update
+    $scene = Scene_Map.new
+  end
+end
+
+#======================================
+# ¦ Scene Map
+#======================================
+
+class Scene_Map
+  #--------------------------------------------------------------------------
+  alias abs_scene_map_main main
+  alias abs_scene_map_update update
+  alias abs_scene_map_transfer_player transfer_player
+  #--------------------------------------------------------------------------
+  attr_accessor   :spriteset
+  #--------------------------------------------------------------------------
+  def main
+    @hud = Window_HUD.new
+    abs_scene_map_main
+    @hud.dispose
+  end
+  #--------------------------------------------------------------------------
+  def update
+    if Kboard.keyboard($R_Key_E)
+      $game_party.shift_forward
+    end
+    if Kboard.keyboard($R_Key_R)
+      $game_party.shift_backward
+    end
+    if Kboard.keyboard($R_Key_T)
+      $game_player.wait_command = true
+      $game_party.shift_forward
+    end
+    if Kboard.keyboard($R_Key_Y)
+      for ally in $game_allies.values
+        if ally.map_id == $game_map.map_id
+          ally.wait_command = true
+        end
+      end
+    end
+    if Kboard.keyboard($R_Key_U)
+      $ABS.player_engaged = false
+      for ally in $game_allies.values
+        if ally.map_id == $game_map.map_id
+          ally.wait_command = false
+          ally.under_attack = false
+          ally.refresh
+        end
+      end
+    end
+    if $ABS.hud_pc == true
+     if Kboard.keyboard($R_Key_P)
+       if @hud.visible == true
+         @hud.visible = false
+       else
+         @hud.visible = true
+       end
+     end
+   else
+     @hud.visible = $ABS.hud
+   end
+    if Input.trigger?(Input::C)
+      $ABS.player_attack
+    end
+    if Kboard.keyboard($R_Key_G)
+      $ABS.player_ranged
+    end
+    if Kboard.keyboard($R_Key_H)
+      $ABS.player_skill(1)
+    end
+    if Kboard.keyboard($R_Key_J)
+      $ABS.player_skill(2)
+    end
+    if Kboard.keyboard($R_Key_K)
+      $ABS.player_skill(3)
+    end
+    if Kboard.keyboard($R_Key_L)
+      $ABS.player_skill(4)
+    end
+    if Kboard.keyboard($R_Key_N)
+      $ABS.close_follow = true
+    end
+    if Kboard.keyboard($R_Key_M)
+      $ABS.close_follow = false
+    end
+    for key in $game_allies.keys
+      $game_allies[key].update
+    end
+    $ABS.update
+    @hud.update
+    if $ABS.transer_player == true
+      transfer
+    end
+    abs_scene_map_update
+  end
+  #--------------------------------------------------------------------------
+  def transfer
+    $ABS.transer_player = false
+    $game_map.update
+    @spriteset.dispose
+    @spriteset = Spriteset_Map.new
+    if $game_temp.transition_processing
+      $game_temp.transition_processing = false
+      Graphics.transition(20)
+    end
+    $game_map.autoplay
+    Graphics.frame_reset
+    Input.update
+  end
+  #--------------------------------------------------------------------------
+  def transfer_player
+    for ally in $game_allies.values
+      if ally.wait_command == false and ally.dead == false
+        ally.moveto($game_temp.player_new_x, $game_temp.player_new_y)
+        ally.map_id = $game_temp.player_new_map_id
+      end
+    end
+    $game_player.map_id = $game_temp.player_new_map_id
+    abs_scene_map_transfer_player
+  end
+end
+
+#======================================
+# ¦ Scene Skill
+#======================================
+
+class Scene_Skill
+  #--------------------------------------------------------------------------
+  alias abs_scene_skill_main main
+  alias abs_scene_skill_update update
+  alias abs_scene_skill_update_skill update_skill
+  #--------------------------------------------------------------------------
+  def main
+    @shk_window = Window_Command.new(250, ["Assigner une compétence à cette touche"])
+    @shk_window.visible = false
+    @shk_window.active = false
+    @shk_window.x = 200
+    @shk_window.y = 250
+    @shk_window.z = 1500
+    abs_scene_skill_main
+    @shk_window.dispose
+  end
+  #--------------------------------------------------------------------------
+  def update
+    @shk_window.update
+    abs_scene_skill_update
+    if @shk_window.active
+      update_shk
+      return
+    end
+  end
+  #--------------------------------------------------------------------------
+  def update_skill
+    abs_scene_skill_update_skill
+    if Kboard.keyboard($R_Key_H)
+      $game_system.se_play($data_system.decision_se)
+      @skill_window.active = false
+      @shk_window.active = true
+      @shk_window.visible = true
+      $ABS.skill_key[1] = @skill_window.skill.id
+    end
+    if Kboard.keyboard($R_Key_J)
+      $game_system.se_play($data_system.decision_se)
+      @skill_window.active = false
+      @shk_window.active = true
+      @shk_window.visible = true
+      $ABS.skill_key[2] = @skill_window.skill.id
+    end
+    if Kboard.keyboard($R_Key_K)
+      $game_system.se_play($data_system.decision_se)
+      @skill_window.active = false
+      @shk_window.active = true
+      @shk_window.visible = true
+      $ABS.skill_key[3] = @skill_window.skill.id
+    end
+    if Kboard.keyboard($R_Key_L)
+      $game_system.se_play($data_system.decision_se)
+      @skill_window.active = false
+      @shk_window.active = true
+      @shk_window.visible = true
+      $ABS.skill_key[3] = @skill_window.skill.id
+    end
+  end
+ #--------------------------------------------------------------------------
+ def update_shk
+   if Input.trigger?(Input::C)
+     $game_system.se_play($data_system.decision_se)
+     @shk_window.active = false
+     @shk_window.visible = false
+     @skill_window.active = true
+     $scene = Scene_Skill.new(@actor_index)
+     return
+   end
+ end
+end
+
+#======================================
+# ¦ Scene Load
+#======================================
+
+class Scene_Load < Scene_File
+  #--------------------------------------------------------------------------
+  alias abs_scene_load_read_save_data read_save_data
+  #--------------------------------------------------------------------------
+  def read_save_data(file)
+    $ABS = Action_Battle_System.new
+    abs_scene_load_read_save_data(file)
+    $game_allies = Marshal.load(file)
+    $game_map.setup($game_map.map_id)
+  end
+end
+
+#======================================
+# ¦ Scene Save
+#======================================
+
+class Scene_Save < Scene_File
+  #--------------------------------------------------------------------------
+  alias abs_scene_save_write_save_data write_save_data
+  #--------------------------------------------------------------------------
+  def write_save_data(file)
+    abs_scene_save_write_save_data(file)
+    Marshal.dump($game_allies, file)
+  end
+end
+
+#======================================
+# ¦ Keyboard Script
+#---------------------------------------------------------------------------
+#  By: Cybersam
+#   Date: 25/05/05
+#   Version 4
+#======================================
+
+module Kboard
+  #--------------------------------------------------------------------------
+  $RMouse_BUTTON_L = 0x01        # left mouse button
+  $RMouse_BUTTON_R = 0x02        # right mouse button
+  $RMouse_BUTTON_M = 0x04        # middle mouse button
+  $RMouse_BUTTON_4 = 0x05        # 4th mouse button 
+  $RMouse_BUTTON_5 = 0x06        # 5th mouse button
+  #--------------------------------------------------------------------------
+  $R_Key_BACK      = 0x08        # BACKSPACE key
+  $R_Key_TAB       = 0x09        # TAB key
+  $R_Key_RETURN    = 0x0D        # ENTER key
+  $R_Key_SHIFT     = 0x10        # SHIFT key
+  $R_Key_CTLR      = 0x11        # CTLR key
+  $R_Key_ALT       = 0x12        # ALT key
+  $R_Key_PAUSE     = 0x13        # PAUSE key
+  $R_Key_CAPITAL   = 0x14        # CAPS LOCK key
+  $R_Key_ESCAPE    = 0x1B        # ESC key
+  $R_Key_SPACE     = 0x20        # SPACEBAR
+  $R_Key_PRIOR     = 0x21        # PAGE UP key
+  $R_Key_NEXT      = 0x22        # PAGE DOWN key
+  $R_Key_END       = 0x23        # END key
+  $R_Key_HOME      = 0x24        # HOME key
+  $R_Key_LEFT      = 0x25        # LEFT ARROW key
+  $R_Key_UP        = 0x26        # UP ARROW key
+  $R_Key_RIGHT     = 0x27        # RIGHT ARROW key
+  $R_Key_DOWN      = 0x28        # DOWN ARROW key
+  $R_Key_SELECT    = 0x29        # SELECT key
+  $R_Key_PRINT     = 0x2A        # PRINT key
+  $R_Key_SNAPSHOT  = 0x2C        # PRINT SCREEN key
+  $R_Key_INSERT    = 0x2D        # INS key
+  $R_Key_DELETE    = 0x2E        # DEL key
+  #--------------------------------------------------------------------------
+  $R_Key_0         = 0x30        # 0 key
+  $R_Key_1         = 0x31        # 1 key
+  $R_Key_2         = 0x32        # 2 key
+  $R_Key_3         = 0x33        # 3 key
+  $R_Key_4         = 0x34        # 4 key
+  $R_Key_5         = 0x35        # 5 key
+  $R_Key_6         = 0x36        # 6 key
+  $R_Key_7         = 0x37        # 7 key
+  $R_Key_8         = 0x38        # 8 key
+  $R_Key_9         = 0x39        # 9 key
+  #--------------------------------------------------------------------------
+  $R_Key_A         = 0x41        # A key
+  $R_Key_B         = 0x42        # B key
+  $R_Key_C         = 0x43        # C key
+  $R_Key_D         = 0x44        # D key
+  $R_Key_E         = 0x45        # E key
+  $R_Key_F         = 0x46        # F key
+  $R_Key_G         = 0x47        # G key
+  $R_Key_H         = 0x48        # H key
+  $R_Key_I         = 0x49        # I key
+  $R_Key_J         = 0x4A        # J key
+  $R_Key_K         = 0x4B        # K key
+  $R_Key_L         = 0x4C        # L key
+  $R_Key_M         = 0x4D        # M key
+  $R_Key_N         = 0x4E        # N key
+  $R_Key_O         = 0x4F        # O key
+  $R_Key_P         = 0x50        # P key
+  $R_Key_Q         = 0x51        # Q key
+  $R_Key_R         = 0x52        # R key
+  $R_Key_S         = 0x53        # S key
+  $R_Key_T         = 0x54        # T key
+  $R_Key_U         = 0x55        # U key
+  $R_Key_V         = 0x56        # V key
+  $R_Key_W         = 0x57        # W key
+  $R_Key_X         = 0x58        # X key
+  $R_Key_Y         = 0x59        # Y key
+  $R_Key_Z         = 0x5A        # Z key
+  #--------------------------------------------------------------------------
+  $R_Key_LWIN      = 0x5B        # Left Windows key (Microsoft Natural keyboard) 
+  $R_Key_RWIN      = 0x5C        # Right Windows key (Natural keyboard)
+  $R_Key_APPS      = 0x5D        # Applications key (Natural keyboard)
+  #--------------------------------------------------------------------------
+  $R_Key_NUMPAD0   = 0x60        # Numeric keypad 0 key
+  $R_Key_NUMPAD1   = 0x61        # Numeric keypad 1 key
+  $R_Key_NUMPAD2   = 0x62        # Numeric keypad 2 key
+  $R_Key_NUMPAD3   = 0x63        # Numeric keypad 3 key
+  $R_Key_NUMPAD4   = 0x64        # Numeric keypad 4 key
+  $R_Key_NUMPAD5   = 0x65        # Numeric keypad 5 key
+  $R_Key_NUMPAD6   = 0x66        # Numeric keypad 6 key
+  $R_Key_NUMPAD7   = 0x67        # Numeric keypad 7 key
+  $R_Key_NUMPAD8   = 0x68        # Numeric keypad 8 key
+  $R_Key_NUMPAD9     = 0x69        # Numeric keypad 9 key
+  $R_Key_MULTIPLY  = 0x6A        # Multiply key (*)
+  $R_Key_ADD       = 0x6B        # Add key (+)
+  $R_Key_SEPARATOR = 0x6C        # Separator key
+  $R_Key_SUBTRACT  = 0x6D        # Subtract key (-)
+  $R_Key_DECIMAL   = 0x6E        # Decimal key
+  $R_Key_DIVIDE    = 0x6F        # Divide key (/)
+  #--------------------------------------------------------------------------
+  $R_Key_F1        = 0x70        # F1 key
+  $R_Key_F2        = 0x71        # F2 key
+  $R_Key_F3        = 0x72        # F3 key
+  $R_Key_F4        = 0x73        # F4 key
+  $R_Key_F5        = 0x74        # F5 key
+  $R_Key_F6        = 0x75        # F6 key
+  $R_Key_F7        = 0x76        # F7 key
+  $R_Key_F8        = 0x77        # F8 key
+  $R_Key_F9        = 0x78        # F9 key
+  $R_Key_F10       = 0x79        # F10 key
+  $R_Key_F11       = 0x7A        # F11 key
+  $R_Key_F12       = 0x7B        # F12 key
+  #--------------------------------------------------------------------------
+  $R_Key_NUMLOCK   = 0x90        # NUM LOCK key
+  $R_Key_SCROLL    = 0x91        # SCROLL LOCK key
+  #--------------------------------------------------------------------------
+  $R_Key_LSHIFT       = 0xA0        # Left SHIFT key
+  $R_Key_RSHIFT       = 0xA1        # Right SHIFT key
+  $R_Key_LCONTROL  = 0xA2        # Left CONTROL key
+  $R_Key_RCONTROL  = 0xA3        # Right CONTROL key
+  $R_Key_L_ALT       = 0xA4        # Left ALT key
+  $R_Key_R_ALT       = 0xA5        # Right ALT key
+  #--------------------------------------------------------------------------
+  $R_Key_SEP         = 0xBC        # , key
+  $R_Key_DASH         = 0xBD        # - key
+  $R_Key_DOTT         = 0xBE        # . key
+  #--------------------------------------------------------------------------
+  GetKeyState = Win32API.new("user32","GetAsyncKeyState",['i'],'i')
+  GetKeyboardState = Win32API.new("user32","GetKeyState",['i'],'i')
+  GetSetKeyState = Win32API.new("user32","SetKeyboardState",['i'],'i')
+  #--------------------------------------------------------------------------
+  module_function
+  #--------------------------------------------------------------------------
+  def keyb(rkey)
+     if GetKeyState.call(rkey) != 0
+       return 1
+     end
+     return 0
+  end
+   #--------------------------------------------------------------------------
+  def keyboard(rkey)
+    GetKeyState.call(rkey) & 0x01 == 1  #
+  end
+  #--------------------------------------------------------------------------
+  def key(rkey, key = 0)
+    GetKeyboardState.call(rkey) & 0x01 == key #
+  end
+end

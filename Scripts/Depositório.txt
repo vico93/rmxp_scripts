@@ -1,0 +1,1790 @@
+#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/ 
+
+#_/  ?Espace de Stockage - KGC_Depository ? Translated by Ojiro - 
+
+#_/---------------------------------------------------------------------------- 
+
+#_/ Espace de stockage pour objets et monaie. 
+
+#_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/ 
+
+  
+
+  
+
+class Window_DepositoryCommand < Window_Selectable 
+
+  # ?Nom des commandes de l'espace de stockage 
+
+  DEPOSITORY_COMMAND = [ 
+
+    "Depositar",       # depositar
+
+    "Retirar",     # Retirar
+
+    "Stokar itens",   # Stokar  itens
+
+    "tirar itens"  # tirar itens 
+
+  ] 
+
+  # ?Définitions des commandes 
+
+  DEPOSITORY_HELP = [ 
+
+    "Depositar dinheiro",               # Deposita dinheiro 
+
+    "Retirer dinheiro",     # Retirer dinheiro 
+
+    "Stokar um objeto",           # Stokar um objeto 
+
+    "retirar um objeto"  # Retirar um objeto 
+
+  ] 
+
+end 
+
+  
+
+class Window_DepositoryGold < Window_Base 
+
+  # ?Nombre de chiffres maximal pour le dépot de monnaie 
+
+  GOLD_DIGITS = 7 
+
+end 
+
+  
+
+class Scene_Depository 
+
+  DEPOSIT_GOLD = "Inserez la somme à déposer" 
+
+  WDEPOSIT_GOLD = "Inserez la somme à retirer" 
+
+  DEPOSIT_ITEM = "Déposer combien ?" 
+
+  WDEPOSIT_ITEM = "Retirer combien ?" 
+
+end 
+
+  
+
+#??????????????????????????????????????? 
+
+  
+
+#-------------------------------------------------------------------------- 
+
+# ? Appel de l'espace de stockage 
+
+#-------------------------------------------------------------------------- 
+
+def call_depository 
+
+  $game_player.straighten 
+
+  # Affiche l'espace de stockage 
+
+  $scene = Scene_Depository.new 
+
+end 
+
+  
+
+#??????????????????????????????????????? 
+
+  
+
+#============================================================================== 
+
+# ¦ Game_Party 
+
+#------------------------------------------------------------------------------ 
+
+#  Récupère les informations sur la monnaie et les objets possédés dans 
+
+# $game_party 
+
+#============================================================================== 
+
+  
+
+class Game_Party 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Initialisation 
+
+  #-------------------------------------------------------------------------- 
+
+  alias initialize_KGC_Depository initialize 
+
+  def initialize 
+
+    # Exécute le processus d'origine 
+
+    initialize_KGC_Depository 
+
+  
+
+    @deposit_gold = 0 
+
+    @deposit_item = [] 
+
+    @deposit_weapon = [] 
+
+    @deposit_armor = [] 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Récupère l'information sur la monnaie 
+
+  #-------------------------------------------------------------------------- 
+
+  def deposit_gold 
+
+    @deposit_gold = 0 if @deposit_gold == nil 
+
+    return @deposit_gold 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Récupère l'information sur la monnaie récupérée 
+
+  #     number : Montant a récuperer 
+
+  #-------------------------------------------------------------------------- 
+
+  def gain_deposit_gold(number) 
+
+    @deposit_gold = 0 if @deposit_gold == nil 
+
+    @deposit_gold += number 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Récupère l'information sur la monnaie déposée 
+
+  #     number : Montant à déposer 
+
+  #-------------------------------------------------------------------------- 
+
+  def lose_deposit_gold(number) 
+
+    self.gain_deposit_gold(-number) 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Récupère l'information sur les objets 
+
+  #     id : ID 
+
+  #-------------------------------------------------------------------------- 
+
+  def deposit_item_number(id) 
+
+    @deposit_item = [] if @deposit_item == nil 
+
+    return @deposit_item[id] != nil ? @deposit_item[id] : 0 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Acquisition de l'objet 
+
+  #     id     : ID 
+
+  #     number : Quantité 
+
+  #-------------------------------------------------------------------------- 
+
+  def gain_deposit_item(id, number) 
+
+    @deposit_item = [] if @deposit_item == nil 
+
+    @deposit_item[id] = 0 if @deposit_item[id] == nil 
+
+    @deposit_item[id] += number 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Dépôt de l'objet 
+
+  #     id     : ID 
+
+  #     number : Quantité 
+
+  #-------------------------------------------------------------------------- 
+
+  def lose_deposit_item(id, number) 
+
+    self.gain_deposit_item(id, -number) 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Récupère l'information sur les armes 
+
+  #     id : ID 
+
+  #-------------------------------------------------------------------------- 
+
+  def deposit_weapon_number(id) 
+
+    @deposit_weapon = [] if @deposit_weapon == nil 
+
+    return @deposit_weapon[id] != nil ? @deposit_weapon[id] : 0 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Acquisition de l'arme 
+
+  #     id     : ID 
+
+  #     number : Quantité 
+
+  #-------------------------------------------------------------------------- 
+
+  def gain_deposit_weapon(id, number) 
+
+    @deposit_weapon = [] if @deposit_weapon == nil 
+
+    @deposit_weapon[id] = 0 if @deposit_weapon[id] == nil 
+
+    @deposit_weapon[id] += number 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Dépôt de l'arme 
+
+  #     id     : ID 
+
+  #     number : Quantité 
+
+  #-------------------------------------------------------------------------- 
+
+  def lose_deposit_weapon(id, number) 
+
+    self.gain_deposit_weapon(id, -number) 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Récupère l'information sur les armures 
+
+  #     id : ID 
+
+  #-------------------------------------------------------------------------- 
+
+  def deposit_armor_number(id) 
+
+    @deposit_armor = [] if @deposit_armor == nil 
+
+    return @deposit_armor[id] != nil ? @deposit_armor[id] : 0 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Acquisition de l'armure 
+
+  #     id     : ID 
+
+  #     number : Quantité 
+
+  #-------------------------------------------------------------------------- 
+
+  def gain_deposit_armor(id, number) 
+
+    @deposit_armor = [] if @deposit_armor == nil 
+
+    @deposit_armor[id] = 0 if @deposit_armor[id] == nil 
+
+    @deposit_armor[id] += number 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Dépôt de l'armure 
+
+  #     id     : ID 
+
+  #     number : Quantité 
+
+  #-------------------------------------------------------------------------- 
+
+  def lose_deposit_armor(id, number) 
+
+    self.gain_deposit_armor(id, -number) 
+
+  end 
+
+end 
+
+  
+
+#??????????????????????????????????????? 
+
+  
+
+#============================================================================== 
+
+# ¦ Window_DepositoryCommand 
+
+#------------------------------------------------------------------------------ 
+
+#  Ecran de sélection d'une commande de l'espace de stockage 
+
+#============================================================================== 
+
+  
+
+class Window_DepositoryCommand < Window_Selectable 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Initialisation 
+
+  #-------------------------------------------------------------------------- 
+
+  def initialize 
+
+    super(0, 64, 640, 64) 
+
+    self.contents = Bitmap.new(width - 32, height - 32) 
+
+    # ????????? 
+
+    @commands = DEPOSITORY_COMMAND 
+
+    @item_max = @commands.size 
+
+    @column_max = @commands.size 
+
+    @item_width = (width - 32) / @commands.size 
+
+    self.back_opacity = 160 
+
+    self.index = 0 
+
+    refresh 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation 
+
+  #-------------------------------------------------------------------------- 
+
+  def refresh 
+
+    for i in 0...@commands.size 
+
+      rect = Rect.new(@item_width * i, 0, @item_width, 32) 
+
+      self.contents.fill_rect(rect, Color.new(0, 0, 0, 0)) 
+
+      self.contents.font.color = system_color 
+
+      self.contents.draw_text(rect, @commands[i], 1) 
+
+    end 
+
+  end 
+
+#-------------------------------------------------------------------------- 
+
+  # ? Curseur 
+
+  #-------------------------------------------------------------------------- 
+
+  def update_cursor_rect 
+
+    if index != -1 
+
+      self.cursor_rect.set(@item_width * index, 0, @item_width, 32) 
+
+    end 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation de la fenêtre d'aide 
+
+  #-------------------------------------------------------------------------- 
+
+  def update_help 
+
+    @help_window.set_text(DEPOSITORY_HELP[self.index]) 
+
+  end 
+
+end 
+
+  
+
+#??????????????????????????????????????? 
+
+  
+
+#============================================================================== 
+
+# ¦ Window_DepositoryGold 
+
+#------------------------------------------------------------------------------ 
+
+#  Indication de la quantité/valeur de la monnaie/objet. 
+
+#============================================================================== 
+
+  
+
+class Window_DepositoryGold < Window_Base 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Initialisation 
+
+  #-------------------------------------------------------------------------- 
+
+  def initialize 
+
+    super(0, 128, 640, 352) 
+
+    @digits_max = GOLD_DIGITS 
+
+    # Calcul de la largeur du curseur à partir du nombre de chiffres à entrer 
+
+    dummy_bitmap = Bitmap.new(32, 32) 
+
+    @cursor_width = dummy_bitmap.text_size("0").width + 8 
+
+    dummy_bitmap.dispose 
+
+    self.contents = Bitmap.new(width - 32, height - 32) 
+
+    self.back_opacity = 160 
+
+    self.active = false 
+
+    self.visible = false 
+
+    @cursor_position = 0 
+
+    @max = 0 
+
+    @price = 0 
+
+    @index = 0 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Acquisition de la quantité inséré 
+
+  #-------------------------------------------------------------------------- 
+
+  def price 
+
+    return @price 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Option de la quantité 
+
+  #     np : Nouvelle quantité 
+
+  #-------------------------------------------------------------------------- 
+
+  def price=(np) 
+
+    @price = [[np, 0].max, @max].min 
+
+    redraw_price 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Reinitialisation 
+
+  #     type : Type 
+
+  #-------------------------------------------------------------------------- 
+
+  def reset(type) 
+
+    @price = 0 
+
+    @index = @digits_max - 1 
+
+    refresh(type) 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation 
+
+  #     type : Type 
+
+  #-------------------------------------------------------------------------- 
+
+  def refresh(type) 
+
+    # Affiche la quantité 
+
+    self.contents.clear 
+
+    domination = $data_system.words.gold 
+
+    cx = contents.text_size(domination).width 
+
+    @cursor_position = 332 - cx - @cursor_width * @digits_max 
+
+    self.contents.font.color = system_color 
+
+    self.contents.draw_text(0, 0, 608, 32, "Monnaie en main") 
+
+    self.contents.draw_text(0, 64, 608, 32, "Dépôt") 
+
+    if type == 0 
+
+      self.contents.draw_text(0, 128, 608, 32, "Quantité") 
+
+      @max = $game_party.gold 
+
+    else 
+
+      self.contents.draw_text(0, 128, 608, 32, "Retrait") 
+
+      @max = [10 ** @digits_max - $game_party.gold - 1, $game_party.deposit_gold].min 
+
+    end 
+
+    self.contents.font.color = normal_color 
+
+    self.contents.draw_text(4, 32, 326 - cx, 32, $game_party.gold.to_s, 2) 
+
+    self.contents.font.color = system_color 
+
+    self.contents.draw_text(332 - cx, 32, cx, 32, domination, 2) 
+
+    self.contents.font.color = normal_color 
+
+    self.contents.draw_text(4, 96, 326 - cx, 32, $game_party.deposit_gold.to_s, 2) 
+
+    self.contents.font.color = system_color 
+
+    self.contents.draw_text(332 - cx, 96, cx, 32, domination, 2) 
+
+    redraw_price 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Quantité re-affiché 
+
+  #-------------------------------------------------------------------------- 
+
+  def redraw_price 
+
+    domination = $data_system.words.gold 
+
+    cx = contents.text_size(domination).width 
+
+    self.contents.fill_rect(0, 160, 608, 32, Color.new(0, 0, 0, 0)) 
+
+    self.contents.font.color = normal_color 
+
+    text = sprintf("%0#{@digits_max}d", self.price) 
+
+    for i in 0...text.length 
+
+      x = @cursor_position + (i - 1) * @cursor_width 
+
+      self.contents.draw_text(x, 160, 32, 32, text[i, 1], 2) 
+
+    end 
+
+    self.contents.font.color = system_color 
+
+    self.contents.draw_text(332 - cx, 160, cx, 32, domination, 2) 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation du curseur 
+
+  #-------------------------------------------------------------------------- 
+
+  def update_cursor_rect 
+
+    x = @cursor_position + @index * @cursor_width 
+
+    self.cursor_rect.set(x, 160, @cursor_width, 32) 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation 
+
+  #-------------------------------------------------------------------------- 
+
+  def update 
+
+    super 
+
+    return unless self.active 
+
+    # Lors d'un appui HAUT ou BAS 
+
+    if Input.repeat?(Input::UP) || Input.repeat?(Input::DOWN) 
+
+      $game_system.se_play($data_system.cursor_se) 
+
+      place = 10 ** (@digits_max - 1 - @index) 
+
+      n = self.price / place % 10 
+
+      self.price -= n * place 
+
+      n = (n + 1) % 10 if Input.repeat?(Input::UP) 
+
+      n = (n + 9) % 10 if Input.repeat?(Input::DOWN) 
+
+      self.price += n * place 
+
+    end 
+
+    if Input.repeat?(Input::RIGHT) 
+
+      if @digits_max >= 2 
+
+        $game_system.se_play($data_system.cursor_se) 
+
+        @index = (@index + 1) % @digits_max 
+
+      end 
+
+    end 
+
+    if Input.repeat?(Input::LEFT) 
+
+      if @digits_max >= 2 
+
+        $game_system.se_play($data_system.cursor_se) 
+
+        @index = (@index + @digits_max - 1) % @digits_max 
+
+      end 
+
+    end 
+
+    update_cursor_rect 
+
+  end 
+
+end 
+
+  
+
+#??????????????????????????????????????? 
+
+  
+
+#============================================================================== 
+
+# ¦ Window_DepositoryItem 
+
+#------------------------------------------------------------------------------ 
+
+#  Conception d'un sommaire pour les objets 
+
+#============================================================================== 
+
+  
+
+class Window_DepositoryItem < Window_Selectable 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Initialisation 
+
+  #-------------------------------------------------------------------------- 
+
+  def initialize 
+
+    super(0, 128, 640, 352) 
+
+    self.back_opacity = 160 
+
+    self.active = false 
+
+    self.visible = false 
+
+    @column_max = 2 
+
+    self.index = 0 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Récupère l'information sur les objets 
+
+  #-------------------------------------------------------------------------- 
+
+  def item 
+
+    return @data[self.index] 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation 
+
+  #     type : Type 
+
+  #-------------------------------------------------------------------------- 
+
+  def refresh(type) 
+
+    if self.contents != nil 
+
+      self.contents.dispose 
+
+      self.contents = nil 
+
+    end 
+
+    @data = [] 
+
+    self.index = 0 
+
+    # Ajoute l'objet / arme / armure x 
+
+    if type == 0 
+
+      for i in 1...$data_items.size 
+
+        if $game_party.item_number(i) > 0 
+
+          @data.push($data_items[i]) 
+
+        end 
+
+      end 
+
+      for i in 1...$data_weapons.size 
+
+        if $game_party.weapon_number(i) > 0 
+
+          @data.push($data_weapons[i]) 
+
+        end 
+
+      end 
+
+      for i in 1...$data_armors.size 
+
+        if $game_party.armor_number(i) > 0 
+
+          @data.push($data_armors[i]) 
+
+        end 
+
+      end 
+
+    else 
+
+      for i in 1...$data_items.size 
+
+        if $game_party.deposit_item_number(i) > 0 
+
+          @data.push($data_items[i]) 
+
+        end 
+
+      end 
+
+      for i in 1...$data_weapons.size 
+
+        if $game_party.deposit_weapon_number(i) > 0 
+
+          @data.push($data_weapons[i]) 
+
+        end 
+
+      end 
+
+      for i in 1...$data_armors.size 
+
+        if $game_party.deposit_armor_number(i) > 0 
+
+          @data.push($data_armors[i]) 
+
+        end 
+
+      end 
+
+  
+
+    end 
+
+    # Si le nombre d'objet n'est pas de 0 : 
+
+    @item_max = @data.size 
+
+    if @item_max > 0 
+
+      self.contents = Bitmap.new(width - 32, row_max * 32) 
+
+      for i in 0...@item_max 
+
+        draw_item(i, type) 
+
+      end 
+
+    end 
+
+  end 
+
+#-------------------------------------------------------------------------- 
+
+  # ? Affichage de l'objet 
+
+  #     index : Nombre d'objets 
+
+  #     type  : Type 
+
+  #-------------------------------------------------------------------------- 
+
+  def draw_item(index, type) 
+
+    item = @data[index] 
+
+    case item 
+
+    when RPG::Item 
+
+      number = type == 0 ? $game_party.item_number(item.id) : 
+
+        $game_party.deposit_item_number(item.id) 
+
+    when RPG::Weapon 
+
+      number = type == 0 ? $game_party.weapon_number(item.id) : 
+
+        $game_party.deposit_weapon_number(item.id) 
+
+    when RPG::Armor 
+
+      number = type == 0 ? $game_party.armor_number(item.id) : 
+
+        $game_party.deposit_armor_number(item.id) 
+
+    end 
+
+    x = 4 + index % 2 * (288 + 32) 
+
+    y = index / 2 * 32 
+
+    rect = Rect.new(x, y, self.width / @column_max - 32, 32) 
+
+    self.contents.fill_rect(rect, Color.new(0, 0, 0, 0)) 
+
+    bitmap = RPG::Cache.icon(item.icon_name) 
+
+    self.contents.blt(x, y + 4, bitmap, Rect.new(0, 0, 24, 24)) 
+
+    self.contents.draw_text(x + 28, y, 212, 32, item.name, 0) 
+
+    self.contents.draw_text(x + 240, y, 16, 32, ":", 1) 
+
+    self.contents.draw_text(x + 256, y, 24, 32, number.to_s, 2) 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation de la fenêtre d'aide 
+
+  #-------------------------------------------------------------------------- 
+
+  def update_help 
+
+    @help_window.set_text(self.item == nil ? "" : self.item.description) 
+
+  end 
+
+end 
+
+  
+
+#??????????????????????????????????????? 
+
+  
+
+#============================================================================== 
+
+# ¦ Window_DepositoryNumber 
+
+#------------------------------------------------------------------------------ 
+
+#  Fenêtre de l'insertion numérique 
+
+#============================================================================== 
+
+  
+
+class Window_DepositoryNumber < Window_Base 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Initialisation 
+
+  #-------------------------------------------------------------------------- 
+
+  def initialize 
+
+    @digits_max = 2 
+
+    @number = 0 
+
+    # Calcul de la largeur du curseur en fonction du nombre de chiffres 
+
+    dummy_bitmap = Bitmap.new(32, 32) 
+
+    @cursor_width = dummy_bitmap.text_size("0").width + 8 
+
+    dummy_bitmap.dispose 
+
+    @default_size = @cursor_width * @digits_max + 32 
+
+    super(0, 0, @default_size, 128) 
+
+    self.contents = Bitmap.new(width - 32, height - 32) 
+
+    self.z = 1000 
+
+    self.back_opacity = 160 
+
+    self.active = false 
+
+    self.visible = false 
+
+    @index = 0 
+
+    @item = nil 
+
+    refresh 
+
+    update_cursor_rect 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Option de l'objet 
+
+  #     item : Objet 
+
+  #-------------------------------------------------------------------------- 
+
+  def item=(item) 
+
+    @item = item 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Acquisition de la valeur numérique 
+
+  #-------------------------------------------------------------------------- 
+
+  def number 
+
+    return @number 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Option de la valeur numérique 
+
+  #     number : Nouvelle valeur numérique 
+
+  #-------------------------------------------------------------------------- 
+
+  def number=(number) 
+
+    @number = [[number, 0].max, @max].min 
+
+    refresh 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation du curseur 
+
+  #-------------------------------------------------------------------------- 
+
+  def update_cursor_rect 
+
+    self.cursor_rect.set(@index * @cursor_width, 32, @cursor_width, 32) 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Reinitilisation 
+
+  #-------------------------------------------------------------------------- 
+
+  def reset(type) 
+
+    @number = 0 
+
+    @index = @digits_max - 1 
+
+    if type == 0 
+
+      case @item 
+
+      when RPG::Item 
+
+        @max = $game_party.item_number(@item.id) 
+
+        dep = $game_party.deposit_item_number(@item.id) 
+
+      when RPG::Weapon 
+
+        @max = $game_party.weapon_number(@item.id) 
+
+        dep = $game_party.deposit_weapon_number(@item.id) 
+
+      when RPG::Armor 
+
+        @max = $game_party.armor_number(@item.id) 
+
+        dep = $game_party.deposit_armor_number(@item.id) 
+
+      end 
+
+      # Affiche la quantité déposé 
+
+      self.contents.fill_rect(0, 64, width - 32, 32, Color.new(0, 0, 0, 0)) 
+
+      self.contents.font.color = system_color 
+
+      self.contents.draw_text(0, 64, width - 32, 32, "Dépôt:#{dep}") 
+
+    else 
+
+      case @item 
+
+      when RPG::Item 
+
+        @max = [$game_party.deposit_item_number(@item.id), 
+
+          10 ** @digits_max - $game_party.item_number(@item.id) - 1].min 
+
+        having = $game_party.item_number(@item.id) 
+
+      when RPG::Weapon 
+
+        @max = [$game_party.deposit_weapon_number(@item.id), 
+
+          10 ** @digits_max - $game_party.weapon_number(@item.id) - 1].min 
+
+        having = $game_party.weapon_number(@item.id) 
+
+      when RPG::Armor 
+
+        @max = [$game_party.deposit_armor_number(@item.id), 
+
+          10 ** @digits_max - $game_party.armor_number(@item.id) - 1].min 
+
+        having = $game_party.armor_number(@item.id) 
+
+      end 
+
+      # Affiche la quantité possedé 
+
+      self.contents.fill_rect(0, 64, width - 32, 32, Color.new(0, 0, 0, 0)) 
+
+      self.contents.font.color = system_color 
+
+      self.contents.draw_text(0, 64, width - 32, 32, "Possédé:#{having}") 
+
+    end 
+
+    refresh 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation 
+
+  #-------------------------------------------------------------------------- 
+
+  def refresh 
+
+    self.contents.fill_rect(0, 32, width - 32, 32, Color.new(0, 0, 0, 0)) 
+
+    self.contents.font.color = normal_color 
+
+    s = sprintf("%0*d", @digits_max, @number) 
+
+    for i in 0...@digits_max 
+
+      self.contents.draw_text(i * @cursor_width + 4, 32, 32, 32, s[i,1]) 
+
+    end 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Option du personnage 
+
+  #     string : Met en place les options 
+
+  #-------------------------------------------------------------------------- 
+
+  def set_text(string = " ") 
+
+    self.resize(self.contents.text_size(string).width + 40) 
+
+    self.contents.fill_rect(0, 0, width - 32, 32, Color.new(0, 0, 0, 0)) 
+
+    self.contents.font.color = normal_color 
+
+    self.contents.draw_text(0, 0, width - 32, 32, string, 1) 
+
+    refresh 
+
+    centering 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Modification de la taille 
+
+  #     nw : Nouvelle largeur 
+
+  #-------------------------------------------------------------------------- 
+
+  def resize(nw) 
+
+    self.width = nw 
+
+    buf = self.contents.dup 
+
+    self.contents.dispose 
+
+    self.contents = Bitmap.new(nw - 32, 96) 
+
+    self.contents.blt(0, 0, buf, buf.rect) 
+
+    buf.dispose 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Mouvement central 
+
+  #-------------------------------------------------------------------------- 
+
+  def centering 
+
+    self.x = 320 - self.width / 2 
+
+    self.y = 240 - self.height / 2 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation 
+
+  #-------------------------------------------------------------------------- 
+
+  def update 
+
+    super 
+
+    return unless self.active 
+
+    # Lors d'un appui HAUT ou BAS 
+
+    if Input.repeat?(Input::UP) || Input.repeat?(Input::DOWN) 
+
+      $game_system.se_play($data_system.cursor_se) 
+
+      place = 10 ** (@digits_max - 1 - @index) 
+
+      n = self.number / place % 10 
+
+      self.number -= n * place 
+
+      n = (n + 1) % 10 if Input.repeat?(Input::UP) 
+
+      n = (n + 9) % 10 if Input.repeat?(Input::DOWN) 
+
+      self.number += n * place 
+
+      refresh 
+
+    end 
+
+    if Input.repeat?(Input::RIGHT) 
+
+      if @digits_max >= 2 
+
+        $game_system.se_play($data_system.cursor_se) 
+
+        @index = (@index + 1) % @digits_max 
+
+      end 
+
+    end 
+
+    if Input.repeat?(Input::LEFT) 
+
+      if @digits_max >= 2 
+
+        $game_system.se_play($data_system.cursor_se) 
+
+        @index = (@index + @digits_max - 1) % @digits_max 
+
+      end 
+
+    end 
+
+    update_cursor_rect 
+
+  end 
+
+end 
+
+  
+#??????????????????????????????????????? 
+
+  
+
+#============================================================================== 
+
+# ¦ Scene_Depository 
+
+#------------------------------------------------------------------------------ 
+
+#  "Class" qui proccède à l'espace de stockage 
+
+#============================================================================== 
+
+  
+
+class Scene_Depository 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? ????? 
+
+  #-------------------------------------------------------------------------- 
+
+  def main 
+
+    # Compilation des sprites 
+
+    @spriteset = Spriteset_Map.new 
+
+    # Affiche des fenêtres multiples 
+
+    @dummy_window = Window_Base.new(0, 128, 640, 352) 
+
+    @help_window = Window_Help.new 
+
+    @dummy_window.back_opacity = 160 
+
+    @help_window.back_opacity = 160 
+
+    @command_window = Window_DepositoryCommand.new 
+
+    @gold_window = Window_DepositoryGold.new 
+
+    @item_window = Window_DepositoryItem.new 
+
+    @number_window = Window_DepositoryNumber.new 
+
+    # Association de la fenêtre d'affichage 
+
+    @command_window.help_window = @help_window 
+
+    @item_window.help_window = @help_window 
+
+    # Exécute la transition 
+
+    Graphics.transition 
+
+    # Boucle Principale 
+
+    loop do 
+
+      # Actualise les images 
+
+      Graphics.update 
+
+      # Actualise l'information d'insertion 
+
+      Input.update 
+
+      # Actualisation 
+
+      update 
+
+      # Brise la boucle si les images changent 
+
+      if $scene != self 
+
+        break 
+
+      end 
+
+    end 
+
+    # Préparation de la Transition 
+
+    Graphics.freeze 
+
+    # Relais 
+
+    @spriteset.dispose 
+
+    @dummy_window.dispose 
+
+    @help_window.dispose 
+
+    @command_window.dispose 
+
+    @gold_window.dispose 
+
+    @item_window.dispose 
+
+    @number_window.dispose 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation 
+
+  #-------------------------------------------------------------------------- 
+
+  def update 
+
+    # Actualisation des fenêtres 
+
+    @dummy_window.update 
+
+    @help_window.update 
+
+    @command_window.update 
+
+    @gold_window.update 
+
+    @item_window.update 
+
+    @number_window.update 
+
+    if @command_window.active 
+
+      update_command 
+
+      return 
+
+    end 
+
+    if @gold_window.active 
+
+      update_gold 
+
+      return 
+
+    end 
+
+    if @item_window.active 
+
+      update_item 
+
+      return 
+
+    end 
+
+    if @number_window.active 
+
+      update_number 
+
+      return 
+
+    end 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation lorsque une fenêtre de commande est active 
+
+  #-------------------------------------------------------------------------- 
+
+  def update_command 
+
+    # Lors d'un appui sur la touche B 
+
+    if Input.trigger?(Input::B) 
+
+      $game_system.se_play($data_system.cancel_se) 
+
+      $scene = Scene_Map.new 
+
+      return 
+
+    end 
+
+    # Lors d'un appui sur la touche C 
+
+    if Input.trigger?(Input::C) 
+
+      $game_system.se_play($data_system.decision_se) 
+
+      case @command_window.index 
+
+      when 0 
+
+        @gold_window.active = true 
+
+        @gold_window.visible = true 
+
+        @gold_window.reset(0) 
+
+        @help_window.set_text(DEPOSIT_GOLD) 
+
+      when 1 
+
+        @gold_window.active = true 
+
+        @gold_window.visible = true 
+
+        @gold_window.reset(1) 
+
+        @help_window.set_text(WDEPOSIT_GOLD) 
+
+      when 2 
+
+        @item_window.active = true 
+
+        @item_window.visible = true 
+
+        @item_window.refresh(0) 
+
+      when 3 
+
+        @item_window.active = true 
+
+        @item_window.visible = true 
+
+        @item_window.refresh(1) 
+
+      end 
+
+      @command_window.active = false 
+
+      @dummy_window.visible = false 
+
+      return 
+
+    end 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation lors d'un appui pendant la fenetre de monnaie 
+
+  #-------------------------------------------------------------------------- 
+
+  def update_gold 
+
+    # Lors d'un appui sur la touche B 
+
+    if Input.trigger?(Input::B) 
+
+      $game_system.se_play($data_system.cancel_se) 
+
+      @command_window.active = true 
+
+      @gold_window.active = false 
+
+      @gold_window.visible = false 
+
+      @dummy_window.visible = true 
+
+      return 
+
+    end 
+
+    # Lors d'un appui sur la touche C 
+
+    if Input.trigger?(Input::C) 
+
+      price = @gold_window.price 
+
+      if price == 0 
+
+        $game_system.se_play($data_system.decision_se) 
+
+        @command_window.active = true 
+
+        @gold_window.active = false 
+
+        @gold_window.visible = false 
+
+        @dummy_window.visible = true 
+
+        return 
+
+      end 
+
+      $game_system.se_play($data_system.shop_se) 
+
+      case @command_window.index 
+
+      when 0  
+
+        $game_party.lose_gold(price) 
+
+        $game_party.gain_deposit_gold(price) 
+
+      when 1  
+
+        $game_party.gain_gold(price) 
+
+        $game_party.lose_deposit_gold(price) 
+
+      end 
+
+      # ?????????????? 
+
+      @gold_window.reset(@command_window.index) 
+
+      return 
+
+    end 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation lors d'un appui pendant la fenetre d'objet 
+
+  #-------------------------------------------------------------------------- 
+
+  def update_item 
+
+    # Lors d'un appui sur la touche B 
+
+    if Input.trigger?(Input::B) 
+
+      $game_system.se_play($data_system.cancel_se) 
+
+      @command_window.active = true 
+
+      @item_window.active = false 
+
+      @item_window.visible = false 
+
+      @dummy_window.visible = true 
+
+      return 
+
+    end 
+
+    # Lors d'un appui sur la touche C 
+
+    if Input.trigger?(Input::C) 
+
+      @item = @item_window.item 
+
+      if @item == nil 
+
+        $game_system.se_play($data_system.buzzer_se) 
+
+        return 
+
+      end 
+
+      @number_window.item = @item 
+
+      $game_system.se_play($data_system.decision_se) 
+
+      case @command_window.index 
+
+      when 2 
+
+        @number_window.set_text(DEPOSIT_ITEM) 
+
+      when 3 
+
+        @number_window.set_text(WDEPOSIT_ITEM) 
+
+      end 
+
+      @number_window.reset(@command_window.index - 2) 
+
+      # ???????????? 
+
+      @item_window.active = false 
+
+      @number_window.active = true 
+
+      @number_window.visible = true 
+
+      return 
+
+    end 
+
+  end 
+
+  #-------------------------------------------------------------------------- 
+
+  # ? Actualisation lors d'un appui pendant la fenetre de nombres 
+
+  #-------------------------------------------------------------------------- 
+
+  def update_number 
+
+    # Lors d'un appui sur la touche B 
+
+    if Input.trigger?(Input::B) 
+
+      $game_system.se_play($data_system.cancel_se) 
+
+      @item_window.active = true 
+
+      @number_window.active = false 
+
+      @number_window.visible = false 
+
+      return 
+
+    end 
+
+    # Lors d'un appui sur la touche C 
+
+    if Input.trigger?(Input::C) 
+
+      $game_system.se_play($data_system.decision_se) 
+
+      number = @number_window.number 
+
+      case @command_window.index 
+
+      when 2 
+
+        case @item 
+
+        when RPG::Item 
+
+          $game_party.lose_item(@item.id, number) 
+
+          $game_party.gain_deposit_item(@item.id, number) 
+
+        when RPG::Weapon 
+
+          $game_party.lose_weapon(@item.id, number) 
+
+          $game_party.gain_deposit_weapon(@item.id, number) 
+
+        when RPG::Armor 
+
+          $game_party.lose_armor(@item.id, number) 
+
+          $game_party.gain_deposit_armor(@item.id, number) 
+
+        end 
+
+      when 3 
+
+        case @item 
+
+        when RPG::Item 
+
+          $game_party.gain_item(@item.id, number) 
+
+          $game_party.lose_deposit_item(@item.id, number) 
+
+        when RPG::Weapon 
+
+          $game_party.gain_weapon(@item.id, number) 
+
+          $game_party.lose_deposit_weapon(@item.id, number) 
+
+        when RPG::Armor 
+
+          $game_party.gain_armor(@item.id, number) 
+
+          $game_party.lose_deposit_armor(@item.id, number) 
+
+        end 
+
+      end 
+
+      @item_window.refresh(@command_window.index - 2) 
+
+      @item_window.active = true 
+
+      @number_window.active = false 
+
+      @number_window.visible = false 
+
+      return 
+
+    end 
+
+  end 
+
+end

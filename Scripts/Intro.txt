@@ -1,0 +1,9 @@
+Como usá-lo: Depois de colar este Script, vá no main (último da lista de nomes de Scripts) e mude  a linha $scene = Scene_Title.new por essa $scene = Scene_Startup.new 
+Agora vá até ao Scene_Startup e na linha 61 $game_map.setup(2) mude o numero que está entre ( ) pela a id do mapa em que vai ser a apresentação.
+
+E na linha 63 $game_player.moveto(0, 0) mude os números que estão entre ( ) pela cordenada X e Y que o personagem aparecerá.
+
+Como fazer a apresentação: Coloque a id de um mapa em branco e sem herói para começar e faça um evento auto start que será a introdução. Faça toda a introdução e no final do evento, coloque um comando para voltar para a tela titulo que é "Return To Title Screen" 3°Aba (versão 1.0 do XP ). Pronto!!
+
+Script baseado no Scene_title original.
+

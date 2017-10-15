@@ -1,0 +1,211 @@
+#===================================================
+# ¦ Text Scroll Script  R3-Fixed - Created by dubealex 
+#===================================================
+# For more infos and update, visit:
+# rmxp.dubealex.com
+#
+# -> Stack level too deep bug caused by ALIAS is now fixed.
+#
+# December 4, 2004
+#===================================================
+
+#===================================================
+# ? CLASS Text_Scroller Begins
+#===================================================
+class Text_Scroller
+  
+  def initialize (file, opacity_scroll, opacity_bg, speed, live_scroll)
+    
+    text=IO.readlines("Text/#{file}")
+    $tss_speed = speed
+    $tss_iteration = 480.0/speed
+    $tss_sy= (text.size*32) + 64
+    
+    $tss_scroll_window = Window_Scroll.new(file, 640, $tss_sy)
+    $tss_scroll_window.opacity = opacity_scroll
+    $tss_scroll_window.z=500
+    $tss_scroll_window.x = 0
+    $tss_scroll_window.y = 480
+    
+    $tss_bg_window = Window_bg.new
+    $tss_bg_window.opacity = opacity_bg
+    $tss_bg_window.z=400
+    
+    case live_scroll 
+    when 0  
+      update
+      when 1  
+        $live_scroll=true
+    end
+  end  
+
+  def update
+        for i in 0...(($tss_sy/480.0) * $tss_iteration) + $tss_iteration
+           $tss_scroll_window.y -= $tss_speed
+           Graphics.update
+         end
+         $tss_scroll_window.dispose
+         $tss_bg_window.dispose
+   end
+end
+#===================================================
+# ? CLASS Text_Scroller Ends
+#===================================================
+
+
+#===================================================
+# ? CLASS Window_Scroll Begins
+#===================================================
+class Window_Scroll < Window_Base
+
+  def initialize (file, sx, sy)
+    @sx=sx
+    @sy=sy
+    
+    super(0, 0, sx, sy)
+    self.contents = Bitmap.new(width - 32, height - 32)
+    self.contents.font.name = "Tahoma"
+    self.contents.font.size = 24
+    @text=IO.readlines("Text/#{file}")
+    @text_color=0
+    refresh
+  end
+  
+  def refresh    
+    y=0
+      for i in 0...@text.size
+        y+=32
+        if @text[i].index('/') == 0
+            @text_color=@text[i].slice! (0..2)
+            @text_color.slice!(0)
+        end   
+        if @text[i].index('*') == 0
+            line_color=@text[i].slice! (0..2)
+            line_color.slice!(0)
+           self.contents.font.color = text_color(line_color.to_i)
+         else
+        self.contents.font.color = text_color(@text_color.to_i)
+        end
+        self.contents.draw_text(0, y, @sx, 32, @text[i])
+      end
+  end
+end
+#===================================================
+# ? CLASS Window_Scroll Ends
+#===================================================
+
+
+#===================================================
+# ? CLASS Book_Scroll Begins
+#===================================================
+class Book_Scroll
+  
+  def initialize (book_name, number_of_pages, start_page, opacity_scroll, opacity_bg)
+    
+    file = book_name.to_s+"/"+start_page.to_s+".rxdata"
+    text=IO.readlines("Text/#{file}")
+    $tss_sy= (text.size*32) + 64
+    
+    $tss_scroll_window = Window_Scroll.new(file, 640, $tss_sy)
+    $tss_scroll_window.opacity = opacity_scroll
+    $tss_scroll_window.z=500
+    $tss_scroll_window.x = 0
+    $tss_scroll_window.y = 0
+    
+    $tss_bg_window = Window_bg.new
+    $tss_bg_window.opacity = opacity_bg
+    $tss_bg_window.z=400
+    
+    book_update(book_name, start_page, number_of_pages, opacity_scroll, opacity_bg)
+    $game_system.menu_disabled = true
+  end  
+  
+  def book_update(book_name,start_page, number_of_pages, opacity_scroll, opacity_bg)
+    loop do
+    Graphics.update
+    Input.update
+    if Input.repeat?(Input::RIGHT) and number_of_pages > 1
+      unless start_page == number_of_pages
+        start_page+=1 
+      else
+        start_page=1
+      end  
+      $tss_scroll_window.dispose
+      $tss_bg_window.dispose
+      Book_Scroll.new(book_name, number_of_pages,start_page, opacity_scroll, opacity_bg)
+      break
+    end
+    if Input.repeat?(Input::LEFT) and  number_of_pages > 1
+      unless start_page == 1
+        start_page-=1 
+      else
+        start_page=number_of_pages
+      end  
+      $tss_scroll_window.dispose
+      $tss_bg_window.dispose
+      Book_Scroll.new(book_name, number_of_pages,start_page, opacity_scroll, opacity_bg)
+      break
+    end
+    if Input.repeat?(Input::UP)
+      $tss_scroll_window.y+=15
+    end  
+    if Input.repeat?(Input::DOWN)
+      $tss_scroll_window.y-=15
+    end  
+    if Input.trigger?(Input::B) 
+      $tss_scroll_window.dispose
+      $tss_bg_window.dispose
+      $game_system.menu_disabled = false
+      break
+    end
+  end
+ end  
+    
+end
+#===================================================
+# ? CLASS Book_Scroll Ends
+#=================================================== 
+
+
+#===================================================
+# ? CLASS Scene_Map Additional Code Begins
+#===================================================
+class Scene_Map
+
+  alias alex_tss_original_update update
+  @@i=0
+  
+  def update
+  alex_tss_original_update
+    
+    if $live_scroll==true
+       $tss_scroll_window.y -= $tss_speed
+        @@i+=1
+        if @@i ==(($tss_sy/480.0) * $tss_iteration) + $tss_iteration
+          $tss_scroll_window.dispose
+          $tss_bg_window.dispose
+          @@i=0
+          $live_scroll=false
+        end  
+    end
+  end
+end 
+#===================================================
+# ? CLASS Scene_Map Additional Code Ends
+#=================================================== 
+
+
+#===================================================
+# ? CLASS Window_bg Begins
+#===================================================
+class Window_bg < Window_Base
+
+  def initialize
+    super(0, 0, 640, 480)
+  end
+end 
+#===================================================
+# ? CLASS Window_bg Ends
+#=================================================== 
+
+Text_Scroller.new("Story Demo.rxdata",0,0, 1,0)

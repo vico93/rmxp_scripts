@@ -1,0 +1,10 @@
+#----------Chat System------------------------------------------
+  #Avialbe Chat Systems;
+  #Chat[0]          => No Chat
+  #Chat[1]          => Netplay Style
+  #Chat[2]          => RuneScape Style - Dynamic on map
+  #CHAT_SYSTEM       = 'Chat[1]'
+  CHAT_SYSTEM       = 'Chat[0]'
+
+
+CHAT_SYSTEM       = 'Chat[o numero conrespondente ao chat desejado]

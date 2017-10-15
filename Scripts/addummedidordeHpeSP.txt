@@ -1,0 +1,75 @@
+Características.
+Adiciona um medidor de HP e SP, mas somente na batalha.
+
+Utilização.
+Para definir a posição do HP procure esta linha(Linha14)
+#-------------------------
+actor_x = i * 160 + 4
+#-------------------------
+Modifique o numero 160 para definir os espaços na horizontal do medidor.
+E para definir a posição e o tamanho do medidor procure está linha(Linha15)
+#-------------------------------------------------------------
+draw_actor_hp_meter(actor, actor_x , 32, 100)
+#-------------------------------------------------------------
+O numero 32 é a posição vertical do medidor e o 120 é o tamanho do HP.
+A explicação é a mesma para o medidor de SP.
+
+Copie o script acima do script Main.
+
+Codigo:
+#######################################################################################
+############################# XRXS 
+####################################################
+#######################################################################################
+# Adiciona um medidor de HP e SP , apenas na Batalha.
+#######################################################################################
+
+class Window_BattleStatus < Window_Base
+  alias xrxs_bp2_refresh refresh
+  def refresh
+    xrxs_bp2_refresh
+    @item_max = $game_party.actors.size
+    for i in 0...$game_party.actors.size
+      actor = $game_party.actors[i]
+      actor_x = i * 160 + 4
+      draw_actor_hp_meter(actor, actor_x , 32, 120)
+      draw_actor_sp_meter(actor, actor_x , 64, 120)
+        self.contents.font.size = 25
+      self.contents.font.name = "Georgia"
+      self.contents.font.color = text_color(4)
+      self.contents.font.color = text_color(5)
+      self.contents.font.size = 22
+
+      end
+  end
+end
+class Window_Base < Window
+  def draw_actor_hp_meter(actor, x, y, width = 156, type = 0)
+    if type == 1 and actor.hp == 0
+      return
+    end
+    self.contents.font.color = system_color
+    self.contents.fill_rect(x-1, y+27, width+2,6, Color.new(0, 0, 0, 255))
+    w = width * actor.hp / actor.maxhp
+    self.contents.fill_rect(x, y+28, w,1, Color.new(255, 96, 96, 255))
+    self.contents.fill_rect(x, y+29, w,1, Color.new(255, 0, 0, 255))
+    self.contents.fill_rect(x, y+30, w,1, Color.new(128, 0, 0, 255))
+    self.contents.fill_rect(x, y+31, w,1, Color.new(0, 0, 0, 255))
+  end
+  def draw_actor_sp_meter(actor, x, y, width = 156, type = 0)
+    if (type == 1 and actor.hp == 0) or actor.maxsp == 0
+      return
+    end
+    self.contents.font.color = system_color
+    self.contents.fill_rect(x-1, y+27, width+2,6, Color.new(0, 0, 0, 255))
+    w = width * actor.sp / actor.maxsp
+    self.contents.fill_rect(x, y+28, w,1, Color.new(128, 255, 255, 255))
+    self.contents.fill_rect(x, y+29, w,1, Color.new(0, 255, 255, 255))
+    self.contents.fill_rect(x, y+30, w,1, Color.new(0, 192, 192, 255))
+    self.contents.fill_rect(x, y+31, w,1, Color.new(0, 128, 128, 255))
+  end
+end
+
+
+
+

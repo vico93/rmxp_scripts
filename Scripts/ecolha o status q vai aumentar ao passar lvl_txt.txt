@@ -1,0 +1,699 @@
+Level up point spend
+Quando um personagem subir de level, logo após a batalha, quando você entrar 
+no menu, aparecerá level up... vá nos status, e surgira outra tela onde você 
+pode escolher qual status quer aumentar.
+
+Se você não aumentar nenhum status, não poderá aumentar novamente neste 
+level.. só quando passar para o próximo level.
+
+Crie uma classe acima do main com qualquer nome, e cole o script abaixo
+
+
+
+
+
+# Written by Drago del Fato
+# Version 2.4
+# Just insert a new script above main and call it whatever you want.
+#=====================================================
+
+#--Res Text
+PSPEND_LVUPTEXT = "New Level! Do you want to Level up?"
+PSPEND_SPTEXT = "Special Points Left:"
+PSPEND_ANSWERS = ["Yes!","No"]
+PSPEND_HELP_TEXT = ["Change Strength...","Change Agility...",
+"Change Dexterity...","Change Inteligence...","Change Maximum Health 
+Points...",
+"Change Maximum Skill Points...","Reset all Values to Normal...","Finnish 
+Editing...."]
+PSPEND_B1 = "Reset"
+PSPEND_B2 = "Done!"
+LVUP_TEXT = "(Lv Up!)"
+DESC_TEXT = "LEFT - Decrease, RIGHT - Increase,C - Confirm,B - Exit"
+
+#-- Other Res
+SPADD = 25
+
+AGILITY_ADD = 1
+DEXTERITY_ADD = 1
+INTELIGENCE_ADD = 1
+STRENGTH_ADD = 1
+HP_ADD = 10
+SP_ADD = 10
+
+
+
+#-- If you aren't experienced scripter then don't change lines below!!!
+
+#--Global Variables
+$PSPEND_POINTS = []
+$PSPEND_ACTORS = []
+$PSPEND_ADD = [1,1,1,1,1,1]
+$PSPEND_ATTR = [1,1,1,1,1,1]
+$PSPEND_RET = 0
+
+#== Part One - Class for Setting and Getting Attributes from Actors
+
+class PSPEND_GET_SET_ACTOR_ATRIBUTTES
+def initialize(type)
+if !$BTEST
+case type
+when 0
+return
+when 1
+get_attributes
+when 2
+set_attributes
+end
+end
+end
+
+def get_attributes(actorid)
+@actor = $game_actors[actorid]
+$PSPEND_ATTR[1] = @actor.str
+$PSPEND_ATTR[2] = @actor.agi
+$PSPEND_ATTR[3] = @actor.dex
+$PSPEND_ATTR[4] = @actor.int
+$PSPEND_ATTR[5] = @actor.maxhp
+$PSPEND_ATTR[6] = @actor.maxsp
+end
+
+def set_attributes(actorid)
+@actor = $game_actors[actorid]
+@actor.str = $PSPEND_ATTR[1]
+@actor.agi = $PSPEND_ATTR[2]
+@actor.dex = $PSPEND_ATTR[3]
+@actor.int = $PSPEND_ATTR[4]
+@actor.maxhp = $PSPEND_ATTR[5]
+@actor.maxsp = $PSPEND_ATTR[6]
+end
+
+end
+
+#-- End of Part One
+
+#-- Part Two - Disabling actor attributes so that they have same attributes 
+at the next level!
+
+class Game_Actor
+
+def exp=(exp)
+@exp = [[exp, 9999999].min, 0].max
+while @exp >= @exp_list[@level+1] and @exp_list[@level+1] > 0
+$actor_attr.get_attributes(@actor_id)
+@level += 1
+$actor_attr.set_attributes(@actor_id)
+$PSPEND_POINTS[@actor_id - 1] += SPADD
+$PSPEND_ACTORS[@actor_id - 1] = true
+for j in $data_classes[@class_id].learnings
+if j.level == @level
+learn_skill(j.skill_id)
+end
+end
+end
+while @exp < @exp_list[@level]
+$actor_attr.get_attributes(@actor_id)
+@level -= 1
+$actor_attr.set_attributes(@actor_id)
+$PSPEND_ACTORS[@actor_id - 1] = false
+end
+@hp = [@hp, self.maxhp].min
+@sp = [@sp, self.maxsp].min
+end
+
+def level=(level)
+if level < self.level
+$actor_attr.get_attributes(@actor_id)
+level = [[level, $data_actors[@actor_id].final_level].min, 1].max
+$actor_attr.set_attributes(@actor_id)
+$PSPEND_ACTORS[@actor_id - 1] = false
+self.exp = @exp_list[level]
+return
+end
+$actor_attr.get_attributes(@actor_id)
+level = [[level, $data_actors[@actor_id].final_level].min, 1].max
+$actor_attr.set_attributes(@actor_id)
+$PSPEND_POINTS[@actor_id - 1] += SPADD
+$PSPEND_ACTORS[@actor_id - 1] = true
+self.exp = @exp_list[level]
+return
+end
+end
+
+#-- End of Part Two
+
+#-- Part Three - Telling Scene Title that it's time to go to shop (just 
+kidding...).
+# Changing the code so that some other variables will be added...
+
+class Scene_Title
+
+def command_new_game
+$game_system.se_play($data_system.decision_se)
+
+Audio.bgm_stop
+
+Graphics.frame_count = 0
+$game_temp = Game_Temp.new
+$game_system = Game_System.new
+$game_switches = Game_Switches.new
+$game_variables = Game_Variables.new
+$game_self_switches = Game_SelfSwitches.new
+$game_screen = Game_Screen.new
+$game_actors = Game_Actors.new
+$game_party = Game_Party.new
+$game_troop = Game_Troop.new
+$game_map = Game_Map.new
+$game_player = Game_Player.new
+#edit
+$actor_attr = PSPEND_GET_SET_ACTOR_ATRIBUTTES.new(0)
+for i in 0..$data_actors.size - 2
+$PSPEND_ACTORS.push(false)
+$PSPEND_POINTS.push(0)
+end
+#end edit
+$game_party.setup_starting_members
+$game_map.setup($data_system.start_map_id)
+$game_player.moveto($data_system.start_x, $data_system.start_y)
+$game_player.refresh
+
+
+$game_map.autoplay
+$game_map.update
+$scene = Scene_Map.new
+end
+
+def battle_test
+
+
+$data_actors = load_data("Data/BT_Actors.rxdata")
+$data_classes = load_data("Data/BT_Classes.rxdata")
+$data_skills = load_data("Data/BT_Skills.rxdata")
+$data_items = load_data("Data/BT_Items.rxdata")
+$data_weapons = load_data("Data/BT_Weapons.rxdata")
+$data_armors = load_data("Data/BT_Armors.rxdata")
+$data_enemies = load_data("Data/BT_Enemies.rxdata")
+$data_troops = load_data("Data/BT_Troops.rxdata")
+$data_states = load_data("Data/BT_States.rxdata")
+$data_animations = load_data("Data/BT_Animations.rxdata")
+$data_tilesets = load_data("Data/BT_Tilesets.rxdata")
+$data_common_events = load_data("Data/BT_CommonEvents.rxdata")
+$data_system = load_data("Data/BT_System.rxdata")
+
+Graphics.frame_count = 0
+
+
+$game_temp = Game_Temp.new
+$game_system = Game_System.new
+$game_switches = Game_Switches.new
+$game_variables = Game_Variables.new
+$game_self_switches = Game_SelfSwitches.new
+$game_screen = Game_Screen.new
+$game_actors = Game_Actors.new
+$game_party = Game_Party.new
+$game_troop = Game_Troop.new
+$game_map = Game_Map.new
+$game_player = Game_Player.new
+#edit
+$actor_attr = PSPEND_GET_SET_ACTOR_ATRIBUTTES.new(0)
+for i in 0..$data_actors.size - 2
+$PSPEND_ACTORS.push(false)
+$PSPEND_POINTS.push(0)
+end
+#end edit
+$game_party.setup_battle_test_members
+$game_temp.battle_troop_id = $data_system.test_troop_id
+$game_temp.battle_can_escape = true
+$game_map.battleback_name = $data_system.battleback_name
+
+
+$game_system.se_play($data_system.battle_start_se)
+$game_system.bgm_play($game_system.battle_bgm)
+
+$scene = Scene_Battle.new
+end
+end
+
+#End of Part Three
+
+#Mid Part - Adding Draw Actor Battler
+
+class Window_Base < Window
+
+def draw_actor_battler(actor, x, y)
+bitmap = RPG::Cache.battler(actor.battler_name, actor.battler_hue)
+cw =bitmap.width
+ch = bitmap.height
+src_rect = Rect.new(0, 0, cw,ch)
+self.contents.blt(x - cw / 2, y - ch, bitmap, src_rect)
+end
+
+def draw_actor_name(actor, x, y)
+self.contents.font.color = normal_color
+self.contents.draw_text(x, y, 120, 32, actor.name)
+cx = self.contents.text_size(actor.name).width
+if $PSPEND_ACTORS[actor.id - 1]
+self.contents.font.color = crisis_color
+self.contents.draw_text(x + cx, y, 90, 32, " " + LVUP_TEXT)
+end
+self.contents.font.color = normal_color
+end
+
+end
+
+#End of Mid Part
+
+#Part Four - The Hard one! Making Custom Windows
+
+class PSPEND_CUSTOM_WINDOW < Window_Selectable
+
+def initialize(winactorid)
+super(0, 64, 640, 480 - 64)
+commands = [1,2,3,4,5,6,7,8]
+@item_max = commands.size
+@commands = commands
+self.contents = Bitmap.new(width - 32,height - 32)
+self.contents.font.name = $fontface
+self.contents.font.size = $fontsize
+@actor = $game_actors[winactorid + 1]
+@y = 10
+$PSPEND_RET = $PSPEND_POINTS[@actor.id - 1]
+refresh(true)
+self.index = 0
+end
+
+def refresh(ret = false)
+self.contents.clear
+@y = 10
+if ret
+$PSPEND_ADD[1] = @actor.str
+$PSPEND_ADD[2] = @actor.agi
+$PSPEND_ADD[3] = @actor.dex
+$PSPEND_ADD[4] = @actor.int
+$PSPEND_ADD[5] = @actor.maxhp
+$PSPEND_ADD[6] = @actor.maxsp
+$PSPEND_POINTS[@actor.id - 1] = $PSPEND_RET
+ret = false
+end
+draw_actor_battler(@actor,20 + 100,@y + 200)
+draw_actor_name(@actor,20 + 32,@y + 220)
+cx = self.contents.text_size(PSPEND_SPTEXT + $PSPEND_POINTS[@actor.id - 
+1].to_s).width
+self.contents.draw_text(52,@y + 252,cx,32,PSPEND_SPTEXT + 
+$PSPEND_POINTS[@actor.id - 1].to_s)
+cx = self.contents.text_size(DESC_TEXT).width
+self.contents.draw_text(52,self.height - 32 - 40,cx,32,DESC_TEXT)
+@y += 150
+@x = 260
+
+for i in 0...@item_max
+draw_item(i, normal_color)
+end
+end
+
+def draw_item(index, color)
+if $PSPEND_POINTS[@actor.id - 1] <= 0
+self.contents.font.color = disabled_color
+else
+self.contents.font.color = color
+end
+rect = Rect.new(@x, 32 * index, self.contents.width - 8, 32)
+self.contents.fill_rect(rect, Color.new(0, 0, 0, 0))
+case index
+when 0
+self.contents.draw_text(rect, $data_system.words.str)
+cx = self.contents.text_size(@actor.str.to_s + " > " + 
+$PSPEND_ADD[1].to_s).width
+self.contents.draw_text(self.width - 32 - cx,32 * index,cx ,32 
+,@actor.str.to_s + " > " + $PSPEND_ADD[1].to_s)
+when 1
+self.contents.draw_text(rect, $data_system.words.agi )
+cx = self.contents.text_size(@actor.agi.to_s + " > " + 
+$PSPEND_ADD[2].to_s).width
+self.contents.draw_text(self.width - 32 - cx,32 * index,cx ,32 
+,@actor.agi.to_s + " > " + $PSPEND_ADD[2].to_s)
+when 2
+self.contents.draw_text(rect, $data_system.words.dex )
+cx = self.contents.text_size( @actor.dex.to_s + " > " + 
+$PSPEND_ADD[3].to_s).width
+self.contents.draw_text(self.width - 32 - cx,32 * index,cx ,32 , 
+@actor.dex.to_s + " > " + $PSPEND_ADD[3].to_s)
+
+when 3
+self.contents.draw_text(rect, $data_system.words.int )
+cx = self.contents.text_size(@actor.int.to_s + " > " + 
+$PSPEND_ADD[4].to_s).width
+self.contents.draw_text(self.width - 32 - cx,32 * index,cx ,32 
+,@actor.int.to_s + " > " + $PSPEND_ADD[4].to_s)
+
+when 4
+self.contents.draw_text(rect, $data_system.words.hp )
+cx = self.contents.text_size( @actor.maxhp.to_s + " > " + 
+$PSPEND_ADD[5].to_s).width
+self.contents.draw_text(self.width - 32 - cx,32 * index,cx ,32 , 
+@actor.maxhp.to_s + " > " + $PSPEND_ADD[5].to_s)
+
+when 5
+self.contents.draw_text(rect, $data_system.words.sp )
+cx = self.contents.text_size(@actor.maxsp.to_s + " > " + 
+$PSPEND_ADD[6].to_s).width
+self.contents.draw_text(self.width - 32 - cx,32 * index,cx ,32 
+,@actor.maxsp.to_s + " > " + $PSPEND_ADD[6].to_s)
+
+when 6
+self.contents.font.color = color
+self.contents.draw_text(rect,PSPEND_B1)
+when 7
+self.contents.font.color = color
+self.contents.draw_text(rect,PSPEND_B2)
+end
+end
+
+def disable_item(index)
+draw_item(index, disabled_color)
+end
+
+def update_cursor_rect
+
+if @index < 0
+self.cursor_rect.empty
+return
+end
+
+row = @index / @column_max
+
+if row < self.top_row
+self.top_row = row
+end
+
+if row > self.top_row + (self.page_row_max - 1)
+self.top_row = row - (self.page_row_max - 1)
+end
+
+cursor_width = self.width / @column_max - 32
+
+x = @index % @column_max * (cursor_width + 32)
+y = @index / @column_max * 32 - self.oy
+
+self.cursor_rect.set(@x - 10, y, self.width - @x - 17, 32)
+end
+end
+
+#End of Part Four
+
+#Part Five - Making Scene_Status to show level up window when character
+#get's a new level
+
+class Scene_Status
+def initialize(actor_index = 0, equip_index = 0)
+@actor_index = actor_index
+end
+
+def main
+@actor = $game_party.actors[@actor_index]
+$ACTORD = @actor
+@status_window = Window_Status.new(@actor)
+Graphics.transition
+if $PSPEND_ACTORS[@actor.id - 1]
+@h = Window_Help.new
+@h.set_text(PSPEND_LVUPTEXT)
+@h.y = 100
+@h.z = 9997
+@c = Window_Command.new(140,PSPEND_ANSWERS)
+@c.y = 170
+@c.x = 200
+@c.z = 9998
+loop do
+Graphics.update
+Input.update
+update_pspend_lvup_win
+
+if $scene != self
+break
+end
+end
+Graphics.freeze
+@h.z = 0
+@c.z = 1
+@status_window.z = 2
+@status_window.dispose
+@h.dispose
+@c.dispose
+return
+end
+loop do
+Graphics.update
+Input.update
+update
+if $scene != self
+break
+end
+end
+@status_window.dispose
+end
+
+def update_pspend_lvup_win
+@c.update
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+$PSPEND_ACTORS[@actor.id - 1] = false
+$scene = Scene_Menu.new
+return
+end
+if Input.trigger?(Input::C)
+case @c.index
+when 0
+$game_system.se_play($data_system.decision_se)
+$scene = Scene_PSPEND_Main_Screen.new(@actor.id - 1)
+return
+when 1
+$game_system.se_play($data_system.cancel_se)
+$PSPEND_ACTORS[@actor.id - 1] = false
+$scene = Scene_Menu.new
+return
+end
+end
+end
+end
+
+#End of Part Five
+
+#Part Six - Hell is coming...AAAAAAAAH!
+
+class Scene_PSPEND_Main_Screen
+def initialize(actor_id_index)
+@actor_ind = actor_id_index
+main
+end
+
+def main
+@help = Window_Help.new
+@spend = PSPEND_CUSTOM_WINDOW.new(@actor_ind)
+@spend.y = 64
+@spend.z = 99998
+@help.z = 99998
+Graphics.transition
+loop do
+Graphics.update
+Input.update
+update_spend_help_win
+if $scene != self
+break
+end
+end
+Graphics.freeze
+@spend.dispose
+@help.dispose
+end
+
+def update_spend_help_win
+@spend.update
+@help.update
+@help.set_text(PSPEND_HELP_TEXT[@spend.index])
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+$scene = Scene_Menu.new
+$PSPEND_POINTS[@actor_ind] = $PSPEND_RET
+$PSPEND_ACTORS[@actor_ind] = false
+return
+end
+if Input.repeat?(Input::RIGHT)
+unless $PSPEND_POINTS[@actor_ind] > 0
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+$game_system.se_play($data_system.cursor_se)
+$PSPEND_POINTS[@actor_ind] -= 1
+case @spend.index
+when 0
+$PSPEND_ADD[1] += STRENGTH_ADD
+when 1
+$PSPEND_ADD[2] += AGILITY_ADD
+when 2
+$PSPEND_ADD[3] += DEXTERITY_ADD
+when 3
+$PSPEND_ADD[4] += INTELIGENCE_ADD
+when 4
+$PSPEND_ADD[5] += HP_ADD
+when 5
+$PSPEND_ADD[6] += SP_ADD
+when 6
+$PSPEND_POINTS[@actor_ind] += 1
+when 7
+$PSPEND_POINTS[@actor_ind] += 1
+end
+@spend.refresh
+return
+end
+
+
+if Input.repeat?(Input::LEFT)
+unless $PSPEND_POINTS[@actor_ind] < $PSPEND_RET
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+$game_system.se_play($data_system.cursor_se)
+case @spend.index
+when 0
+if $PSPEND_ADD[1] <= $ACTORD.str
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+$PSPEND_ADD[1] -= STRENGTH_ADD
+when 1
+if $PSPEND_ADD[2] <= $ACTORD.agi
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+$PSPEND_ADD[2] -= AGILITY_ADD
+when 2
+if $PSPEND_ADD[3] <= $ACTORD.dex
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+$PSPEND_ADD[3] -= DEXTERITY_ADD
+when 3
+if $PSPEND_ADD[4] <= $ACTORD.int
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+$PSPEND_ADD[4] -= INTELIGENCE_ADD
+when 4
+if $PSPEND_ADD[5] <= $ACTORD.maxhp
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+$PSPEND_ADD[5] -= HP_ADD
+when 5
+if $PSPEND_ADD[6] <= $ACTORD.maxsp
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+$PSPEND_ADD[6] -= SP_ADD
+when 6
+$PSPEND_POINTS[@actor_ind] -= 1
+when 7
+$PSPEND_POINTS[@actor_ind] -= 1
+end
+$PSPEND_POINTS[@actor_ind] += 1
+@spend.refresh
+
+return
+end
+
+
+if Input.trigger?(Input::C)
+case @spend.index
+when 6
+@spend.refresh(true)
+when 7
+$ACTORD.str = $PSPEND_ADD[1]
+$ACTORD.agi = $PSPEND_ADD[2]
+$ACTORD.dex = $PSPEND_ADD[3]
+$ACTORD.int = $PSPEND_ADD[4]
+$ACTORD.maxhp = $PSPEND_ADD[5]
+$ACTORD.maxsp = $PSPEND_ADD[6]
+$game_system.se_play($data_system.decision_se)
+$scene = Scene_Menu.new
+$PSPEND_ACTORS[@actor_ind] = false
+return
+end
+end
+end
+end
+
+#End of Part Six - Yipee!!! I made it!
+
+#Part Seven - Save Load part!
+
+class Scene_Save < Scene_File
+
+def write_save_data(file)
+
+characters = []
+for i in 0...$game_party.actors.size
+actor = $game_party.actors[i]
+characters.push([actor.character_name, actor.character_hue])
+end
+
+Marshal.dump(characters, file)
+Marshal.dump(Graphics.frame_count, file)
+
+$game_system.save_count += 1
+$game_system.magic_number = $data_system.magic_number
+
+Marshal.dump($game_system, file)
+Marshal.dump($game_switches, file)
+Marshal.dump($game_variables, file)
+Marshal.dump($game_self_switches, file)
+Marshal.dump($game_screen, file)
+Marshal.dump($game_actors, file)
+Marshal.dump($game_party, file)
+Marshal.dump($game_troop, file)
+Marshal.dump($game_map, file)
+Marshal.dump($game_player, file)
+Marshal.dump($PSPEND_POINTS,file)
+Marshal.dump($PSPEND_ACTORS,file)
+Marshal.dump($actor_attr,file)
+end
+end
+
+# -- And now for the load screen
+
+class Scene_Load < Scene_File
+
+def read_save_data(file)
+
+characters = Marshal.load(file)
+Graphics.frame_count = Marshal.load(file)
+
+$game_system = Marshal.load(file)
+$game_switches = Marshal.load(file)
+$game_variables = Marshal.load(file)
+$game_self_switches = Marshal.load(file)
+$game_screen = Marshal.load(file)
+$game_actors = Marshal.load(file)
+$game_party = Marshal.load(file)
+$game_troop = Marshal.load(file)
+$game_map = Marshal.load(file)
+$game_player = Marshal.load(file)
+$PSPEND_POINTS = Marshal.load(file)
+$PSPEND_ACTORS = Marshal.load(file)
+$actor_attr = Marshal.load(file)
+
+if $game_system.magic_number != $data_system.magic_number
+$game_map.setup($game_map.map_id)
+$game_player.center($game_player.x, $game_player.y)
+end
+
+$game_party.refresh
+end
+end
+
+#-- END OF SAVE AND LOAD SCREEN
+
+#-- END OF THE SCRIPT
+
+#=======================
+# Written by Drago del fato
+#======================

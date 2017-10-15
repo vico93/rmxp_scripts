@@ -1,0 +1,46 @@
+DO_DEBUG_IN_DEBUG = true
+DO_DEBUG_IN_NORMAL = false
+
+def init_debug
+ if $DEBUG
+   $file_debug = File.new("debug.txt", "a")
+   $file_debug.puts "----------------------------------"
+   $file_debug.puts "> Run on: #{Time.new}"
+   $file_debug.puts "----------------------------------"
+ else
+   $file_debug = File.new("debug.txt", "w")
+ end
+end
+
+def dp(*args)
+ return false if (not DO_DEBUG_IN_DEBUG and $DEBUG) or
+   (not DO_DEBUG_IN_NORMAL and not $DEBUG)
+ begin
+   $file_debug.puts caller[1] + ":"
+   $file_debug.puts *args
+ rescue
+ end
+end
+
+def dpc(*args)
+ begin
+   $file_debug.puts(*args)
+ rescue
+ end
+end
+
+def dtrace_var(debug_symbol, kernelprint = false)
+ return false if (not DO_DEBUG_IN_DEBUG and $DEBUG) or
+   (not DO_DEBUG_IN_NORMAL and not $DEBUG)
+ if kernelprint
+   trace_var(debug_symbol, proc {
+     dp "(Var trace) #{debug_symbol.id2name} is now #{debug_symbol.inspect}"
+     print "#{debug_symbol.id2name}\r\n is nowr\n #{debug_symbol.inspect}"
+   })
+ else
+   trace_var(debug_symbol, proc {
+     dp "(Var trace) #{debug_symbol.id2name} is now #{debug_symbol.inspect}"
+   })
+ end
+end
+

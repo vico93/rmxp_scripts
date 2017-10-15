@@ -1,0 +1,69 @@
+ #============================================================================
+  # ** Game_Map
+  #============================================================================
+  
+  class Game_Map
+    #--------------------------------------------------------------------------
+    def in_range?(object)
+      screne_x = $game_map.display_x 
+      screne_x -= 256
+      screne_y = $game_map.display_y
+      screne_y -= 256
+      screne_width = $game_map.display_x 
+      screne_width += 2816
+      screne_height = $game_map.display_y
+      screne_height += 2176
+      return false if object.real_x <= screne_x
+      return false if object.real_x >= screne_width
+      return false if object.real_y <= screne_y
+      return false if object.real_y >= screne_height
+      return true
+    end
+    #--------------------------------------------------------------------------
+    def update_events
+      for event in @events.values
+        if in_range?(event) or event.trigger == 3 or event.trigger == 4
+          event.update
+        end
+      end
+    end
+  end
+  
+  #============================================================================
+  # ** Spriteset_Map
+  #============================================================================
+  
+  class Spriteset_Map
+    #--------------------------------------------------------------------------
+    def in_range?(object)
+      screne_x = $game_map.display_x 
+      screne_x -= 256
+      screne_y = $game_map.display_y
+      screne_y -= 256
+      screne_width = $game_map.display_x 
+      screne_width += 2816
+      screne_height = $game_map.display_y
+      screne_height += 2176
+      return false if object.real_x <= screne_x
+      return false if object.real_x >= screne_width
+      return false if object.real_y <= screne_y
+      return false if object.real_y >= screne_height
+      return true
+    end
+    #--------------------------------------------------------------------------
+    def update_character_sprites
+      for sprite in @character_sprites
+        if sprite.character.is_a?(Game_Event)
+          if in_range?(sprite.character) or sprite.character.trigger == 3 or sprite.character.trigger == 4
+            sprite.update
+          end
+        else
+          sprite.update
+        end
+      end
+    end
+  end
+
+#------------------------------------------------------------------------------
+# * End SDK Enable Test
+#------------------------------------------------------------------------------

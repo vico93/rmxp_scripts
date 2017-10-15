@@ -1,0 +1,50 @@
+#===============================================================================
+# Dark Dudu Jump Script v2.0
+# Feito por: Dark Dudu
+# MSN: edujr1994@hotmail.com
+# Agradecimentos: Renan Tsuneo Hangai
+#-------------------------------------------------------------------------------
+# * O antigo script, fazia com que, ao apertar a tecla ALT,
+# seu char pulasse.
+# Essa versão é diferente, para você poder pular, tem que
+# ter um comentário em qualquer evento, chamado "Pular ON"
+# (sem as aspas) e o evento não precisa estar ativo, basta colocar,
+# mesmo que o evento seja "Ao Pressionar Tecla", não tem problema,
+# O script funciona como se o comentário estivesse sempre ativo.
+# 
+# Isso é útil para quando você não quer que o jogador pule barreiras.
+#===============================================================================
+$DarkDuduScript = {} if $DarkDuduScript.nil?
+# false = disativado true = ativado 
+$DarkDuduScript["Dark Dudu Jump Script v2.0"] = true
+if $DarkDuduScript["Dark Dudu Jump Script v2.0"] == true
+class Scene_Map
+   alias cds2_update update
+  def update
+    valor = false
+    for event in $game_map.events.values
+      if event.list != nil
+        for item in event.list
+          if item.code == 108 or item.code == 408
+            if item.parameters[0] == "Pular ON"
+              valor = true
+              break
+            end
+          end
+        end
+      end
+      break if valor
+    end
+      if Input.trigger?(Input::ALT) and $game_player.direction == 8 and valor
+        $game_player.jump(0, -2)
+      elsif Input.trigger?(Input::ALT) and $game_player.direction == 4 and valor
+        $game_player.jump(-2, 0)
+      elsif Input.trigger?(Input::ALT) and $game_player.direction == 2 and valor
+        $game_player.jump(0, 2)
+      elsif Input.trigger?(Input::ALT) and $game_player.direction == 6 and valor
+        $game_player.jump(2, 0)
+      end
+    cds2_update
+  end
+end
+end

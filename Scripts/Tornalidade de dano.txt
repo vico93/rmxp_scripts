@@ -1,0 +1,107 @@
+Script criado por Momo, créditos ao Momo.
+O Script modifica a tonalidade do inimigo à medida que ele perde energia.
+ 
+Funciona também no CybersanBattleSystem,onde os sprites são animados.
+O script é bem simples ,coloque-o acima do script Main.
+
+Customização
+Modifique estas linhas, para mudar a tonalidade, de 0 a 255.
+TONE_RED = 128
+
+TONE_GREEN = 0
+
+TONE_BLUE = 0
+
+
+SCRIPT
+
+############################################
+#Script criado por Momo
+module Momo_Change_Tone
+
+ACTOR_CHANGE_TONE = false
+
+ENEMY_CHANGE_TONE = true
+
+TONE_RED = 128
+
+TONE_GREEN = 0
+
+TONE_BLUE = 0
+end
+
+class Game_Battler
+attr_accessor :tone_change
+alias game_battler_change_color_initialize initialize
+def initialize
+game_battler_change_color_initialize
+
+@tone_change = false
+end
+end
+
+class Sprite_Battler < RPG::Sprite
+alias sprite_battler_change_color_initialize initialize
+def initialize(viewport, battler = nil)
+sprite_battler_change_color_initialize(viewport, battler)
+@change_tone = Tone.new(0, 0, 0)
+end
+alias sprite_battler_change_color_update update
+def update
+sprite_battler_change_color_update
+tone_update
+end
+def tone_update
+if @battler != nil
+if rest_hp_tone_change?
+if @battler.tone_change
+rest_hp_tone_change_set
+@battler.tone_change = false
+end
+self.tone = @change_tone
+end
+end
+end
+
+def rest_hp_tone_change?
+if (Momo_Change_Tone::ACTOR_CHANGE_TONE and @battler.is_a?(Game_Actor)) or
+(Momo_Change_Tone::ENEMY_CHANGE_TONE and @battler.is_a?(Game_Enemy))
+return true
+end
+return false
+end
+
+def rest_hp_tone_change_set
+hp_rate = (@battler.hp.to_f / @battler.maxhp) * 100
+rate = 100 - hp_rate
+red = Momo_Change_Tone::TONE_RED * rate / 100
+green = Momo_Change_Tone::TONE_GREEN * rate / 100
+blue = Momo_Change_Tone::TONE_BLUE * rate / 100
+@change_tone.set(red, green, blue)
+end
+end
+
+class Spriteset_Battle
+alias spriteset_battle_change_color_initialize initialize
+def initialize
+spriteset_battle_change_color_initialize
+for sprite in @actor_sprites
+if !sprite.battler.nil?
+sprite.battler.tone_change = true 
+sprite.update
+end
+end
+end
+end
+
+class Scene_Battle
+alias scene_battle_change_color_update_phase4_step5 update_phase4_step5
+def update_phase4_step5
+scene_battle_change_color_update_phase4_step5
+for target in @target_battlers
+target.tone_change = true
+end
+end
+end
+###############################
+

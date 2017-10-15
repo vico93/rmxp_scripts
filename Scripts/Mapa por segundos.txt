@@ -1,0 +1,296 @@
+#=====================================================================
+#                       Mapa Por Segundos
+#Script - XRXS
+#Tradução - Wirefox Para mais informações: www.wirefox.free-forums.org
+#=====================================================================
+
+module XRXS20 
+  EXCLUSIVE_MAPS = [] # Defina aqui os mapas que NÃO apareçeram, pelo seus IDs, Ex: EXCLUSIVE_MAPS = [1,2,3];
+  WINDOW_FRAME    = true  
+  WINDOW_SKIN      = "001-Blue01"  # Defina aqui a Windowskin que irá ser usada. OBS: No "self.windowskin = RPG::Cache.windowskin("001-Blue01")", troque também pelo nome da skin.  
+  WINDOW_WIDTH_FIX =  120  # Defina aqui a largura da janela.
+  WINDOW_HEIGHT    =  24  # Defina aqui a altura da janela.
+  FONT_NAME  = "Tahoma"  # Defina aqui a fonte do texto, Tahoma, Verdana...
+  FONT_COLOR = Color.new(255, 255, 0, 255)  # Defina aqui a cor do texto.
+  FONT_SIZE  = 18  # Defina aqui o tamanho do texto.
+  POSITION = 4  # Defina aqui a posição em que a janela ficará. Ex: POSITION = 3 : A janela ficará no canto inferior direito.
+  TIME_FADEIN  = 16  # Defina aqui o tempo de espera para que a janela apareça.
+  TIME_STOP    = 64  # Defina aqui o tempo que a janela fica apareçendo. 
+  TIME_FADEOUT = 24  # Defina aqui o tempo para que a janela se apague.
+#Bom, espero que tenham entendido, bom proveito ^_^.
+end 
+class Window_Map_Name < Window_Base 
+  def text_model(text) 
+    return "" + text + "" 
+  end 
+end 
+#============================================================================== 
+# ? XRXS. ???????? 
+#============================================================================== 
+class Game_Map 
+  #-------------------------------------------------------------------------- 
+  # ? ??????? 
+  #-------------------------------------------------------------------------- 
+  def name 
+    $data_mapinfos = load_data("Data/MapInfos.rxdata") if $data_mapinfos.nil? 
+    $data_mapinfos[@map_id].name 
+  end 
+end 
+
+#============================================================================== 
+# ¦ Game_Temp 
+#============================================================================== 
+class Game_Temp 
+  #-------------------------------------------------------------------------- 
+  # ? ?????????? 
+  #-------------------------------------------------------------------------- 
+  attr_accessor :xrxs20_fade_duration 
+end 
+#============================================================================== 
+# ¦ Game_Map 
+#============================================================================== 
+class Game_Map 
+  #-------------------------------------------------------------------------- 
+  # ? ?????????? 
+  #-------------------------------------------------------------------------- 
+  attr_reader  :map_id 
+end 
+#============================================================================== 
+# ? Window_Map_Name_Space 
+#============================================================================== 
+class Window_Map_Name_Space < Window_Base 
+  #-------------------------------------------------------------------------- 
+  # ? ????????? 
+  #-------------------------------------------------------------------------- 
+  def initialize(x, y, w, h) 
+    super(x-16, y-16, w+32, h+32) 
+    self.opacity = 0 
+    self.visible = false 
+    @align = 1 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ????? 
+  #-------------------------------------------------------------------------- 
+  def set_text(text) 
+    # ?????? 
+    if XRXS20::WINDOW_WIDTH_FIX == 0 
+      bitmap = Bitmap.new(1,1) 
+      bitmap.font.name  = XRXS20::FONT_NAME 
+      bitmap.font.size  = XRXS20::FONT_SIZE 
+      width = bitmap.text_size(text).width + 10 
+      bitmap.dispose 
+    else 
+      width = XRXS20::WINDOW_WIDTH_FIX 
+    end 
+    # ?????????? 
+    if self.contents != nil 
+      self.contents.dispose 
+    end 
+    self.width = width + 32 
+    self.contents = Bitmap.new(width, self.height - 32) 
+    self.contents.font.name  = XRXS20::FONT_NAME 
+    self.contents.font.color = XRXS20::FONT_COLOR 
+    self.contents.font.size  = XRXS20::FONT_SIZE 
+    self.contents.font.bold  = true 
+    if text.nil? 
+      return 
+    end 
+    # ????? 
+    x = 12 
+    y = 0 
+    width -= 6 
+    height = self.contents.height 
+    text_color = self.contents.font.color.dup 
+    self.contents.font.color = Color.new(  0,  0,  0, 192) 
+    self.contents.draw_text(x+2, y+2, width, height, text, @align) 
+    self.contents.font.color = Color.new( 64, 64, 64, 192) 
+    self.contents.draw_text(x-1, y-1, width, height, text, @align) 
+    self.contents.draw_text(x+1, y-1, width, height, text, @align) 
+    self.contents.draw_text(x-1, y+1, width, height, text, @align) 
+    self.contents.draw_text(x+1, y+1, width, height, text, @align) 
+    self.contents.font.color = text_color 
+    self.contents.draw_text(x,  y,  width, height, text, @align) 
+  end 
+end 
+#============================================================================== 
+# ? Window_Map_Name 
+#------------------------------------------------------------------------------ 
+#  ????????????????? 
+#============================================================================== 
+class Window_Map_Name < Window_Base 
+  #-------------------------------------------------------------------------- 
+  # ? ?????????? 
+  #-------------------------------------------------------------------------- 
+  attr_accessor :text 
+  #-------------------------------------------------------------------------- 
+  # ? ???????? 
+  #-------------------------------------------------------------------------- 
+  def initialize 
+    y = XRXS20::POSITION >= 2 ? 440 : 8 
+    w = 64 
+    h = XRXS20::WINDOW_HEIGHT 
+    super(-w, y, w, h) 
+    self.opacity = 0 
+    self.visible = false 
+    self.windowskin = RPG::Cache.windowskin("001-Blue01") # Troque aqui a Windowskin (se quiser).
+    if XRXS20::WINDOW_SKIN != "" 
+      # ?????? 
+      skin = (RPG::Cache.windowskin(XRXS20::WINDOW_SKIN) rescue nil) 
+      # ?????? (???????????) 
+      self.windowskin = skin unless skin.nil? 
+  
+    end 
+    @space = Window_Map_Name_Space.new(self.x, self.y, self.width, self.height) 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? 
+  #    text  : ????????????? 
+  #-------------------------------------------------------------------------- 
+  def set_text(text) 
+    if text.nil? or text.empty? or text =~ /^\./ 
+      @showing_time = -1 
+      @text = "" 
+      @space.set_text(@text) 
+      $game_temp.xrxs20_fade_duration = -1 
+    else 
+      # ?? 
+      @text = text_model(text) 
+      # ?? 
+      @space.set_text(@text) 
+      if XRXS20::WINDOW_WIDTH_FIX == 0 
+        self.width = @space.width - 16 
+      else 
+        self.width = XRXS20::WINDOW_WIDTH_FIX 
+      end 
+      case XRXS20::POSITION % 2 
+      when 0 
+        @x_indent = 4 
+      when 1 
+        @x_indent = 632 - self.width 
+      end 
+    end 
+    self.visible  = false 
+    @space.visible = false 
+    # ????? 
+    fade_relocation 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????????????? 
+  #-------------------------------------------------------------------------- 
+  def fade_relocation 
+    # ????????? 
+    if $game_temp.xrxs20_fade_duration.nil? 
+      $game_temp.xrxs20_fade_duration = (XRXS20::TIME_FADEIN + XRXS20::TIME_STOP + XRXS20::TIME_FADEOUT) 
+    end 
+    # 
+    # ?????? 
+    # 
+    d = $game_temp.xrxs20_fade_duration - (XRXS20::TIME_STOP + XRXS20::TIME_FADEOUT) 
+    if d > 0 
+      self.visible  = XRXS20::WINDOW_FRAME 
+      @space.visible = true 
+      amount = ((XRXS20::TIME_FADEIN - d) * 255.0 / XRXS20::TIME_FADEIN).ceil 
+      @space.contents_opacity =  amount 
+      self.opacity            = [amount*5/8, 160].min 
+      self.x = @x_indent - d 
+      @space.x = self.x - 16 
+      $game_temp.xrxs20_fade_duration -= 1 
+    # 
+    # ???? 
+    # 
+    elsif ($game_temp.xrxs20_fade_duration > XRXS20::TIME_FADEOUT) or 
+          ($game_temp.xrxs20_fade_duration == 0 and XRXS20::TIME_FADEOUT == 0) 
+      self.visible  = XRXS20::WINDOW_FRAME 
+      @space.visible = true 
+      @space.contents_opacity = 255 
+      self.opacity            = 160 
+      self.x = @x_indent 
+      @space.x = self.x - 16 
+      if $game_temp.xrxs20_fade_duration > 0 
+        $game_temp.xrxs20_fade_duration -= 1 
+      end 
+    # 
+    # ??????? 
+    # 
+    elsif $game_temp.xrxs20_fade_duration > 0 
+      self.visible  = XRXS20::WINDOW_FRAME 
+      @space.visible = true 
+      amount = ($game_temp.xrxs20_fade_duration * 255.0 / XRXS20::TIME_FADEOUT).ceil 
+      @space.contents_opacity = amount 
+      self.opacity            = amount * 5/8 
+      self.x = (@x_indent + XRXS20::TIME_FADEOUT) - $game_temp.xrxs20_fade_duration 
+      @space.x = self.x - 16 
+      $game_temp.xrxs20_fade_duration -= 1 
+      if $game_temp.xrxs20_fade_duration == 0 
+        self.visible  = false 
+        @space.visible = false 
+      end 
+    end 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? [???????] 
+  #-------------------------------------------------------------------------- 
+  def update 
+    fade_relocation 
+    super 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?? [???????] 
+  #-------------------------------------------------------------------------- 
+  def dispose 
+    @space.dispose 
+    super 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ???? [???????] 
+  #-------------------------------------------------------------------------- 
+  def visible=(b) 
+    @space.visible = b unless @space.nil? 
+    super 
+  end 
+end 
+#============================================================================== 
+# ¦ Scene_Map 
+#============================================================================== 
+class Scene_Map 
+  #-------------------------------------------------------------------------- 
+  # ? ????? 
+  #-------------------------------------------------------------------------- 
+  alias xrxs20_main main 
+  def main 
+    # ?????????? 
+    @map_name_window = Window_Map_Name.new 
+    # ?????????? 
+    name = XRXS20::EXCLUSIVE_MAPS.include?($game_map.map_id) ? nil : $game_map.name 
+    @map_name_window.set_text(name) 
+    # ?? 
+    xrxs20_main 
+    # ?????????? 
+    @map_name_window.dispose 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????? 
+  #-------------------------------------------------------------------------- 
+  alias xrxs20_update update 
+  def update 
+    # ?????????? 
+    @map_name_window.update 
+    # ???? 
+    xrxs20_update 
+  end 
+  #-------------------------------------------------------------------------- 
+  # ? ?????????? 
+  #-------------------------------------------------------------------------- 
+  alias xrxs20_transfer_player transfer_player 
+  def transfer_player 
+    # ???????????? 
+    @map_name_window.visible = false 
+    # ???? 
+    xrxs20_transfer_player 
+    # ?????????? 
+    $game_temp.xrxs20_fade_duration = nil 
+    # ?????????? 
+    name = XRXS20::EXCLUSIVE_MAPS.include?($game_map.map_id) ? nil : $game_map.name 
+    @map_name_window.set_text(name) 
+  end 
+end 

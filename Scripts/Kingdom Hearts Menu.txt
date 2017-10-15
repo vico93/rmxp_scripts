@@ -1,0 +1,1269 @@
+#===============================================================================
+# Kingdom Hearts Menu
+# -Scripted by: Leon Blade-
+#------------------------------------------------------------------------------
+# This menu was scripted by Leon Blade for FinalXemnas
+# Created after Kingdom Hearts Menu
+# Corrigido por JOAONETO - www.jogosrpg.com.br
+#==============================================================================
+#================================
+# Windows
+#================================
+#----------------------------------------------------------------
+# Window Base Add On(Used for displaying battlers)
+#----------------------------------------------------------------
+class Window_Base < Window
+def draw_actor_battler_graphic(actor, x, y)
+bitmap = RPG::Cache.battler(actor.battler_name, actor.battler_hue)
+cw = bitmap.width
+ch = bitmap.height
+src_rect = Rect.new(0, 0, cw, ch)
+self.contents.blt(x - cw / 2, y - ch, bitmap, src_rect)
+end
+end
+#----------------------------------------------------------------
+# Extra Window(Contains Playtime and Step Counter)
+#----------------------------------------------------------------
+class Window_Extra < Window_Base
+#--------------------------------------------------------------------------
+# ? Set up
+#--------------------------------------------------------------------------
+def initialize
+super(0, 0, 480, 104)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.name = $defaultfonttype # "Play Time" window font
+self.contents.font.size = $defaultfontsize
+refresh
+end
+#--------------------------------------------------------------------------
+# ? Displays
+#--------------------------------------------------------------------------
+def refresh
+self.contents.clear
+self.contents.font.color = system_color
+self.contents.draw_text(4, 0, 120, 32, "Play Time")
+self.contents.draw_text(300, 0, 120, 32, "Number of Steps")
+@total_sec = Graphics.frame_count / Graphics.frame_rate
+hour = @total_sec / 60 / 60
+min = @total_sec / 60 % 60
+sec = @total_sec % 60
+text = sprintf("%02d:%02d:%02d", hour, min, sec)
+self.contents.font.color = normal_color
+self.contents.draw_text(4, 32, 120, 32, text, 2)
+self.contents.draw_text(300, 32, 120, 32, $game_party.steps.to_s, 2)
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+end
+#--------------------------------------------------------------------------
+# ? Update
+#--------------------------------------------------------------------------
+def update
+super
+if Graphics.frame_count / Graphics.frame_rate != @total_sec
+refresh
+end
+end
+end
+#----------------------------------------------------------------
+# Gold(Displays your curency and how much)
+#----------------------------------------------------------------
+class Window_Gold < Window_Base
+#--------------------------------------------------------------------------
+# ? Set up
+#--------------------------------------------------------------------------
+def initialize
+super(0, 0, 160, 168)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.name = $defaultfonttype # "Gold" window font
+self.contents.font.size = $defaultfontsize
+refresh
+end
+#--------------------------------------------------------------------------
+# ? Display
+#--------------------------------------------------------------------------
+def refresh
+self.contents.clear
+cx = contents.text_size($data_system.words.gold).width
+self.contents.font.color = normal_color
+self.contents.draw_text(4, 0, 120-cx-2, 32, $game_party.gold.to_s, 2)
+self.contents.font.color = system_color
+self.contents.draw_text(124-cx, 0, cx, 32, $data_system.words.gold, 2)
+end
+end
+#----------------------------------------------------------------
+# Map(Lets $map_infos = @map_id)
+#----------------------------------------------------------------
+class Game_Map
+def name
+$map_infos[@map_id]
+end
+end
+#----------------------------------------------------------------
+# Title(Checks your map in data files)
+#----------------------------------------------------------------
+class Scene_Title
+$map_infos = load_data("Data/MapInfos.rxdata")
+for key in $map_infos.keys
+$map_infos[key] = $map_infos[key].name
+end
+end
+#----------------------------------------------------------------
+# Mapname(Displays current location)
+#----------------------------------------------------------------
+class Window_Mapname < Window_Base
+#--------------------------------------------------------------------------
+# Set up
+#--------------------------------------------------------------------------
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+def initialize
+super(0, 0, 640, 56)
+self.contents = Bitmap.new(width - 52, height - 32)
+self.contents.font.name = $defaultfonttype
+self.contents.font.size = $defaultfontsize
+refresh
+end
+#--------------------------------------------------------------------------
+# Display
+#--------------------------------------------------------------------------
+def refresh
+self.contents.clear
+self.contents.font.color = normal_color
+new_name = $game_map.name.tr("/*","")
+self.contents.draw_text(500, -5, 320, 32, new_name.to_s)
+self.contents.draw_text(5, -5, 320, 32, "Location")
+end
+end
+#----------------------------------------------------------------
+# Menu Status 1(Displays stats for hero in slot 1)
+#----------------------------------------------------------------
+class Window_MenuStatus < Window_Selectable
+#--------------------------------------------------------------------------
+# ? Set up
+#--------------------------------------------------------------------------
+def initialize
+super(0, 0, 160, 320)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.name = $defaultfonttype # "Main" window font
+self.contents.font.size = $defaultfontsize
+refresh
+self.active = false
+self.index = -1
+end
+#--------------------------------------------------------------------------
+# ? Display
+#--------------------------------------------------------------------------
+def refresh
+self.contents.clear
+@item_max = $game_party.actors.size
+if @item_max > 0
+actor = $game_party.actors[0]
+draw_actor_battler_graphic(actor, 55, 190)
+draw_actor_name(actor, 40, -8)
+draw_actor_level(actor, 0, 190)
+draw_actor_hp(actor, 0, 212)
+draw_actor_sp(actor, 0, 234)
+draw_actor_state(actor, 0, 256)
+end
+end
+#--------------------------------------------------------------------------
+# ? Update
+#--------------------------------------------------------------------------
+def update_cursor_rect
+if @index < 0
+self.cursor_rect.empty
+else
+self.cursor_rect.set(0, @index * 116, self.width - 32, 96)
+end
+end
+end
+#----------------------------------------------------------------
+# Menu Status 2(Displays stats for hero in slot 2)
+#----------------------------------------------------------------
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+class Window_MenuStatus2 < Window_Selectable
+#--------------------------------------------------------------------------
+# ? Set up
+#--------------------------------------------------------------------------
+def initialize
+super(0, 0, 160, 320)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.name = $defaultfonttype # "Main" window font
+self.contents.font.size = $defaultfontsize
+refresh
+self.active = false
+self.index = -1
+end
+#--------------------------------------------------------------------------
+# ? Display
+#--------------------------------------------------------------------------
+def refresh
+self.contents.clear
+@item_max = $game_party.actors.size
+if @item_max > 1
+actor = $game_party.actors[1]
+draw_actor_battler_graphic(actor, 55, 190)
+draw_actor_name(actor, 40, -8)
+draw_actor_level(actor, 0, 190)
+draw_actor_hp(actor, 0, 212)
+draw_actor_sp(actor, 0, 234)
+draw_actor_state(actor, 0, 256)
+end
+end
+#--------------------------------------------------------------------------
+# ? Update
+#--------------------------------------------------------------------------
+def update_cursor_rect
+if @index < 0
+self.cursor_rect.empty
+else
+self.cursor_rect.set(0, @index * 116, self.width - 32, 96)
+end
+end
+end
+#----------------------------------------------------------------
+# Menu Status 3(Displays stats for hero in slot 3)
+#----------------------------------------------------------------
+class Window_MenuStatus3 < Window_Selectable
+#--------------------------------------------------------------------------
+# ? Set up
+#--------------------------------------------------------------------------
+def initialize
+super(0, 0, 160, 320)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.name = $defaultfonttype # "Main" window font
+self.contents.font.size = $defaultfontsize
+refresh
+self.active = false
+self.index = -1
+end
+#--------------------------------------------------------------------------
+# ? Display
+#--------------------------------------------------------------------------
+def refresh
+self.contents.clear
+@item_max = $game_party.actors.size
+if @item_max > 2
+actor = $game_party.actors[2]
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+draw_actor_battler_graphic(actor, 60, 190)
+draw_actor_name(actor, 40, -8)
+draw_actor_level(actor, 0, 190)
+draw_actor_hp(actor, 0, 212)
+draw_actor_sp(actor, 0, 234)
+draw_actor_state(actor, 0, 256)
+end
+end
+#--------------------------------------------------------------------------
+# ? Update
+#--------------------------------------------------------------------------
+def update_cursor_rect
+if @index < 0
+self.cursor_rect.empty
+else
+self.cursor_rect.set(0, @index * 116, self.width - 32, 96)
+end
+end
+end
+#----------------------------------------------------------------
+# Status(An opaqe window for hero selections)
+#----------------------------------------------------------------
+class Window_Status < Window_Selectable
+#--------------------------------------------------------------------------
+# Set up
+#--------------------------------------------------------------------------
+def initialize
+super(0, 0, 480, 320)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.name = $defaultfonttype # "Main" window font
+self.contents.font.size = $defaultfontsize
+@item_max = 3
+@column_max = 3
+@commands = [" ", " ", " "]
+refresh
+self.active = false
+self.index = -1
+end
+#--------------------------------------------------------------------------
+# Display
+#--------------------------------------------------------------------------
+def refresh
+self.contents.clear
+@item_max = $game_party.actors.size
+for i in 0...$game_party.actors.size
+end
+end
+#--------------------------------------------------------------------------
+# Update
+#--------------------------------------------------------------------------
+def update_cursor_rect
+if @index < 0
+self.cursor_rect.empty
+else
+self.cursor_rect.set(@index * 160, -3, 130, 22)
+end
+end
+end
+#----------------------------------------------------------------
+# Item(Item window to not display items of synthesis)
+#
+# To make an item synthesis make a new attribute in the
+# systems tab ID: 17 and select it to all synthesis items.
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+#----------------------------------------------------------------
+class Window_Item < Window_Selectable
+def initialize
+super(0, 64, 640, 416)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.name = $defaultfonttype # "Main" window font
+self.contents.font.size = $defaultfontsize
+@column_max = 2
+refresh
+self.index = 0
+if $game_temp.in_battle
+self.y = 64
+self.height = 256
+self.back_opacity = 160
+end
+end
+def item
+return @data[self.index]
+end
+def refresh(item_kind = 0)
+if self.contents != nil
+self.contents.dispose
+self.contents = nil
+end
+@data = []
+case item_kind
+when 0
+for i in 1...$data_items.size
+if $game_party.item_number(i) > 0 and
+not $data_items[i].element_set.include?(17)
+@data.push($data_items[i])
+end
+end
+for i in 1...$data_weapons.size
+if $game_party.weapon_number(i) > 0 and
+not $data_weapons[i].element_set.include?(17)
+@data.push($data_weapons[i])
+end
+end
+for i in 1...$data_armors.size
+if $game_party.armor_number(i) > 0 and
+not $data_armors[i].guard_element_set.include?(17)
+@data.push($data_armors[i])
+end
+end
+end
+@item_max = @data.size
+if @item_max > 0
+self.contents = Bitmap.new(width - 32, row_max * 32)
+for i in 0...@item_max
+draw_item(i)
+end
+end
+end
+def draw_item(index)
+self.contents.font.name = $defaultfonttype # "Main" window font
+self.contents.font.size = $defaultfontsize
+item = @data[index]
+case item
+when RPG::Item
+number = $game_party.item_number(item.id)
+when RPG::Weapon
+number = $game_party.weapon_number(item.id)
+when RPG::Armor
+number = $game_party.armor_number(item.id)
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+end
+if item.is_a?(RPG::Item) and
+$game_party.item_can_use?(item.id)
+self.contents.font.color = normal_color
+else
+self.contents.font.color = disabled_color
+end
+x = 4 + index % 2 * (288 + 32)
+y = index / 2 * 32
+rect = Rect.new(x, y, self.width / @column_max - 32, 32)
+self.contents.fill_rect(rect, Color.new(0, 0, 0, 0))
+bitmap = RPG::Cache.icon(item.icon_name)
+opacity = self.contents.font.color == normal_color ? 255 : 128
+self.contents.blt(x, y + 4, bitmap, Rect.new(0, 0, 24, 24), opacity)
+self.contents.draw_text(x + 28, y, 212, 32, item.name, 0)
+self.contents.draw_text(x + 240, y, 16, 32, ":", 1)
+self.contents.draw_text(x + 256, y, 24, 32, number.to_s, 2)
+end
+def update_help
+@help_window.set_text(self.item == nil ? "" : self.item.description)
+end
+end
+#----------------------------------------------------------------
+# Item2(Item window to display items of synthesis)
+#
+# To make an item synthesis make a new attribute in the
+# systems tab ID: 17 and select it to all synthesis items.
+#----------------------------------------------------------------
+class Window_Item2 < Window_Selectable
+def initialize
+super(0, 64, 640, 416)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.name = $defaultfonttype # "Main" window font
+self.contents.font.size = $defaultfontsize
+@column_max = 2
+refresh
+self.index = 0
+if $game_temp.in_battle
+self.y = 64
+self.height = 256
+self.back_opacity = 160
+end
+end
+def item
+return @data[self.index]
+end
+def refresh(item_kind = 0)
+if self.contents != nil
+self.contents.dispose
+self.contents = nil
+end
+@data = []
+case item_kind
+when 0
+for i in 1...$data_items.size
+if $game_party.item_number(i) > 0 and
+$data_items[i].element_set.include?(17)
+@data.push($data_items[i])
+end
+end
+for i in 1...$data_weapons.size
+if $game_party.weapon_number(i) > 0 and
+$data_weapons[i].element_set.include?(17)
+@data.push($data_weapons[i])
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+end
+end
+for i in 1...$data_armors.size
+if $game_party.armor_number(i) > 0 and
+$data_armors[i].guard_element_set.include?(17)
+@data.push($data_armors[i])
+end
+end
+end
+@item_max = @data.size
+if @item_max > 0
+self.contents = Bitmap.new(width - 32, row_max * 32)
+for i in 0...@item_max
+draw_item(i)
+end
+end
+end
+def draw_item(index)
+self.contents.font.name = $defaultfonttype # "Main" window font
+self.contents.font.size = $defaultfontsize
+item = @data[index]
+case item
+when RPG::Item
+number = $game_party.item_number(item.id)
+when RPG::Weapon
+number = $game_party.weapon_number(item.id)
+when RPG::Armor
+number = $game_party.armor_number(item.id)
+end
+if item.is_a?(RPG::Item) and
+$game_party.item_can_use?(item.id)
+self.contents.font.color = normal_color
+else
+self.contents.font.color = disabled_color
+end
+x = 4 + index % 2 * (288 + 32)
+y = index / 2 * 32
+rect = Rect.new(x, y, self.width / @column_max - 32, 32)
+self.contents.fill_rect(rect, Color.new(0, 0, 0, 0))
+bitmap = RPG::Cache.icon(item.icon_name)
+opacity = self.contents.font.color == normal_color ? 255 : 128
+self.contents.blt(x, y + 4, bitmap, Rect.new(0, 0, 24, 24), opacity)
+self.contents.draw_text(x + 28, y, 212, 32, item.name, 0)
+self.contents.draw_text(x + 240, y, 16, 32, ":", 1)
+self.contents.draw_text(x + 256, y, 24, 32, number.to_s, 2)
+end
+def update_help
+@help_window.set_text(self.item == nil ? "" : self.item.description)
+end
+end
+#----------------------------------------------------------------
+# Journal(Used in displaying things that happen)
+#----------------------------------------------------------------
+class Window_Journal < Window_Base
+#--------------------------------------------------------------------------
+# Set up
+#--------------------------------------------------------------------------
+def initialize
+super(55, 55, 640, 640)
+self.contents = Bitmap.new(width - 52, height - 52)
+self.contents.font.name = $defaultfonttype
+self.contents.font.size = $defaultfontsize
+refresh
+end
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+#--------------------------------------------------------------------------
+# Draws info on screen
+#--------------------------------------------------------------------------
+def refresh
+self.contents.clear
+self.contents.font.color = normal_color
+if $game_variables[1] == 0 # Page 1
+if $game_switches[3] == true
+self.contents.draw_text(4, -9, 320, 32, "This is just an example of the journal and how cool it")
+self.contents.draw_text(4, 23, 320, 32, "it can be. To make it work or to add messages first")
+self.contents.draw_text(4, 55, 320, 32, "you need to make a switch that activates this in the")
+self.contents.draw_text(4, 87, 320, 32, "journal so you may view it. Then in Window_Journal")
+self.contents.draw_text(4, 119, 320, 32, "write in ''if $game_switches[?] == true'' after font color.")
+self.contents.draw_text(4, 151, 320, 32, "The ? stands for the switch follow this example to make")
+self.contents.draw_text(4, 183, 320, 32, "Your own entrys. The cordinates are as follows. Every")
+self.contents.draw_text(4, 215, 320, 32, "line you add on 32 to the last one so the first line is -9")
+self.contents.draw_text(4, 247, 320, 32, "you would add 32 to that and get 23. To skip a line or")
+self.contents.draw_text(4, 279, 320, 32, "make a small space add on 42 instead of 32 this will")
+self.contents.draw_text(4, 311, 320, 32, "seperate different entrys. Learn more view Window_Journal.")
+self.contents.draw_text(4, 353, 320, 32, "-Leon Blade-")
+end
+end
+if $game_variables[1] == 1 # Page 2
+self.contents.draw_text(4, -9, 320, 32, "Just testing the page 2")
+end
+# Okay now that your here, here is how you make new pages. Okay first make a new variable
+# in this case its [1]. The pages will work as such. Variable 1 will control page number.
+# When its at 0 the page is 1, when its at 1 the page is 2. Here is a chart...
+#
+# Ammount - Page
+# 0 1
+# 1 2
+# 2 3
+# 3 4
+# 4 5
+# 5 6
+#
+# You get the idea. Now to control the pages start with if $game_variables[1] == 0 then that
+# means if page 1 is open... then you use switches to control journal entrys. Now lets say you want
+# a new page. After the first page's end from the first if variable, make another one only it should
+# say if $game_variables[1] == 1 which means, if Page 2 open... then display that page. Look at
+# Scene_Journal to see how you control viewing the pages.
+end
+end
+#================================
+# Scenes
+#================================
+#----------------------------------------------------------------
+# Item 1(Used for regular items)
+#----------------------------------------------------------------
+class Scene_Item
+#--------------------------------------------------------------------------
+# ? ?????
+#--------------------------------------------------------------------------
+def main
+# ?????????????????????
+@help_window = Window_Help.new
+@item_window = Window_Item.new
+# ?????????????
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+@item_window.help_window = @help_window
+# ????????????? (???·?????????)
+@target_window = Window_Target.new
+@target_window.visible = false
+@target_window.active = false
+# ?????????
+Graphics.transition
+# ??????
+loop do
+# ????????
+Graphics.update
+# ???????
+Input.update
+# ??????
+update
+# ????????????????
+if $scene != self
+break
+end
+end
+# ?????????
+Graphics.freeze
+# ????????
+@help_window.dispose
+@item_window.dispose
+@target_window.dispose
+end
+#--------------------------------------------------------------------------
+# ? ??????
+#--------------------------------------------------------------------------
+def update
+# ????????
+@help_window.update
+@item_window.update
+@target_window.update
+# ??????????????????: update_item ???
+if @item_window.active
+update_item
+return
+end
+# ???????????????????: update_target ???
+if @target_window.active
+update_target
+return
+end
+end
+#--------------------------------------------------------------------------
+# ? ?????? (??????????????????)
+#--------------------------------------------------------------------------
+def update_item
+# B ??????????
+if Input.trigger?(Input::B)
+# ????? SE ???
+$game_system.se_play($data_system.cancel_se)
+# ???????????
+$game_switches[2] = false
+$scene = Scene_Menu.new(0)
+return
+end
+# C ??????????
+if Input.trigger?(Input::C)
+# ?????????????????????????
+@item = @item_window.item
+# ????????????
+unless @item.is_a?(RPG::Item)
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+# ??? SE ???
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+# ????????
+unless $game_party.item_can_use?(@item.id)
+# ??? SE ???
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+# ?? SE ???
+$game_system.se_play($data_system.decision_se)
+# ??????????
+if @item.scope >= 3
+# ?????????????????
+@item_window.active = false
+@target_window.x = (@item_window.index + 1) % 2 * 304
+@target_window.visible = true
+@target_window.active = true
+# ???? (??/??) ?????????????
+if @item.scope == 4 || @item.scope == 6
+@target_window.index = -1
+else
+@target_window.index = 0
+end
+# ????????????
+else
+# ??????? ID ??????
+if @item.common_event_id > 0
+# ?????????????
+$game_temp.common_event_id = @item.common_event_id
+# ???????? SE ???
+$game_system.se_play(@item.menu_se)
+# ??????
+if @item.consumable
+# ????????? 1 ???
+$game_party.lose_item(@item.id, 1)
+# ????????????????
+@item_window.draw_item(@item_window.index)
+end
+# ??????????
+$scene = Scene_Map.new
+return
+end
+end
+return
+end
+end
+#--------------------------------------------------------------------------
+# ? ?????? (???????????????????)
+#--------------------------------------------------------------------------
+def update_target
+# B ??????????
+if Input.trigger?(Input::B)
+# ????? SE ???
+$game_system.se_play($data_system.cancel_se)
+# ????????????????????
+unless $game_party.item_can_use?(@item.id)
+# ????????????????
+@item_window.refresh
+end
+# ?????????????
+@item_window.active = true
+@target_window.visible = false
+@target_window.active = false
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+return
+end
+# C ??????????
+if Input.trigger?(Input::C)
+# ????????????
+if $game_party.item_number(@item.id) == 0
+# ??? SE ???
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+# ???????????
+if @target_window.index == -1
+# ???????????????????
+used = false
+for i in $game_party.actors
+used |= i.item_effect(@item)
+end
+end
+# ???????????
+if @target_window.index >= 0
+# ???????????????????????
+target = $game_party.actors[@target_window.index]
+used = target.item_effect(@item)
+end
+# ??????????
+if used
+# ???????? SE ???
+$game_system.se_play(@item.menu_se)
+# ??????
+if @item.consumable
+# ????????? 1 ???
+$game_party.lose_item(@item.id, 1)
+# ????????????????
+@item_window.draw_item(@item_window.index)
+end
+# ?????????????????
+@target_window.refresh
+# ?????
+if $game_party.all_dead?
+# ??????????????
+$scene = Scene_Gameover.new
+return
+end
+# ??????? ID ??????
+if @item.common_event_id > 0
+# ?????????????
+$game_temp.common_event_id = @item.common_event_id
+# ??????????
+$scene = Scene_Map.new
+return
+end
+end
+# ?????????????
+unless used
+# ??? SE ???
+$game_system.se_play($data_system.buzzer_se)
+end
+return
+end
+end
+end
+#----------------------------------------------------------------
+# Item 2(Used for Materials scene)
+#----------------------------------------------------------------
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+class Scene_Item2
+#--------------------------------------------------------------------------
+# ? ?????
+#--------------------------------------------------------------------------
+def main
+# ?????????????????????
+@help_window = Window_Help.new
+@item_window = Window_Item2.new
+# ?????????????
+@item_window.help_window = @help_window
+# ????????????? (???·?????????)
+@target_window = Window_Target.new
+@target_window.visible = false
+@target_window.active = false
+# ?????????
+Graphics.transition
+# ??????
+loop do
+# ????????
+Graphics.update
+# ???????
+Input.update
+# ??????
+update
+# ????????????????
+if $scene != self
+break
+end
+end
+# ?????????
+Graphics.freeze
+# ????????
+@help_window.dispose
+@item_window.dispose
+@target_window.dispose
+end
+#--------------------------------------------------------------------------
+# ? ??????
+#--------------------------------------------------------------------------
+def update
+# ????????
+@help_window.update
+@item_window.update
+@target_window.update
+# ??????????????????: update_item ???
+if @item_window.active
+update_item
+return
+end
+# ???????????????????: update_target ???
+if @target_window.active
+update_target
+return
+end
+end
+#--------------------------------------------------------------------------
+# ? ?????? (??????????????????)
+#--------------------------------------------------------------------------
+def update_item
+# B ??????????
+if Input.trigger?(Input::B)
+# ????? SE ???
+$game_system.se_play($data_system.cancel_se)
+# ???????????
+$game_switches[2] = false
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+$scene = Scene_Menu.new(0)
+return
+end
+# C ??????????
+if Input.trigger?(Input::C)
+# ?????????????????????????
+@item = @item_window.item
+# ????????????
+unless @item.is_a?(RPG::Item)
+# ??? SE ???
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+# ????????
+unless $game_party.item_can_use?(@item.id)
+# ??? SE ???
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+# ?? SE ???
+$game_system.se_play($data_system.decision_se)
+# ??????????
+if @item.scope >= 3
+# ?????????????????
+@item_window.active = false
+@target_window.x = (@item_window.index + 1) % 2 * 304
+@target_window.visible = true
+@target_window.active = true
+# ???? (??/??) ?????????????
+if @item.scope == 4 || @item.scope == 6
+@target_window.index = -1
+else
+@target_window.index = 0
+end
+# ????????????
+else
+# ??????? ID ??????
+if @item.common_event_id > 0
+# ?????????????
+$game_temp.common_event_id = @item.common_event_id
+# ???????? SE ???
+$game_system.se_play(@item.menu_se)
+# ??????
+if @item.consumable
+# ????????? 1 ???
+$game_party.lose_item(@item.id, 1)
+# ????????????????
+@item_window.draw_item(@item_window.index)
+end
+# ??????????
+$scene = Scene_Map.new
+return
+end
+end
+return
+end
+end
+#--------------------------------------------------------------------------
+# ? ?????? (???????????????????)
+#--------------------------------------------------------------------------
+def update_target
+# B ??????????
+if Input.trigger?(Input::B)
+# ????? SE ???
+$game_system.se_play($data_system.cancel_se)
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+# ????????????????????
+unless $game_party.item_can_use?(@item.id)
+# ????????????????
+@item_window.refresh
+end
+# ?????????????
+@item_window.active = true
+@target_window.visible = false
+@target_window.active = false
+return
+end
+# C ??????????
+if Input.trigger?(Input::C)
+# ????????????
+if $game_party.item_number(@item.id) == 0
+# ??? SE ???
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+# ???????????
+if @target_window.index == -1
+# ???????????????????
+used = false
+for i in $game_party.actors
+used |= i.item_effect(@item)
+end
+end
+# ???????????
+if @target_window.index >= 0
+# ???????????????????????
+target = $game_party.actors[@target_window.index]
+used = target.item_effect(@item)
+end
+# ??????????
+if used
+# ???????? SE ???
+$game_system.se_play(@item.menu_se)
+# ??????
+if @item.consumable
+# ????????? 1 ???
+$game_party.lose_item(@item.id, 1)
+# ????????????????
+@item_window.draw_item(@item_window.index)
+end
+# ?????????????????
+@target_window.refresh
+# ?????
+if $game_party.all_dead?
+# ??????????????
+$scene = Scene_Gameover.new
+return
+end
+# ??????? ID ??????
+if @item.common_event_id > 0
+# ?????????????
+$game_temp.common_event_id = @item.common_event_id
+# ??????????
+$scene = Scene_Map.new
+return
+end
+end
+# ?????????????
+unless used
+# ??? SE ???
+$game_system.se_play($data_system.buzzer_se)
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+end
+return
+end
+end
+end
+#----------------------------------------------------------------
+# Journal(Viewing things that have happened in the game
+#----------------------------------------------------------------
+class Scene_Journal
+#--------------------------------------------------------------------------
+# ? ?????
+#--------------------------------------------------------------------------
+def main
+@command_window = Window_Journal.new
+@command_window.opacity = 0
+@sprite = Sprite.new
+@sprite.bitmap = RPG::Cache.title("paper")
+@sprite.x = 25
+Graphics.transition
+# ??????
+loop do
+# ????????
+Graphics.update
+# ???????
+Input.update
+# ??????
+update
+# ????????????????
+if $scene != self
+break
+end
+end
+# ?????????
+Graphics.freeze
+# ????????
+@command_window.dispose
+@sprite.dispose
+end
+#--------------------------------------------------------------------------
+# ? ??????
+#--------------------------------------------------------------------------
+def update
+# ????????
+@command_window.update
+@sprite.update
+if @command_window.active
+update_command
+return
+end
+end
+#--------------------------------------------------------------------------
+# ? ?????? (??????????????????)
+#--------------------------------------------------------------------------
+def update_command
+# B ??????????
+if Input.trigger?(Input::B)
+# ????? SE ???
+$game_system.se_play($data_system.cancel_se)
+# ??????????
+$scene = Scene_Map.new
+return
+end
+if Input.trigger?(Input::LEFT)
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+if $game_variables[1] <= 0
+$game_system.se_play($data_system.buzzer_se)
+else
+Audio.se_play("Audio/SE/" + "046-Book01", 100, 100)
+$game_variables[1] -= 1
+@command_window.dispose
+@command_window = Window_Journal.new
+@command_window.opacity = 0
+end
+end
+if Input.trigger?(Input::RIGHT)
+if $game_variables[1] >= 2
+$game_system.se_play($data_system.buzzer_se)
+else
+Audio.se_play("Audio/SE/" + "046-Book01", 100, 100)
+$game_variables[1] += 1
+@command_window.dispose
+@command_window = Window_Journal.new
+@command_window.opacity = 0
+end
+end
+return
+end
+end
+#----------------------------------------------------------------
+# Menu
+#----------------------------------------------------------------
+class Scene_Menu
+#--------------------------------------------------------------------------
+# ? Initialize the menus
+# menu_index : The index of the initial selected item on the command menu
+# (0 = the first item on the menu, with the number increasing
+# by one for each command below the top command)
+#--------------------------------------------------------------------------
+def initialize(menu_index = 0)
+@menu_index = menu_index
+end
+#--------------------------------------------------------------------------
+# ? Set up the menu, processes the user's actions in the main loop,
+# and then disposes of the objects
+#--------------------------------------------------------------------------
+def main
+# Set up command window
+if $game_switches[1] == true
+s1 = "Items"
+s2 = "Skills"
+s3 = "Equip"
+s4 = "Status"
+s5 = "Materials"
+s6 = "Journal"
+s7 = "Party"
+@command_window = Window_Command.new(160, [s1, s2, s3, s4, s5, s6, s7])
+@command_window.y = 56
+@command_window.index = @menu_index
+else
+s1 = "Items"
+s2 = "Skills"
+s3 = "Equip"
+s4 = "Status"
+s5 = "Materials"
+s6 = "Journal"
+@command_window = Window_Command.new(160, [s1, s2, s3, s4, s5, s6])
+@command_window.y = 56
+@command_window.index = @menu_index
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+end
+if $game_party.actors.size == 0
+@command_window.disable_item(0)
+@command_window.disable_item(1)
+@command_window.disable_item(2)
+@command_window.disable_item(3)
+end
+# Set up play mapname window
+@map_window = Window_Mapname.new
+@map_window.x = 0
+@map_window.y = 0
+# Set up extra window
+@extra_window = Window_Extra.new
+@extra_window.x = 160
+@extra_window.y = 376
+# Set up gold window
+@gold_window = Window_Gold.new
+@gold_window.x = 0
+@gold_window.y = 312
+# Set up status window
+@status_window = Window_MenuStatus.new
+@status_window.x = 160
+@status_window.y = 56
+# Set up status window 2
+@status_window2 = Window_MenuStatus2.new
+@status_window2.x = 320
+@status_window2.y = 56
+# Set up status window 2
+@status_window3 = Window_MenuStatus3.new
+@status_window3.x = 480
+@status_window3.y = 56
+# Set up status
+@window_status = Window_Status.new
+@window_status.x = 160
+@window_status.y = 56
+@window_status.opacity = 0
+Graphics.transition
+loop do
+Graphics.update
+Input.update
+update
+if $scene != self
+break
+end
+end
+Graphics.freeze
+# Clean up
+@command_window.dispose
+@map_window.dispose
+@gold_window.dispose
+@status_window.dispose
+@status_window2.dispose
+@status_window3.dispose
+@window_status.dispose
+@extra_window.dispose
+end
+#--------------------------------------------------------------------------
+# ? Update the contents of all five windows on the main menu
+#--------------------------------------------------------------------------
+def update
+@command_window.update
+@gold_window.update
+@status_window.update
+@map_window.update
+@status_window2.update
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+@status_window3.update
+@extra_window.update
+@window_status.update
+if @command_window.active
+update_command
+return
+end
+if @window_status.active
+update_status
+return
+end
+end
+#--------------------------------------------------------------------------
+# ? Update the command menu window in response to user input
+#--------------------------------------------------------------------------
+def update_command
+# Cancel key is pressed
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+$scene = Scene_Map.new
+return
+end
+# Decision key is pressed
+if Input.trigger?(Input::C)
+if $game_party.actors.size == 0 and @command_window.index < 4
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+case @command_window.index
+when 0 # Item selected
+$game_system.se_play($data_system.decision_se)
+$scene = Scene_Item.new
+when 1 # Skill selected
+$game_system.se_play($data_system.decision_se)
+@command_window.active = false
+@window_status.active = true
+@window_status.index = 0
+when 2 # Equipment selected
+$game_system.se_play($data_system.decision_se)
+@command_window.active = false
+@window_status.active = true
+@window_status.index = 0
+when 3 # Status selected
+$game_system.se_play($data_system.decision_se)
+@command_window.active = false
+@window_status.active = true
+@window_status.index = 0
+when 4 # Materials selected
+$game_system.se_play($data_system.decision_se)
+$scene = Scene_Item2.new
+when 5 # Journal selected
+$game_system.se_play($data_system.decision_se)
+$scene = Scene_Journal.new
+when 6 # Party selected
+$game_system.se_play($data_system.decision_se)
+$scene = Scene_Switch.new(false, 1, 3)
+end
+return
+end
+end
+#--------------------------------------------------------------------------
+# ? Update the status of a menu opened through the main menu
+#--------------------------------------------------------------------------
+def update_status
+# Cancel key pressed
+#Império Turbidos
+#http://turbidos.com/principal Fornecido por Joomla! Produzido em: 27 May, 2007, 11:43
+if Input.trigger?(Input::B)
+$game_system.se_play($data_system.cancel_se)
+@command_window.active = true
+@window_status.active = false
+@window_status.index = -1
+return
+end
+# Make a decision
+if Input.trigger?(Input::C)
+case @command_window.index
+when 1 # Skill Window
+if $game_party.actors[@window_status.index].restriction >= 2
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+$game_system.se_play($data_system.decision_se)
+$scene = Scene_Skill.new(@window_status.index)
+when 2 # Equipment Window
+$game_system.se_play($data_system.decision_se)
+$scene = Scene_Equip.new(@window_status.index)
+when 3 # Staus Window
+$game_system.se_play($data_system.decision_se)
+$scene = Scene_Status.new(@window_status.index)
+end
+return
+end
+end
+end

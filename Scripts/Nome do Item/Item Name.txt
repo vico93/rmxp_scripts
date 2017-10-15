@@ -1,0 +1,271 @@
+CARACTERÍSTICAS
+Apresentação automática do nome e quantidade do tesouro adquirido(Item, Armor,Weapon) com de efeito Fade e Move.
+
+
+--------------------------------------------------------------------------------
+
+UTILIZAÇÃO
+Coloque a imagem nesta pasta dentro da pasta Graphics/Pictures 
+
+
+
+#_________________________________________________
+# MOG_Window Treasure Name V1.0            
+#_________________________________________________
+# By Moghunter               
+#_________________________________________________
+#Apresentação automática do nome do item.(Item,Armor,Weapon)
+#É preciso ter a imagem Itname.png dentro da pasta
+#Graphics/Pictures.
+#_________________________________________________
+module MOG
+#Definição da fonte do texto com o nome do mapa.
+MPFONT = "Georgia"
+#Ativar fade.
+MPITFD = true
+#Tempo de exposição da janela.(Deixe sempre acima de 255)
+MPITTM = 400
+#Posição da janela.
+# 0 = Cima
+# 1 = Esquerda.
+# 2 = Direita.
+# 3 = Baixo.
+MPITPS = 0
+#ID da switch que desativa a janela e o som.
+MPITVIS = 5
+#Som ao adquirir o item.
+MPITSE = "056-Right02"
+end
+#_________________________________________________
+###############
+# Game_System #
+###############
+class Game_System
+attr_accessor :fdittm
+attr_accessor :mpit_x
+attr_accessor :mpit_y
+attr_accessor :it_id
+attr_accessor :item_typ
+attr_accessor :item_qua
+alias mog25_initialize initialize
+def initialize
+mog25_initialize
+@fdittm = 0
+@it_id = 1
+@wp_id = 1
+@ar_id = 1
+@item_typ = 0
+@mpit_x = 0
+@mpit_y = 0
+@item_qua = 1
+end
+def item_typ
+return @item_typ
+end
+def item_qua
+return @item_qua
+end
+def mpit_x
+return @mpit_x
+end
+def mpit_y
+return @mpit_y
+end
+def fdittm
+if @fdittm <= 0
+@fdittm = 0 
+end
+return @fdittm
+end
+def it_id
+return @it_id
+end
+end 
+###############
+# Interpreter #
+###############
+class Interpreter
+alias mog25_command126 command_126
+def command_126
+mog25_command126
+$game_system.item_typ = 1
+$game_system.fdittm = MOG::MPITTM
+$game_system.it_id = @parameters[0]
+value = operate_value(@parameters[1], @parameters[2], @parameters[3])
+$game_system.item_qua = value
+unless $game_switches[MOG::MPITVIS] == true 
+Audio.se_play("Audio/SE/" + MOG::MPITSE, 100,100) rescue nil
+end
+$ref = true
+end
+alias mog25_command127 command_127
+def command_127
+mog25_command127
+$game_system.item_typ = 2
+$game_system.fdittm = MOG::MPITTM
+$game_system.it_id = @parameters[0]
+value = operate_value(@parameters[1], @parameters[2], @parameters[3])
+$game_system.item_qua = value
+unless $game_switches[MOG::MPITVIS] == true 
+Audio.se_play("Audio/SE/" + MOG::MPITSE, 100,100) rescue nil
+end
+$ref = true
+end
+alias mog25_command128 command_128
+def command_128
+mog25_command128
+$game_system.item_typ = 3
+$game_system.fdittm = MOG::MPITTM
+$game_system.it_id = @parameters[0]
+value = operate_value(@parameters[1], @parameters[2], @parameters[3])
+$game_system.item_qua = value
+unless $game_switches[MOG::MPITVIS] == true 
+Audio.se_play("Audio/SE/" + MOG::MPITSE, 100,100) rescue nil
+end
+$ref = true
+end
+end  
+############
+# Game_Map #
+############
+class Game_Map
+attr_reader   :map_id  
+def mpitnm
+$mpitnm = load_data("Data/Items.rxdata")
+$mpitnm[$game_system.it_id].name
+end
+def mpwpnm
+$mpwpnm = load_data("Data/Weapons.rxdata")
+$mpwpnm[$game_system.it_id].name
+end
+def mparnm
+$mparnm = load_data("Data/Armors.rxdata")
+$mparnm[$game_system.it_id].name
+end
+end
+###############
+# Window Base #
+###############
+class Window_Base < Window
+def draw_mpitem(x,y)
+mapic = RPG::Cache.picture("Itname")    
+cw = mapic.width  
+ch = mapic.height 
+src_rect = Rect.new(0, 0, cw, ch)
+self.contents.blt(x , y - ch + 65, mapic, src_rect)
+self.contents.font.name = MOG::MPFONT
+self.contents.font.size = 22
+if $game_system.item_typ == 1
+self.contents.font.color = Color.new(0,0,0,255)
+self.contents.draw_text(x + 76, y + 30, 110, 32, $game_map.mpitnm.to_s,1)
+self.contents.draw_text(x - 19, y + 19, 110, 32, $game_system.item_qua.to_s + "X",1)
+self.contents.font.color = Color.new(255,255,255,255)
+self.contents.draw_text(x + 75, y + 29, 110, 32, $game_map.mpitnm.to_s,1)
+self.contents.draw_text(x - 20, y + 18, 110, 32, $game_system.item_qua.to_s + "X",1)
+elsif $game_system.item_typ == 2
+self.contents.font.color = Color.new(0,0,0,255)
+self.contents.draw_text(x - 19, y + 19, 110, 32, $game_system.item_qua.to_s + "X",1)
+self.contents.draw_text(x + 76, y + 30, 110, 32, $game_map.mpwpnm.to_s,1)
+self.contents.font.color = Color.new(255,255,255,255)
+self.contents.draw_text(x + 75, y + 29, 110, 32, $game_map.mpwpnm.to_s,1)
+self.contents.draw_text(x - 20, y + 18, 110, 32, $game_system.item_qua.to_s + "X",1)
+elsif $game_system.item_typ == 3
+self.contents.font.color = Color.new(0,0,0,255)
+self.contents.draw_text(x + 76, y + 30, 110, 32, $game_map.mparnm.to_s,1)
+self.contents.draw_text(x - 19, y + 19, 110, 32, $game_system.item_qua.to_s + "X",1)
+self.contents.font.color = Color.new(255,255,255,255)
+self.contents.draw_text(x + 75, y + 29, 110, 32, $game_map.mparnm.to_s,1)
+self.contents.draw_text(x - 20, y + 18, 110, 32, $game_system.item_qua.to_s + "X",1)
+else
+end  
+end
+end
+##########
+# Mpitem #
+##########
+class Mpitem < Window_Base
+def initialize
+super($game_system.mpit_x, $game_system.mpit_y, 250, 100)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.opacity = 0
+refresh
+end
+def refresh
+self.contents.clear
+draw_mpitem(10,0)    
+end
+end
+#############
+# Scene_Map #
+#############
+class Scene_Map
+alias mog25_main main
+def main
+@mpit =  Mpitem.new
+if  $game_switches[MOG::MPITVIS] == true 
+@mpit.visible = false
+else
+@mpit.visible = true  
+end
+@mpit.contents_opacity = $game_system.fdittm
+mog25_main
+@mpit.dispose
+end
+alias mog25_update update
+def update
+mog25_update
+if $ref == true
+@mpit.refresh
+if MOG::MPITPS == 0 
+@mpit.x = 200
+@mpit.y = -150
+elsif MOG::MPITPS == 1
+@mpit.x = -240
+@mpit.y = 200  
+elsif MOG::MPITPS == 2
+@mpit.x = 640
+@mpit.y = 200  
+else
+@mpit.x = 200
+@mpit.y = 480    
+end  
+$ref = false
+end
+if  $game_switches[MOG::MPITVIS] == true 
+@mpit.visible = false
+else
+@mpit.visible = true  
+end
+$game_system.mpit_x = @mpit.x
+$game_system.mpit_y = @mpit.y
+if MOG::MPITPS == 0
+if @mpit.y < 0
+@mpit.y += 8
+elsif @mpit.x >= 0
+@mpit.y = 0
+end   
+elsif MOG::MPITPS == 1
+if @mpit.x < 0
+@mpit.x += 10
+elsif @mpit.x >= 0
+@mpit.x = 0
+end 
+elsif MOG::MPITPS == 2
+if @mpit.x > 400
+@mpit.x -= 10
+elsif @mpit.x >= 400
+@mpit.x = 400
+end  
+else 
+if @mpit.y > 380
+@mpit.y -= 8
+elsif @mpit.y >= 380
+@mpit.y = 380
+end 
+end
+@mpit.contents_opacity = $game_system.fdittm
+if MOG::MPITFD == true
+$game_system.fdittm -= 3
+end
+end
+end

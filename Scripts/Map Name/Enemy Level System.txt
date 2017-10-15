@@ -1,0 +1,121 @@
+CARACTERÍSTICAS
+Os atributos dos inimigos são baseados no nível do personagem (Ou na média do Grupo).
+Você pode ativar ou desativar esse sistema a hora que quiser pela switch, isso é útil caso querermos usar esse sistema apenas nos chefes. Exp - FF7 no Seraph Sephiroth
+
+
+--------------------------------------------------------------------------------
+
+UTILIZAÇÃO
+As customizações estão logo no começo do script, por default o sistema de level já está ativado, se quiser desativá-lo basta ativar a switch de desativação como true 
+
+
+
+
+
+#_________________________________________________
+# MOG_Enemy Level System V1.0            
+#_________________________________________________
+# By Moghunter          
+#_________________________________________________
+# Os atributos do inimigo são baseados no nível 
+#do personagen(Ou na média do Grupo).
+#_________________________________________________
+module MOG
+##########  
+# SET-UP #
+##########
+# Você também pode ativar o sistema de level apenas nos
+#chefes, ativando ou desativando a Switch abaixo.
+#Definição do ID da Switch que desativa o sistema de level.
+ENLV_DIS = 15 
+#(Coloque a switch ENLV_DIS como "true" se quiser desativar
+#o sistema de level).
+#_________________________________________________
+# Defina abaixo o valor que será multiplicado pelo
+#level do personagem.
+#Base de calculo que o inimigo ganhará por level.
+# 1 = aumenta 0 % 
+# 1.1 = aumenta 10% 
+# 1.01 = aumenta 1%
+#_________________________________________________
+ELV_HP = 1.01     # HP
+ELV_SP = 1.01     # SP
+ELV_STR = 1.01    # STR
+ELV_DEX = 1.01    # DEX
+ELV_AGI = 1.01    # AGI
+ELV_INT = 1.01    # INT
+ELV_ATK = 1.01    # ATK
+ELV_PDEF = 1.01   # PDEF
+ELV_MDEF = 1.01   # MDEF
+ELV_EVA = 1.0     # EVA
+end
+##############
+# Game_Enemy #
+##############
+class Game_Enemy < Game_Battler
+include MOG
+def enemy_lv(type)
+for i in 0...$game_party.actors.size
+actor = $game_party.actors[i]
+if  $game_switches[MOG::ENLV_DIS] == false
+case type
+when 0
+return actor.level * ELV_HP
+when 1
+return actor.level * ELV_SP
+when 2
+return actor.level * ELV_STR
+when 3
+return actor.level * ELV_DEX
+when 4
+return actor.level * ELV_AGI
+when 5
+return actor.level * ELV_INT
+when 6
+return actor.level * ELV_ATK
+when 7
+return actor.level * ELV_PDEF
+when 8
+return actor.level * ELV_MDEF
+when 9
+return actor.level * ELV_EVA
+end  
+else
+case type  
+when 0..9
+return 1
+end    
+end
+end
+end
+def base_maxhp
+return $data_enemies[@enemy_id].maxhp * enemy_lv(0)
+end
+def base_maxsp
+return $data_enemies[@enemy_id].maxsp * enemy_lv(1)
+end
+def base_str
+return $data_enemies[@enemy_id].str * enemy_lv(2)
+end
+def base_dex
+return $data_enemies[@enemy_id].dex * enemy_lv(3)
+end
+def base_agi
+return $data_enemies[@enemy_id].agi * enemy_lv(4)
+end
+def base_int
+return $data_enemies[@enemy_id].int * enemy_lv(5)
+end
+def base_atk
+return $data_enemies[@enemy_id].atk * enemy_lv(6)
+end
+def base_pdef
+return $data_enemies[@enemy_id].pdef * enemy_lv(7)
+end
+def base_mdef
+return $data_enemies[@enemy_id].mdef * enemy_lv(8)
+end
+def base_eva
+return $data_enemies[@enemy_id].eva * enemy_lv(9)
+end
+end

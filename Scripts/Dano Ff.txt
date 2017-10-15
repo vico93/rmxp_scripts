@@ -1,0 +1,164 @@
+#==============================================================================
+# ¦ RPG::Sprite
+#------------------------------------------------------------------------------
+# Change the damage display
+# 
+# By Squall // squall@rmxp.ch
+# released on the 30th march at rmxp.org
+#==============================================================================
+
+class RPG::Sprite < ::Sprite
+  #--------------------------------------------------------------------------
+  # ? initialize
+  #--------------------------------------------------------------------------
+  def initialize(viewport = nil)
+    super(viewport)
+    @_whiten_duration = 0
+    @_appear_duration = 0
+    @_escape_duration = 0
+    @_collapse_duration = 0
+    @_damage_durations = []
+    @_animation_duration = 0
+    @_blink = false
+  end
+  #--------------------------------------------------------------------------
+  # ? dispose
+  #--------------------------------------------------------------------------
+  def dispose
+    dispose_damage(0...@_damage_durations.size)
+    dispose_animation
+    dispose_loop_animation
+    super
+  end
+  #--------------------------------------------------------------------------
+  # ? effect?
+  #--------------------------------------------------------------------------
+  def effect?
+    damage_duration = 0
+    for value in @_damage_durations
+      damage_duration += value
+    end
+    @_whiten_duration > 0 or
+    @_appear_duration > 0 or
+    @_escape_duration > 0 or
+    @_collapse_duration > 0 or
+    damage_duration > 0 or
+    @_animation_duration > 0
+  end
+  #--------------------------------------------------------------------------
+  # ? damage
+  #--------------------------------------------------------------------------
+  def damage(value, critical)
+    dispose_damage(0...@_damage_durations.size)
+    @_damage_sprites = []
+    if value.is_a?(Numeric)
+      damage_string = value.abs.to_s
+    else
+      damage_string = value.to_s
+    end
+    if critical
+      damage_string += " CRITICAL"
+    end
+      
+    for i in 0...damage_string.size
+      letter = damage_string[i..i]
+      bitmap = Bitmap.new(48, 48)
+      bitmap.font.size = 24
+      bitmap.font.color.set(0, 0, 0)
+      bitmap.draw_text(-1, 12-1, 48, 48, letter, 1)
+      bitmap.draw_text(+1, 12-1, 48, 48, letter, 1)
+      bitmap.draw_text(-1, 12+1, 48, 48, letter, 1)
+      bitmap.draw_text(+1, 12+1, 48, 48, letter, 1)
+      if value.is_a?(Numeric) and value < 0
+        bitmap.font.color.set(176, 255, 144)
+      else
+        bitmap.font.color.set(255, 255, 255)
+      end
+      bitmap.draw_text(0, 12, 48, 48, letter, 1)
+      
+      @_damage_sprites[i] = ::Sprite.new(self.viewport)
+      @_damage_sprites[i].bitmap = bitmap
+      @_damage_sprites[i].visible = false
+      @_damage_sprites[i].ox = 16
+      @_damage_sprites[i].oy = 16
+      @_damage_sprites[i].x = self.x - self.ox / 2 + i * 12
+      @_damage_sprites[i].y = self.y - self.oy / 2
+      @_damage_sprites[i].z = 3000
+      @_damage_durations[i] = 40 + i * 2
+    end
+  end
+  #--------------------------------------------------------------------------
+  # ? dispose_damage
+  #--------------------------------------------------------------------------
+  def dispose_damage(index)
+    return if @_damage_sprites == nil
+    if @_damage_sprites[index].is_a?(::Sprite) and @_damage_sprites[index].bitmap != nil
+      @_damage_sprites[index].bitmap.dispose
+      @_damage_sprites[index].dispose
+      @_damage_durations[index] = 0
+    end
+  end
+  #--------------------------------------------------------------------------
+  # ? update
+  #--------------------------------------------------------------------------
+  def update
+    super
+    if @_whiten_duration > 0
+      @_whiten_duration -= 1
+      self.color.alpha = 128 - (16 - @_whiten_duration) * 10
+    end
+    if @_appear_duration > 0
+      @_appear_duration -= 1
+      self.opacity = (16 - @_appear_duration) * 16
+    end
+    if @_escape_duration > 0
+      @_escape_duration -= 1
+      self.opacity = 256 - (32 - @_escape_duration) * 10
+    end
+    if @_collapse_duration > 0
+      @_collapse_duration -= 1
+      self.opacity = 256 - (48 - @_collapse_duration) * 6
+    end
+    for i in 0...@_damage_durations.size
+      damage_sprite = @_damage_sprites[i]
+      next if @_damage_durations[i] == nil
+      if @_damage_durations[i] > 0
+        @_damage_durations[i] -= 1
+        damage_sprite.visible = (@_damage_durations[i] <= 40)
+        case @_damage_durations[i]
+        when 38..39
+          damage_sprite.y -= 4
+        when 36..37
+          damage_sprite.y -= 2
+        when 34..35
+          damage_sprite.y += 2
+        when 28..33
+          damage_sprite.y += 4
+        end
+        damage_sprite.opacity = 256 - (12 - @_damage_durations[i]) * 32
+        if @_damage_durations[i] == 0
+          dispose_damage(i)
+        end
+      end
+    end
+    if @_animation != nil and (Graphics.frame_count % 2 == 0)
+      @_animation_duration -= 1
+      update_animation
+    end
+    if @_loop_animation != nil and (Graphics.frame_count % 2 == 0)
+      update_loop_animation
+      @_loop_animation_index += 1
+      @_loop_animation_index %= @_loop_animation.frame_max
+    end
+    if @_blink
+      @_blink_count = (@_blink_count + 1) % 32
+      if @_blink_count < 16
+        alpha = (16 - @_blink_count) * 6
+      else
+        alpha = (@_blink_count - 16) * 6
+      end
+      self.color.set(255, 255, 255, alpha)
+    end
+    @@_animations.clear
+  end
+end

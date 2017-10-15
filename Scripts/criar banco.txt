@@ -1,0 +1,241 @@
+Após pouco tempo sem fazer nenhum script em RGSS (5 ou 6 meses), resolvi 
+esquentar os dedos. ^^
+
+Esse script aqui tá em versão um e é muito simples, ele funciona como um 
+simples banco onde você pode depositar e retirar dinheiro. Nessa versão só é 
+possivel ter uma conta, mas quanto a versão 2 e a final será diferente. Cada 
+personagem do seu grupo poderá criar uma conta e terá também senha, ou seja, 
+esse script é só para eu ter uma base do que realmente será.
+
+Então deem opniões e sugestões para ele.
+
+Coloque esse script acima do Sprite_Character e o chame de Game_Banco
+Codigo:
+
+#======================================================
+#
+#  Game_Banco v-1.0
+#------------------------------------------------------
+# Esse script processa os principais comandos da
+# Scene_Banco.
+# Por Firewords
+#======================================================
+
+class Game_Banco
+
+  #Criando variáveis de classe
+  attr_accessor :tarefa
+  attr_accessor :dinheiro
+  attr_accessor :deposito
+  attr_accessor :retirada
+  attr_accessor :conta
+
+  def initialize
+   #Definindo variáveis de classe
+   @tarefa  = nil
+   @dinheiro = 0
+   @deposito = 0
+   @retirada = 0
+   @conta   = 0
+  end
+
+  #--------------------------------------------------#
+
+  #Verificar Dinheiro depositado
+  def Verificar_D()
+   # Verificando se esta depositando
+   #mais do que se pode
+   if(self.deposito > self.dinheiro) then
+     return false
+   else
+     return true
+   end
+  end
+
+  # Verificar Retirada
+  def Verificar_R()
+   # Verificando se dinheiro retirado
+   #é maior do que o que se tem
+   if(self.retirada > self.conta) then
+     return false
+   else
+     return true
+   end
+  end
+
+  #--------------------------------------------------#
+
+  #Executando script
+  def Executar
+   #Se está Retirando dinheiro
+   if(self.tarefa == 1) then
+     #Vendo se vc quer retirar mais do que pode
+     if(Verificar_R() == false)
+      print "Não é possível retirar esse dinheiro da conta.\nVocê não tem 
+fundos suficientes."
+     else
+      Audio.se_play("Audio/SE/006-System06", 80, 100)
+      #Tirando dinheiro da conta
+      self.conta -= self.retirada
+      #Adicionando dinheiro na equipe
+      $game_party.gain_gold(self.retirada)
+      print "Dinheiro retirado com sucesso!"
+     end
+
+   #Se está Depositando dinheiro
+   elsif(self.tarefa == 2) then
+     #Vendo se vc quer depositar mais do que pode
+     if(Verificar_D() == false)
+      print "Não é possível depositar esse dinheiro na conta.\nVocê não tem 
+todo esse dinheiro."
+     else
+      Audio.se_play("Audio/SE/006-System06", 80, 100)
+      #Depositando dinheiro na conta
+      self.conta += self.deposito
+      #Retirando dinheiro de personagem
+      $game_party.lose_gold(self.deposito)
+      print "Dinheiro depositado com sucesso!"
+     end
+   end
+
+  end
+
+end
+
+
+Coloque esse script acima do Arrow_Base e o chame de Window_DR
+Codigo:
+#Janela que fica por traz da escolha de números
+
+class Window_DR < Window_Base
+
+  attr_accessor :nome
+
+  def initialize
+   super(160, 320, 320, 80)
+   self.contents = Bitmap.new(width - 32, height - 32)
+   @nome = ""
+   mostrar
+  end
+
+  def mostrar
+   self.contents.clear
+  end
+
+end
+
+
+Coloque esse acima do Main e o chame de Scene_Banco
+Codigo:
+class Scene_Banco
+
+  def main
+
+   @fundo = Window_DR.new
+   @fundo.visible = false
+
+   @op = Window_Command.new(125, ["Retirar", "Depositar"])
+   @op.x = 320 - @op.width/2
+   @op.y = 160
+   @op.active = true
+
+   @din = Window_InputNumber.new(8)
+   @din.x = 340 - @din.width/2
+   @din.y = 340
+   @din.visible = false
+   @din.active = false
+
+   Graphics.transition
+   while $scene == self
+     Graphics.update
+     Input.update
+     atualizar
+   end
+   Graphics.freeze
+
+   @fundo.dispose
+   @din.dispose
+   @op.dispose
+
+  end
+
+  def atualizar
+   @op.update
+   @din.update
+
+   if(@op.active) then
+     escolha
+     return
+   end
+   if(@din.active) then
+     numero
+     return
+   end
+
+  end
+
+  def escolha
+
+   if(Input.trigger?(Input::B)) then
+     $game_system.se_play($data_system.cancel_se)
+     $scene = Scene_Map.new
+     return
+   end
+
+   if(Input.trigger?(Input::C)) then
+     @fundo.nome = (@op.index == 0 ? "Retirar" : "Depositar")
+     cx = @fundo.contents.text_size(@fundo.nome).width
+     @fundo.contents.draw_text(0, 0, cx, 32, @fundo.nome, 2)
+     @fundo.visible = true
+
+     @op.active = false
+     @din.visible = true
+     @din.active = true
+     return
+   end
+
+  end
+
+  def numero
+   if(Input.trigger?(Input::B)) then
+     @fundo.visible = false
+     @fundo.contents.clear
+     @op.active = true
+     @din.visible = false
+     @din.active = false
+     @din.contents.clear
+     return
+   end
+   if(Input.trigger?(Input::C)) then
+     $game_banco.dinheiro = $game_party.gold
+     if(@op.index == 0) then
+      $game_banco.tarefa = 1
+      $game_banco.retirada = @din.number
+      $game_banco.Executar
+      return
+     elsif(@op.index == 1) then
+      $game_banco.tarefa = 2
+      $game_banco.deposito = @din.number
+      $game_banco.Executar
+      return
+     end
+   end
+  end
+
+end
+
+
+CONFIGURANDO E CHAMANDO
+
+Vá até o Scene_Title e procure por:
+Codigo:
+$game_player      = Game_Player.new
+
+
+Coloque abaixo:
+Codigo:
+$game_banco       = Game_Banco.new
+
+Para chamar é só fazer um $scene = Scene_Banco.new
+
+Testem e deem suas sugestões.

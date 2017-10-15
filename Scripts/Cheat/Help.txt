@@ -1,0 +1,17 @@
+ÍCONE NECESSÁRIO (Coloque na pasta Icons, não na Pictures)
+
+
+Instruções
+Após colocar o arquivo "cheat.png" na pasta Icons de seu projeto, ponha o script acima de main com qualquer nome que desejar. Então, crie um evento, e vá na terceira aba e procure por "Chamar Script". Cole o texto a seguir
+CODE$scene = Scene_Cheats.new
+Dê um ok, e o script de códigos será chamado no evento que você colocou o "Chamar Script".
+
+Customização
+Você pode customizar o script normalmente entre as linhas 68 e 128 (Está escrito "Start Editing" e "Stop Editing".)
+Para criar/editar novos códigos, siga as instruções contidas no script, mas lembre-se que seu código NÃO DEVE TER mais que 17 carácteres.
+
+OBS: Os códigos não tem "case sensitive", isto é, o código exemplo "estourico" também pode ser inserido como "eStOuRiCo" ou "ESTOURICO", não fará diferença.
+
+OBS²: Você pode criar sua própria imagem de "cheat.png", mas não mude o nome do arquivo e faça essa imagem ter 24x24 pixels.
+
+

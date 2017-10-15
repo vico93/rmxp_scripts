@@ -1,0 +1,418 @@
+Bem tenho aqui um sistema de saves muito loko! Da para adicionar ate 99 slots de save no seu jogo! Crie uma nova classe acima de Main Chamada KGC_2000StyleSave e coloque o codigo abaixo! 
+ 
+Código:	   
+################################################################## 
+###################### KGC_2000StyleSave ######################### 
+################################################################## 
+#  Modifica a janela do save 
+################################################################## 
+
+module KGC 
+# Defina aqui o numero maximo de saves 
+SAVEFILE_NUMBER = 15 
+# Numero de imagens dos battlers por save. 
+SAVEFILE_ACTORS = 5 
+end 
+
+
+$imported["2000StyleSave"] = true 
+
+#============================================================================== 
+# ¦ Window_SaveFile 
+#============================================================================== 
+
+class Window_SaveFile < Window_Base 
+def initialize(file_index, filename) 
+super(0, 64 + file_index % KGC::SAVEFILE_NUMBER * 138, 640, 138) 
+self.contents = Bitmap.new(width - 32, height - 32) 
+@file_index = file_index 
+@filename = "Save#{@file_index + 1}.rxdata" 
+@time_stamp = Time.at(0) 
+@file_exist = FileTest.exist?(@filename) 
+if @file_exist 
+file = File.open(@filename, "r") 
+@time_stamp = file.mtime 
+@characters = Marshal.load(file) 
+@frame_count = Marshal.load(file) 
+@game_system = Marshal.load(file) 
+@game_switches = Marshal.load(file) 
+@game_variables = Marshal.load(file) 
+@game_self_switches = Marshal.load(file) 
+@game_screen = Marshal.load(file) 
+@game_actors = Marshal.load(file) 
+@game_party = Marshal.load(file) 
+@game_troop = Marshal.load(file) 
+@game_map = Marshal.load(file) 
+@total_sec = @frame_count / Graphics.frame_rate 
+file.close 
+end 
+refresh 
+@selected = false 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+def refresh 
+# MapInfo.rxdata ???? 
+mapinfo = load_data("Data/MapInfos.rxdata") 
+self.contents.clear 
+# ????????? 
+self.contents.font.color = normal_color 
+name = "Save #{@file_index + 1}" 
+self.contents.draw_text(4, 0, 600, 32, name) 
+@name_width = contents.text_size(name).width 
+# ?????????????? 
+if @file_exist 
+# ????????? 
+x = 116 
+actor = @characters[0] 
+if actor != nil && actor.is_a?(Game_Actor) 
+self.contents.font.size = 20 
+draw_actor_name(actor, x, -4) 
+draw_actor_level(actor, x, 20) 
+draw_actor_hp(actor, x, 44) 
+self.contents.font.size = 22 
+end 
+x = 256 
+for i in 0...@characters.size 
+actor = @characters[i] 
+next if !actor.is_a?(Game_Actor) || actor == nil 
+bitmap = RPG::Cache.battler(actor.battler_name, actor.battler_hue) 
+cw = bitmap.rect.width 
+ch = bitmap.rect.height 
+src_rect = Rect.new(0, 0, cw, ch) 
+dest_rect = Rect.new(x, 0, cw / 2, ch / 2) 
+x += dest_rect.width 
+self.contents.stretch_blt(dest_rect, bitmap, src_rect) 
+end 
+# ???????? 
+hour = @total_sec / 60 / 60 
+min = @total_sec / 60 % 60 
+sec = @total_sec % 60 
+time_string = sprintf("%02d:%02d:%02d", hour, min, sec) 
+self.contents.font.color = normal_color 
+self.contents.draw_frame_text(4, 0, 600, 32, time_string, 2) 
+# ?????????? 
+self.contents.font.color = normal_color 
+time_string = @time_stamp.strftime("%Y/%m/%d %H:%M") 
+self.contents.draw_frame_text(4, 32, 600, 32, time_string, 2) 
+if $imported["PlaceMission"] 
+# ????????? 
+if @game_system.place == nil || @game_system.place == "" 
+# ??????? 
+place = mapinfo[@game_map.map_id].name 
+else 
+place = @game_system.place 
+end 
+self.contents.font.color = system_color 
+cx = self.contents.text_size("Local").width 
+self.contents.draw_shadow_text(4, 80, cx, 32, "Local") 
+self.contents.font.color = normal_color 
+self.contents.draw_shadow_text(8 + cx, 80, 596 - cx, 32, place) 
+end 
+end 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Scene_Title 
+#============================================================================== 
+
+class Scene_Title 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+alias update_KGC_2000StyleSave update 
+def update 
+# ????????? 
+unless @continue_checked 
+for i in 0...KGC::SAVEFILE_NUMBER 
+if FileTest.exist?("Save#{i+1}.rxdata") 
+found = true 
+break 
+end 
+end 
+# ??????????????? 
+if found 
+# ????????????????? 
+@command_window.index = 1 
+end 
+@continue_checked = true 
+end 
+
+# ??????? 
+update_KGC_2000StyleSave 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Scene_File 
+#------------------------------------------------------------------------------ 
+#  ???????????????????????? 
+#============================================================================== 
+
+class Scene_File 
+#-------------------------------------------------------------------------- 
+# ? ????? 
+#-------------------------------------------------------------------------- 
+def main 
+# ??????????? 
+@help_window = Window_Help.new 
+@help_window.set_text(@help_text) 
+# ??????????????? 
+@savefile_windows = [] 
+for i in 0...KGC::SAVEFILE_NUMBER 
+@savefile_windows.push(Window_SaveFile.new(i, make_filename(i))) 
+@savefile_windows[i].visible = false 
+end 
+# ????????? 
+window_alpha if $imported["MenuAlter"] && KGC::MA_MENU_TRANSPARENT 
+# ?????????????? 
+@file_index = $game_temp.last_file_index 
+@savefile_windows[@file_index].selected = true 
+# ??????????? 
+i = 0 
+if @file_index <= KGC::SAVEFILE_NUMBER - 3 
+while i <= 2 
+@savefile_windows[@file_index + i].y = 138 * i + 64 
+@savefile_windows[@file_index + i].visible = true 
+i += 1 
+@index_y = 0 
+end 
+else 
+while i <= 2 
+@savefile_windows[@file_index - 2 + i].y = 138 * i + 64 
+@savefile_windows[@file_index - 2 + i].visible = true 
+i += 1 
+@index_y = 2 
+end 
+end 
+# ????????? 
+Graphics.transition 
+# ?????? 
+loop do 
+# ???????? 
+Graphics.update 
+# ??????? 
+Input.update 
+# ?????? 
+update 
+# ???????????????? 
+if $scene != self 
+break 
+end 
+end 
+# ????????? 
+Graphics.freeze 
+# ???????? 
+@help_window.dispose 
+for i in @savefile_windows 
+i.dispose 
+end 
+# ???????? 
+@spriteset.dispose if @spriteset != nil 
+end 
+#-------------------------------------------------------------------------- 
+# ? ?????? 
+#-------------------------------------------------------------------------- 
+def update 
+# ???????? 
+@help_window.update 
+for i in @savefile_windows 
+i.update 
+end 
+# C ?????????? 
+if Input.trigger?(Input::C) 
+# ???? on_decision (??????) ??? 
+on_decision(make_filename(@file_index)) 
+$game_temp.last_file_index = @file_index 
+return 
+end 
+# B ?????????? 
+if Input.trigger?(Input::B) 
+# ???? on_cancel (??????) ??? 
+on_cancel 
+return 
+end 
+# ?????????????? 
+if Input.repeat?(Input::DOWN) 
+# ???????????????????????? 
+# ?????????????????????? 
+if Input.trigger?(Input::DOWN) or @file_index < KGC::SAVEFILE_NUMBER - 1 
+# ???? SE ??? 
+$game_system.se_play($data_system.cursor_se) 
+# ????????? 
+@savefile_windows[@file_index].selected = false 
+@file_index = (@file_index + 1) % KGC::SAVEFILE_NUMBER 
+@savefile_windows[@file_index].selected = true 
+@index_y += 1 
+# ??????? 
+self.move_window 
+return 
+end 
+end 
+# ?????????????? 
+if Input.repeat?(Input::UP) 
+# ???????????????????????? 
+# ?????????? 0 ??????? 
+if Input.trigger?(Input::UP) or @file_index > 0 
+# ???? SE ??? 
+$game_system.se_play($data_system.cursor_se) 
+# ????????? 
+@savefile_windows[@file_index].selected = false 
+@file_index = (@file_index + KGC::SAVEFILE_NUMBER - 1) % KGC::SAVEFILE_NUMBER 
+@savefile_windows[@file_index].selected = true 
+@index_y -= 1 
+# ??????? 
+self.move_window 
+return 
+end 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????????? 
+#-------------------------------------------------------------------------- 
+def move_window 
+# ????????????? 
+if @index_y >= 0 && @index_y <= 2 
+return 
+end 
+# ??????????????????? 
+for i in 0...KGC::SAVEFILE_NUMBER 
+@savefile_windows[i].visible = false 
+end 
+i = 0 
+if @index_y == 3 # ????? 
+if @file_index == 0 # ?????????? 
+while i <= 2 
+@savefile_windows[@file_index + i].y = 138 * i + 64 
+@savefile_windows[@file_index + i].visible = true 
+i += 1 
+end 
+@index_y = 0 
+else # ??????? 
+while i <= 2 
+@savefile_windows[@file_index - 2 + i].y = 138 * i + 64 
+@savefile_windows[@file_index - 2 + i].visible = true 
+i += 1 
+end 
+@index_y = 2 
+end 
+elsif @index_y == -1 # ????? 
+if @file_index == KGC::SAVEFILE_NUMBER - 1 # ?????????? 
+while i <= 2 
+@savefile_windows[@file_index - 2 + i].y = 138 * i + 64 
+@savefile_windows[@file_index - 2 + i].visible = true 
+i += 1 
+end 
+@index_y = 2 
+else # ??????? 
+while i <= 2 
+@savefile_windows[@file_index + i].y = 138 * i + 64 
+@savefile_windows[@file_index + i].visible = true 
+i += 1 
+end 
+@index_y = 0 
+end 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+def window_alpha 
+# [Scene_Save]???? 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Scene_Save 
+#============================================================================== 
+
+class Scene_Save < Scene_File 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+def window_alpha 
+# ?????????? 
+@spriteset = Spriteset_Map.new 
+# ??????????? 
+@help_window.back_opacity = 160 
+for window in @savefile_windows 
+window.back_opacity = 160 
+end 
+end 
+#-------------------------------------------------------------------------- 
+# ? ??????????? 
+# file : ??????????????? (??????) 
+#-------------------------------------------------------------------------- 
+def write_save_data(file) 
+# ??????????????????????? 
+characters = [] 
+max = [$game_party.actors.size, 
+$imported["LargeParty"] ? KGC::SAVEFILE_ACTORS : 4].min 
+for i in 0...max 
+characters.push($game_party.actors[i]) 
+end 
+# ????????????????????????? 
+Marshal.dump(characters, file) 
+# ?????????????????????? 
+Marshal.dump(Graphics.frame_count, file) 
+# ?????? 1 ??? 
+$game_system.save_count += 1 
+# ????????????? 
+# (??????????????????????????) 
+$game_system.magic_number = $data_system.magic_number 
+# ???????????????? 
+Marshal.dump($game_system, file) 
+Marshal.dump($game_switches, file) 
+Marshal.dump($game_variables, file) 
+Marshal.dump($game_self_switches, file) 
+Marshal.dump($game_screen, file) 
+Marshal.dump($game_actors, file) 
+Marshal.dump($game_party, file) 
+Marshal.dump($game_troop, file) 
+Marshal.dump($game_map, file) 
+Marshal.dump($game_player, file) 
+end 
+end 
+
+#??????????????????????????????????????? 
+
+#============================================================================== 
+# ¦ Scene_Load 
+#------------------------------------------------------------------------------ 
+#  ????????????????? 
+#============================================================================== 
+
+class Scene_Load < Scene_File 
+#-------------------------------------------------------------------------- 
+# ? ????????? 
+#-------------------------------------------------------------------------- 
+def initialize 
+# ??????????????? 
+$game_temp = Game_Temp.new 
+# ?????????????????? 
+$game_temp.last_file_index = 0 
+latest_time = Time.at(0) 
+for i in 0...KGC::SAVEFILE_NUMBER 
+filename = make_filename(i) 
+if FileTest.exist?(filename) 
+file = File.open(filename, "r") 
+if file.mtime > latest_time 
+latest_time = file.mtime 
+$game_temp.last_file_index = i 
+end 
+file.close 
+end 
+end 
+super("Você deseja continuar qual aventura?") 
+end 
+end 
+	 
+

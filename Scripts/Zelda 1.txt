@@ -1,0 +1,1083 @@
+#======================================
+# ¦ Squad Based Action Battle System
+#======================================
+#  By: Near Fantastica
+#   Date: 02.07.05
+#   Version: 3.4
+#   Thanks To: Cybersam for the Keyboard Script 
+#   Thanks To: Prexus for the Graphics
+#======================================
+#
+#======================================
+# ¦ Commandes des personnages
+#======================================
+#   E   ? Echanger le héros avec le suivant personnage.
+#   R   ? Echanger le héros avec le précédent personnage.
+#   T   ? Attendre le héros.
+#   Y   ? Attendre les alliés.
+#   U   ? Rassembler les alliés.
+#   I    ? Courir.
+#   O   ? Ramper (se dissimuler aux yeux des ennemis.).
+#   P    ? Masquer les informations de l' écran (hp, membres du groupe etc...) (ou HUD)
+#   C ou ESPACE ou ENTREE    ? Attaque au corps à corps. ( Commande modifié)
+#   G   ? Attaque à distance.
+#   H   ? Touche assignable de compétence 1.
+#   J    ? Touche assignable de compétence 2.
+#   K    ? Touche assignable de compétence 3.
+#   L    ? Touche assignable de compétence 4.
+#   N    ? Formation large.
+#   M    ? Formation serrée.
+#======================================
+#
+#======================================
+# ¦ Paramètres de l' intelligence artificielle des ennemis. (ces informations sont à mettre sous forme de commentaires dans l' événement).
+#======================================
+#   Nom. (mettez ici ce que vous voulez, cela n' a pas d' influence)
+#   Nom de l' ennemi dans la base de données (Database).
+#---------------------------------------------------------------------------
+#   Behavior (comportement)
+#   Passif = 0 ? L' événement (ennemi) n' attaquera que si il est attaqué.
+#   Aggressif = 1 ? L' événement n' attaquera que si il voit ou entend le héro.
+#   Protecteur = 2 ? L' événement n' attaquera que si un de ses coéquipiers est attaqué dans son champ de vision.
+#   Défenseur = 3 ? L' événement attaquera le héro une fois celui-ci découvert par lui ou un de ses coéquipiers.
+#---------------------------------------------------------------------------
+#   Detection (Détection)
+#   Sound (Son)= range ? La faculté auditive du pnj, le nombre mis correspond à son rayon de détection. Sourd si mis à 0.
+#   Sight (Vue) = range ? La perception visuelle du pnj, aveugle si mis à 0.
+#---------------------------------------------------------------------------
+#   Aggressiveness (Agressivité)
+#   Aggressiveness = Level ? Plus le chiffre est élevé, moins le pnj est agressif.
+#---------------------------------------------------------------------------
+#   Movement (Mouvement)
+#   Speed = Level ? La vitesse de déplacement du pnj en combat. (de 1 à 6)
+#   Frequency = Level  ? La fréquence de déplacement du pnj en combat. (de 1 à 6)
+#---------------------------------------------------------------------------
+#   Trigger (Bouton)
+#   Détruit = 0  ? L' événement sera effacé à sa mort.
+#   Bouton = 1  ? Le bouton Switch[ID] sera activé à la mort de l' évenement.
+#   Variable = 2  ? La variable Varible[ID] sera mise à une valeure indiquée à la mort de l' évenement (ex: "Trigger 2 [005]=4")
+#   Bouton Local = 3 ? le bouton local Local_Switch[ID] sera activé à la mort de l' événement. (ex: "Trigger 3 [A]" )
+#
+#======================================
+# ¦ ABS CONSTANTS
+#======================================
+#   ? DEAD_DISPLAY is the sprite that is displayed when an actor is dead
+#   ? DEAD_DISPLAY[Data_Base_Actor_ID] = ["Character_Set_Name", X of sprite, Y of sprite] 
+#---------------------------------------------------------------------------
+$DEAD_DISPLAY = {}
+$DEAD_DISPLAY[1] = ["189-Down01", 2, 0]   #Actor 1
+$DEAD_DISPLAY[2] = ["189-Down01", 6, 1]   #Actor 2
+$DEAD_DISPLAY[7] = ["190-Down02", 8, 0]   #Actor 7
+$DEAD_DISPLAY[8] = ["191-Down03", 4, 1]   #Actor 8
+#---------------------------------------------------------------------------
+#   ? RANGE_ELEMENT_ID is which element the range is set to
+#---------------------------------------------------------------------------
+$RANGE_ELEMENT_ID = 17 #Element 17
+#---------------------------------------------------------------------------
+#   ? RANGE_DISPLAY is the setup for range weapons
+#   ? RANGE_DISPLAY[Data_Base_Weapon_ID] = 
+#      ["Character_Set_Name", New Animation Id, Item Id of Ammo]
+#---------------------------------------------------------------------------
+$RANGE_DISPLAY = {}
+$RANGE_DISPLAY[17] = ["Arrow", 4, 33] #Weapon 17
+#======================================
+
+class Action_Battle_System
+  #--------------------------------------------------------------------------
+  attr_accessor :ally_ai_active
+  attr_accessor :enemies
+  attr_accessor :display
+  attr_accessor :hud
+  attr_accessor :hud_pc
+  attr_accessor :hudname
+  attr_accessor :dash_level
+  attr_accessor :sneak_level
+  attr_accessor :transer_player
+  attr_accessor :ranged
+  attr_accessor :skill_key
+  attr_accessor :player_engaged
+  attr_accessor :close_follow
+  #--------------------------------------------------------------------------
+  def initialize
+    # Ally AI Flag
+    @ally_ai_active = true
+    # Enemies List
+    @enemies = {}
+    # Range List
+    @ranged = {}
+    # Dashing
+    @dashing = false
+    @dash_restore = false
+    @dash_reduce= false
+    @dash_timer = 0
+    @dash_level = 5
+    @dash_sec = 0
+    # Sneaking
+    @sneaking = false
+    @sneak_restore = false
+    @sneak_reduce= false
+    @sneak_timer = 0
+    @sneak_level = 5
+    @sneak_sec = 0
+    # Display
+    @display = []
+    @display[0] = false
+    @display[1] = ""
+    # Hud
+    @hud = true
+    @hud_pc = false
+    @hudname = "HUD-Display"
+    # Transfering Player
+    @transer_player = false
+    # Skill Keys
+    @skill_key = {}
+    @skill_key[1] = 0
+    @skill_key[2] = 0
+    @skill_key[3] = 0
+    @skill_key[4] = 0
+     # Ally tracking
+    @player_engaged = false
+    @player_obect = nil
+    # Party Command
+   @close_follow = false
+  end
+  #--------------------------------------------------------------------------
+  def hud_control(flag)
+    @hud = flag
+    return
+  end
+  #--------------------------------------------------------------------------
+  def hud_player_control(flag)
+    @hud_pc = flag
+    return
+  end
+  #--------------------------------------------------------------------------
+  def set_ally_ai(tirgger)
+    @ally_ai_active = tirgger
+    return
+  end
+  #--------------------------------------------------------------------------
+  def refresh(event, list, character_name)
+    @enemies.delete(event.id)
+    return if character_name == ""
+    return if list == nil
+    for i in 0...list.size
+      if list[i].code == 108 and list[i].parameters == ["ABS Event Command List"]
+        name = list[i+1].parameters[0].split
+        for x in 1...$data_enemies.size
+          enemy = $data_enemies[x]
+          if name[1].upcase == enemy.name.upcase
+            @enemies[event.id] = Game_ABS_Enemy.new(enemy.id)
+            @enemies[event.id].event_id = event.id
+            default_setup(event.id)
+            behavior = list[i+2].parameters[0].split
+            @enemies[event.id].behavior = behavior[1].to_i
+            sound = list[i+3].parameters[0].split
+            @enemies[event.id].detection[0] = sound[1].to_i
+            sight = list[i+4].parameters[0].split
+            @enemies[event.id].detection[1] = sight[1].to_i
+            aggressiveness = list[i+5].parameters[0].split
+            @enemies[event.id].aggressiveness = aggressiveness[1].to_i
+            speed = list[i+6].parameters[0].split
+            @enemies[event.id].speed = speed[1].to_i
+            frequency = list[i+7].parameters[0].split
+            @enemies[event.id].frequency = frequency[1].to_i
+            trigger = list[i+8].parameters[0].split
+            @enemies[event.id].trigger= [trigger[1].to_i, trigger[2].to_i, trigger[3].to_i]
+          end
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def default_setup(id)
+    @enemies[id].behavior = 1
+    @enemies[id].detection[0] = 1
+    @enemies[id].detection[1] = 4
+    @enemies[id].aggressiveness = 2
+    @enemies[id].engaged[0] = false
+    @enemies[id].engaged[1] = 0
+    @enemies[id].speed = 4
+    @enemies[id].frequency = 5
+  end
+  #--------------------------------------------------------------------------
+  def update
+    update_dash if @sneaking == false 
+    update_sneak if @dashing == false
+    update_enemies
+    update_range
+    update_allies if @ally_ai_active == true
+    Graphics.frame_reset
+  end
+  #--------------------------------------------------------------------------
+  def update_range
+    for range in @ranged.values
+      range.update
+    end
+  end
+  #--------------------------------------------------------------------------
+  def update_allies
+    for ally in $game_allies.values
+      next if ally.under_attack == true
+      if @player_engaged == true
+        ally.under_attack = true
+        ally.forced_attack = true
+        ally.object = @player_obect        
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def update_dash
+    if Kboard.keyb($R_Key_I) == 1
+      if $game_player.moving?
+        @dashing = true
+        $game_player.move_speed = 5
+        for ally in $game_allies.values
+          ally.move_speed = 5
+        end
+        @dash_restore = false
+        if @dash_reduce == false
+          @dash_timer = 50 # Initial time off set
+          @dash_reduce = true
+        else
+          @dash_timer-= 1
+        end
+        @dash_sec = (@dash_timer / Graphics.frame_rate)%60
+        if @dash_sec == 0
+          if @dash_level != 0
+            @dash_level -= 1
+            @dash_timer = 50 # Timer Count
+          end
+        end
+        if @dash_level == 0
+          @dashing = false
+          $game_player.move_speed = 4
+          for ally in $game_allies.values
+          ally.move_speed = 4
+        end
+        end
+      end
+    else
+      @dashing = false
+      $game_player.move_speed = 4
+      for ally in $game_allies.values
+          ally.move_speed = 4
+        end
+      @dash_reduce = false
+      if @dash_restore == false
+        @dash_timer = 80 # Initial time off set
+        @dash_restore = true
+      else
+        @dash_timer-= 1
+      end
+      @dash_sec = (@dash_timer / Graphics.frame_rate)%60
+      if @dash_sec == 0
+        if @dash_level != 5
+          @dash_level+= 1
+          @dash_timer = 60
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def update_sneak
+    if Kboard.keyb($R_Key_O) == 1
+      if $game_player.moving?
+        @sneaking = true
+        $game_player.move_speed = 3
+        for ally in $game_allies.values
+          ally.move_speed = 3
+        end
+        @sneak_restore = false
+        if @sneak_reduce == false
+          @sneak_timer = 50 # Initial time off set
+          @sneak_reduce = true
+        else
+          @sneak_timer-= 1
+        end
+        @sneak_sec = (@sneak_timer / Graphics.frame_rate)%60
+        if @sneak_sec == 0
+          if @sneak_level != 0
+            @sneak_level -= 1
+            @sneak_timer = 100 # Timer Count
+          end
+        end
+        if @sneak_level == 0
+          @sneaking = false
+          $game_player.move_speed = 4
+          for ally in $game_allies.values
+            ally.move_speed = 4
+          end
+        end
+      end
+    else
+      @sneaking = false
+      $game_player.move_speed = 4
+      for ally in $game_allies.values
+        ally.move_speed = 4
+      end
+      @sneak_reduce = false
+      if @sneak_restore == false
+        @sneak_timer = 80 # Initial time off set
+        @sneak_restore = true
+      else
+        @sneak_timer-= 1
+      end
+      @sneak_sec = (@sneak_timer / Graphics.frame_rate)%60
+      if @sneak_sec == 0
+        if @sneak_level != 5
+          @sneak_level+= 1
+          @sneak_timer = 60 # Timer Count
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def update_enemies
+    for enemy in @enemies.values
+      if enemy.ranged != nil
+        enemy.ranged.update
+      end
+      case enemy.behavior
+      when 0
+        if enemy.engaged[0] == true
+          next if engaged_enemy_detection?(enemy,1) == true
+          next if engaged_enemy_detection?(enemy, 0) == true
+        end
+      when 1
+        if enemy.engaged[0] == true
+          next if engaged_enemy_detection?(enemy,1) == true
+          next if engaged_enemy_detection?(enemy, 0) == true
+        else
+          next if enemy_detection_sight?(enemy) == true
+          next if enemy_detection_sound?(enemy) == true
+        end
+      when 2
+        if enemy.engaged[0] == true
+          next if engaged_enemy_linking?(enemy, 1) == true
+          next if engaged_enemy_linking?(enemy, 0) == true
+        else
+          next if enemy_linking?(enemy) == true
+        end
+      when 3
+        if enemy.engaged[0] == true
+          next if engaged_enemy_linking?(enemy,1) == true
+          next if engaged_enemy_linking?(enemy,0) == true
+        else
+          next if enemy_detection_sight?(enemy) == true
+          next if enemy_detection_sound?(enemy) == true
+          next if enemy_linking?(enemy) == true
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def set_event_movement(enemy)
+    event = $game_map.events[enemy.event_id]
+    enemy.move_type = event.move_type
+    enemy.move_frequency = event.move_frequency
+    enemy.move_speed = event.move_speed
+    if enemy.engaged[1] == 0
+        event.object = $game_player
+    else
+        event.object = $game_allies[enemy.engaged[1]]
+    end
+    event.move_type = 4
+    event.move_toward_object
+    event.move_frequency = enemy.frequency 
+    event.move_speed = enemy.speed
+  end
+  #--------------------------------------------------------------------------
+  def return_event_movement(enemy)
+    event = $game_map.events[enemy.event_id]
+    event.move_type = enemy.move_type
+    event.move_frequency = enemy.move_frequency
+    event.move_speed = enemy.move_speed
+  end
+  #--------------------------------------------------------------------------
+  def engaged_enemy_linking?(enemy, level)
+    if enemy.detection[level] != 0
+      if enemy.engaged[1] == 0
+        object = $game_player
+      else
+        object = $game_allies[enemy.engaged[1]]
+      end
+      if in_range?($game_map.events[enemy.event_id], object, enemy.detection[level])
+        enemy.linking = false
+        enemy_attack(enemy)
+        return true
+      else
+        if enemy.linking == false
+          enemy.engaged[0] = false
+          if enemy.engaged[1] == 0
+            @player_engaged = false
+          else
+            $game_allies[enemy.engaged[1]].under_attack = false
+          end
+          enemy.engaged[1] = 0
+          return_event_movement(enemy)
+          return false
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def enemy_linking?(enemy)
+    for key in @enemies.keys
+      if in_range?($game_map.events[enemy.event_id], $game_map.events[key], enemy.detection[1])
+        if @enemies[key].engaged[0] == true
+          enemy.engaged[0] = true
+          enemy.engaged[1] = @enemies[key].engaged[1]
+          enemy.linking = true
+          set_event_movement(enemy)
+          return true
+        end
+      end
+    end
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def enemy_detection_sound?(enemy)
+    if enemy.detection[0] != 0
+      if in_range?($game_map.events[enemy.event_id], $game_player, enemy.detection[0])
+        if @sneaking == true
+          return false
+        end
+        enemy.engaged[0] = true
+        enemy.engaged[1] = 0
+        set_event_movement(enemy)
+        return true
+      end
+      for key in $game_allies.keys
+        if $game_allies[key].map_id == $game_map.map_id
+          next if $game_allies[key].dead == true
+          if in_range?($game_map.events[enemy.event_id], $game_allies[key], enemy.detection[0])
+            if $game_party.actors[key] != nil
+              if @sneaking == true
+                return false
+              end
+              enemy.engaged[0] = true
+              enemy.engaged[1] = key
+              set_event_movement(enemy)
+              return true
+            end
+          end
+        end
+      end
+    end
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def enemy_detection_sight?(enemy)
+    if enemy.detection[1] != 0
+      if in_range?($game_map.events[enemy.event_id], $game_player, enemy.detection[1])
+        if facing?($game_map.events[enemy.event_id], $game_player)
+          enemy.engaged[0] = true
+          enemy.engaged[1] = 0
+          set_event_movement(enemy)
+          return true
+        end
+      end
+      for key in $game_allies.keys
+        if $game_allies[key].map_id == $game_map.map_id
+          next if $game_allies[key].dead == true
+          if in_range?($game_map.events[enemy.event_id], $game_allies[key], enemy.detection[1])
+            if facing?($game_map.events[enemy.event_id], $game_allies[key])
+              if $game_party.actors[key] != nil
+                enemy.engaged[0] = true
+                enemy.engaged[1] = key
+                set_event_movement(enemy)
+                return true
+              end
+            end
+          end
+        end
+      end
+    end
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def engaged_enemy_detection?(enemy, level)
+    if enemy.detection[level] != 0
+      if enemy.engaged[1] == 0
+        object = $game_player
+      else
+        id = enemy.engaged[1]
+        object = $game_allies[id]
+      end
+      if in_range?($game_map.events[enemy.event_id], object, enemy.detection[level])
+        enemy_attack(enemy)
+        return true
+      else
+        enemy.engaged[0] = false
+        if enemy.engaged[1] == 0
+          @player_engaged = false
+        else
+          $game_allies[enemy.engaged[1]].under_attack = false
+        end
+        enemy.engaged[1] = 0
+        return_event_movement(enemy)
+        return false
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def in_range?(element, object, range)
+    x = (element.x - object.x) * (element.x - object.x)
+    y = (element.y - object.y) * (element.y - object.y)
+    r = x + y
+    if r <= (range * range)
+       return true
+    else
+      return false
+    end
+  end
+  #--------------------------------------------------------------------------
+  def in_range(element, range)
+    objects = []
+    x = (element.x - $game_player.x) * (element.x - $game_player.x)
+    y = (element.y - $game_player.y) * (element.y - $game_player.y)
+    r = x + y
+    if r <= (range * range)
+      objects.push($game_party.actors[0])
+    end
+    for key in $game_allies.keys
+      ally = $game_allies[key]
+      x = (element.x - ally.x) * (element.x - ally.x)
+      y = (element.y - ally.y) * (element.y - ally.y)
+     r = x + y
+      if r <= (range * range)
+        next if $game_party.actors[key] == nil
+        objects.push($game_party.actors[key])
+      end
+    end
+    return objects
+  end
+  #--------------------------------------------------------------------------
+  def facing?(element, object)
+    if element.direction == 2
+      if object.y >= element.y
+        return true
+      end
+    end
+    if element.direction == 4
+      if object.x <= element.x
+        return true
+      end
+    end
+    if element.direction == 6
+      if object.x  >= element.x
+        return true
+      end
+    end
+    if element.direction == 8
+      if object.y <= element.y
+        return true
+      end
+    end
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def in_line?(element, object)
+    if element.direction == 2
+      if object.x == element.x
+        return true
+      end
+    end
+    if element.direction == 4
+      if object.y == element.y
+        return true
+      end
+    end
+    if element.direction == 6
+      if object.y == element.y
+        return true
+      end
+    end
+    if element.direction == 8
+      if object.x == element.x
+        return true
+      end
+    end
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def enemy_pre_attack(enemy, actions)
+    if enemy.hp * 100.0 / enemy.maxhp > actions.condition_hp
+      return true
+    end
+    if $game_party.max_level < actions.condition_level
+      return true
+    end
+    switch_id = actions.condition_switch_id
+    if actions.condition_switch_id > 0 and $game_switches[switch_id] == false
+      return true
+    end
+    n = rand(11) 
+    if actions.rating < n
+      return true
+    end
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def hit_actor(object, enemy)
+    return if object == nil
+    object.jump(0, 0)
+    object.animation_id = enemy.animation2_id
+  end
+  #--------------------------------------------------------------------------
+  def actor_non_dead?(actor, enemy)
+    if actor.dead?
+      return_event_movement(enemy)
+      enemy.engaged[0] = false
+      enemy.engaged[1] = 0
+      $game_party.kill_actor(actor.id)
+      if $game_party.all_dead?
+        $game_temp.gameover = true
+      end
+      return false
+    end
+    return true
+  end
+  #--------------------------------------------------------------------------
+  def set_engaged(enemy)
+    if enemy.engaged[1] == 0
+      @player_engaged = true
+      @player_obect = $game_map.events[enemy.event_id]
+    else
+      $game_allies[enemy.engaged[1]].object = $game_map.events[enemy.event_id]
+      $game_allies[enemy.engaged[1]].under_attack = true
+    end
+  end
+  #--------------------------------------------------------------------------
+  def enemy_attack(enemy)
+    for actions in enemy.actions
+      next if enemy_pre_attack(enemy, actions) == true
+      case actions.kind
+      when 0 #Basic
+        if Graphics.frame_count % (enemy.aggressiveness * 20) == 0
+          case actions.basic
+          when 0 #Attack
+            if enemy.engaged[1] == 0
+              object = $game_player
+            else
+              object = $game_allies[enemy.engaged[1]]
+            end
+            if in_range?($game_map.events[enemy.event_id], object, 1) and 
+            facing?($game_map.events[enemy.event_id], object)
+              actor = $game_party.actors[enemy.engaged[1]]
+              actor.attack_effect(enemy)
+              set_engaged(enemy)
+              if $game_party.actors[enemy.engaged[1]].damage != "Miss" and $game_party.actors[enemy.engaged[1]].damage != 0
+                hit_actor(object, enemy)
+              end
+              actor_non_dead?(actor, enemy)
+              return
+            end
+          when 1..3 #Nothing
+            return
+          end
+        end
+      when 1 #Skill
+        skill = $data_skills[actions.skill_id]
+        case skill.scope
+        when 1 # One Enemy
+          if Graphics.frame_count % (enemy.aggressiveness * 10) == 0
+            if enemy.engaged[1] == 0
+              object = $game_player
+              actor = $game_party.actors[0]
+            else
+              object = $game_allies[enemy.engaged[1]]
+              actor = $game_party.actors[enemy.engaged[1]]
+            end
+            if in_line?($game_map.events[enemy.event_id], object)
+              next if enemy.can_use_skill?(skill) == false
+              next if enemy.ranged  != nil
+              enemy.ranged = Game_Ranged.new("Magic", $game_map.events[enemy.event_id], enemy, skill)
+              enemy.sp -= skill.sp_cost
+            end
+          end
+        when 2 # All Emenies
+          if Graphics.frame_count % (enemy.aggressiveness * 100) == 0
+            next if enemy.can_use_skill?(skill) == false
+            enemy.sp -= skill.sp_cost
+            actors = in_range($game_map.events[enemy.event_id], 7)
+            next if actors[0].dead?
+            $game_map.events[enemy.event_id].animation_id = skill.animation2_id
+            for actor in actors
+              actor.effect_skill(enemy, skill)
+              if $game_party.actors[enemy.engaged[1]].damage != "Miss" and $game_party.actors[enemy.engaged[1]].damage != 0
+                hit_actor(object, enemy)
+              end
+              set_engaged(enemy)
+              if enemy.engaged[1] == 0
+                object = $game_player
+              else
+                object = $game_allies[enemy.engaged[1]]
+              end
+              actor_non_dead?(actor, enemy)
+            end
+             return
+          end
+        when 3..4 # User
+          if Graphics.frame_count % (enemy.aggressiveness * 100) == 0
+            if enemy.hp < skill.power.abs
+              enemy.effect_skill(enemy, skill)
+              enemy.sp -= skill.sp_cost
+              $game_map.events[enemy.event_id].animation_id = skill.animation2_id
+            end
+            return
+          end
+        when 7 # User
+          if Graphics.frame_count % (enemy.aggressiveness * 100) == 0
+            if enemy.hp < skill.power.abs
+              enemy.effect_skill(enemy, skill)
+              enemy.sp -= skill.sp_cost
+              $game_map.events[enemy.event_id].animation_id = skill.animation2_id
+            end
+            return
+          end
+        end
+        return
+      end
+    end
+  else
+    return
+  end
+  #--------------------------------------------------------------------------
+  def hit_event(event, animation)
+    event.jump(0, 0)
+    return if animation == 0
+    event.animation_id = animation
+  end
+  #--------------------------------------------------------------------------
+  def event_non_dead?(enemy)
+    if enemy.dead?
+      if enemy.engaged[1] == 0
+        @player_engaged = false
+      else
+        $game_allies[enemy.engaged[1]].under_attack = false
+      end
+      treasure(enemy)
+      id = enemy.event_id
+      @enemies.delete(id)
+      event = $game_map.events[enemy.event_id]
+      event.character_name = ""
+      case enemy.trigger[0]
+      when 0
+        event.erase
+      when 1
+        print "EVENT " + event.id.to_s + "Trigger Not Set Right ~!" if enemy.trigger[1] == 0
+        $game_switches[enemy.trigger[1]] = true
+        $game_map.need_refresh = true
+      when 2
+        print "EVENT " + event.id.to_s + "Trigger Not Set Right ~!" if enemy.trigger[1] == 0
+         if enemy.trigger[2] == 0
+           $game_variables[enemy.trigger[1]] += 1
+          $game_map.need_refresh = true
+        else
+          $game_variables[enemy.trigger[1]] = enemy.trigger[2]
+          $game_map.need_refresh = true
+        end
+      when 3
+        value = "A" if enemy.trigger[1] == 1
+        value = "B" if enemy.trigger[1] == 2
+        value = "C" if enemy.trigger[1] == 3
+        value = "D" if enemy.trigger[1] == 4
+        print "EVENT " + event.id.to_s + "Trigger Not Set Right ~!" if value == 0
+        key = [$game_map.map_id, event.id, value]
+        $game_self_switches[key] = true
+        $game_map.need_refresh = true
+      end
+      return false
+    end
+    return true
+  end
+  #--------------------------------------------------------------------------
+  def treasure(enemy)
+    exp = 0
+    gold = 0
+    treasures = []
+    unless enemy.hidden
+      exp += enemy.exp
+      gold += enemy.gold
+      if rand(100) < enemy.treasure_prob
+        if enemy.item_id > 0
+          treasures.push($data_items[enemy.item_id])
+        end
+        if enemy.weapon_id > 0
+          treasures.push($data_weapons[enemy.weapon_id])
+        end
+        if enemy.armor_id > 0
+          treasures.push($data_armors[enemy.armor_id])
+        end
+      end
+    end
+    treasures = treasures[0..5]
+    for i in 0...$game_party.actors.size
+      actor = $game_party.actors[i]
+      if actor.cant_get_exp? == false
+        last_level = actor.level
+        actor.exp += exp
+        if actor.level > last_level
+          @display[0] = true
+          @display[1] = "LEVEL UP "
+          actor.hp = actor.maxhp
+          actor.sp = actor.maxsp
+        end
+      end
+    end
+    $game_party.gain_gold(gold)
+    for item in treasures
+      case item
+      when RPG::Item
+        $game_party.gain_item(item.id, 1)
+      when RPG::Weapon
+        $game_party.gain_weapon(item.id, 1)
+      when RPG::Armor
+        $game_party.gain_armor(item.id, 1)
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def player_attack
+    if $RANGE_DISPLAY[$game_party.actors[0].weapon_id]  == nil
+      if Graphics.frame_count % 2 == 0
+        for enemy in @enemies.values
+          event = $game_map.events[enemy.event_id]
+          if facing?($game_player, event) and in_range?($game_player, event, 1)
+            actor = $game_party.actors[0]
+            enemy.attack_effect(actor)
+            if enemy.damage != "Raté" and enemy.damage != 0
+              hit_event(event, $data_weapons[actor.weapon_id].animation2_id)
+            end
+            if event_non_dead?(enemy)
+              @player_engaged = false
+              if enemy.engaged[0] == false
+                enemy.engaged[0] = true
+                enemy.engaged[1] = 0
+                set_event_movement(enemy)
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def player_ranged
+    weapon = $data_weapons[$game_party.actors[0].weapon_id]
+    return if weapon == nil
+    if weapon.element_set.include?($RANGE_ELEMENT_ID)
+      ammo = $RANGE_DISPLAY[weapon.id]
+      return if ammo == nil
+      if $game_party.item_number(ammo[2]) != 0
+        if @ranged[0] == nil
+          $game_party.lose_item(ammo[2], 1)
+          @ranged[0] = Game_Ranged.new("Weapon", $game_player, $game_party.actors[0], $game_party.actors[0].weapon_id)
+        end
+      end
+    end
+  end
+  #--------------------------------------------------------------------------
+  def player_skill(skill_key_id)
+    skill = $data_skills[@skill_key[skill_key_id]]
+    return if skill == nil
+    actor = $game_party.actors[0]
+    return if not actor.skills.include?(skill.id)
+    case skill.scope
+    when 1 # One Enemy
+      if skill.element_set.include?($RANGE_ELEMENT_ID)
+        if @ranged[0] == nil
+          return if actor.can_use_skill?(skill) == false
+          @ranged[0] = Game_Ranged.new("Magic", $game_player, actor, skill)
+          actor.sp -= skill.sp_cost
+          return
+        end
+      else
+        return if actor.can_use_skill?(skill) == false
+        actor.sp -= skill.sp_cost
+        for enemy in @enemies.values
+          next if enemy == nil
+           event = $game_map.events[enemy.event_id]
+          if facing?($game_player, event) and in_range?($game_player, event, 1)
+            enemy.effect_skill(actor, skill)
+            if enemy.damage != "Raté" and enemy.damage != 0
+              hit_event(event, skill.animation2_id)
+            end
+            if event_non_dead?(enemy)
+              if enemy.engaged[0] == false
+                enemy.engaged[0] = true
+                enemy.engaged[1] = 0
+                set_event_movement(enemy)
+                return
+              end
+            end
+          end
+        end
+      end
+    when 2 # All Emenies
+      return if actor.can_use_skill?(skill) == false
+      $game_player.animation_id = skill.animation2_id
+      actor.sp -= skill.sp_cost
+      for enemy in @enemies.values
+        next if enemy == nil
+        enemy.effect_skill(actor, skill)
+        if enemy.damage != "Raté" and enemy.damage != 0
+          event = $game_map.events[enemy.event_id]
+          hit_event(event, 0)
+        end
+        if event_non_dead?(enemy)
+           if enemy.engaged[0] == false
+            enemy.engaged[0] = true
+            enemy.engaged[1] = 0
+            set_event_movement(enemy)
+          end
+        end
+      end
+      return
+    when 3..4 # User
+      return if actor.can_use_skill?(skill) == false
+      actor.effect_skill(actor, skill)
+      actor.sp -= skill.sp_cost
+      $game_player.animation_id = skill.animation2_id
+      return
+    when 7 # User
+      return if actor.can_use_skill?(skill) == false
+      actor.effect_skill(actor, skill)
+      actor.sp -= skill.sp_cost
+      $game_player.animation_id = skill.animation2_id
+    end
+  end
+  #--------------------------------------------------------------------------
+  def ally_melee_attack(ally, id)
+    enemy = @enemies[id]
+    actor = $game_party.actors[ally.actor_id]
+    random = rand(100)
+    return if random >= 20
+    return if $RANGE_DISPLAY[actor.weapon_id]  != nil
+    return if not Graphics.frame_count % 5 == 0
+    enemy.attack_effect(actor)
+    if enemy.damage != "Miss" and enemy.damage != 0
+      event = $game_map.events[enemy.event_id]
+      hit_event(event, $data_weapons[actor.weapon_id].animation2_id)
+    end
+    if not event_non_dead?(enemy)
+      ally.under_attack = false
+    end
+  end
+  #--------------------------------------------------------------------------
+  def ally_ranged_weapon?(ally, id)
+    event = $game_map.events[id]
+    actor = $game_party.actors[ally.actor_id]
+    return false if in_line?(ally, event) == false
+    for allies in $game_allies.values
+      next if allies == ally
+      return false if in_line?(ally, allies) 
+    end
+    return false if $RANGE_DISPLAY[actor.weapon_id]  == nil
+    weapon = $data_weapons[actor.weapon_id]
+    return false if weapon == nil
+    return false if weapon.element_set.include?($RANGE_ELEMENT_ID) == false
+    return false if @ranged[ally.actor_id] != nil
+    ammo = $RANGE_DISPLAY[weapon.id]
+    return false if ammo == nil
+    return false if $game_party.item_number(ammo[2]) == 0
+    $game_party.lose_item(ammo[2], 1)
+    @ranged[ally.actor_id] = Game_Ranged.new("Weapon", ally, actor, actor.weapon_id)
+    return true
+  end
+  #--------------------------------------------------------------------------
+  def ally_ranged_spell?(ally, id)
+    event = $game_map.events[id]
+    actor = $game_party.actors[ally.actor_id]
+    return false if @ranged[ally.actor_id] != nil
+    return false if in_line?(ally, event) == false
+    for allies in $game_allies.values
+      next if allies == ally
+      return false if in_line?(ally, allies) 
+    end
+    for id in actor.skills
+      skill = $data_skills[id]
+      next if skill.scope > 1
+      next if skill.element_set.include?($RANGE_ELEMENT_ID) == false
+      next if skill.sp_cost > actor.sp
+      next if facing?(ally, event) == false
+      @ranged[ally.actor_id] = Game_Ranged.new("Magic", ally, actor, skill)
+      actor.sp -= skill.sp_cost
+      return true
+    end
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def ally_heal?(ally)
+    lowest_actor = $game_party.actors[0]
+    for actor in $game_party.actors
+      if lowest_actor.hp > actor.hp and actor.hp != actor.maxhp and actor.dead? == false
+        lowest_actor = actor
+      end
+    end
+    return false if lowest_actor.hp == lowest_actor.maxhp and !lowest_actor.dead?
+    ally_actor = $game_party.actors[ally.actor_id]
+    for id in ally_actor.skills
+      skill = $data_skills[id]
+      next if skill.scope != 3
+      next if skill.element_set.include?($RANGE_ELEMENT_ID) == true
+      next if skill.sp_cost > ally_actor.sp
+      next if skill.power >= 0
+      next if (lowest_actor.hp/2) > skill.power.abs
+      lowest_actor.effect_skill(ally_actor, skill)
+      ally_actor.sp -= skill.sp_cost
+      index = $game_party.actors.index(lowest_actor)
+      if index == 0
+        $game_player.animation_id = skill.animation2_id
+      else
+        $game_allies[index].animation_id = skill.animation2_id
+      end
+      return true
+    end
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def ally_cure?(ally)
+    lowest_actor = $game_party.actors[0]
+    for actor in $game_party.actors
+      if lowest_actor.states.size > actor.states.size and actor.dead? == false
+        lowest_actor = actor
+      end
+    end
+    return false if lowest_actor.states.size == 0
+    ally_actor = $game_party.actors[ally.actor_id]
+    for id in ally_actor.skills
+      skill = $data_skills[id]
+      next if skill.scope != 3
+      next if skill.element_set.include?($RANGE_ELEMENT_ID) == true
+      next if skill.sp_cost > ally_actor.sp
+      next if skill.minus_state_set == []
+      next if skill.plus_state_set != []
+      lowest_actor.effect_skill(ally_actor, skill)
+      ally_actor.sp -= skill.sp_cost
+      index = $game_party.actors.index(lowest_actor)
+      if index == 0
+        $game_player.animation_id = skill.animation2_id
+      else
+        $game_allies[index].animation_id = skill.animation2_id
+      end
+      return true
+    end
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def ally_range_attack?(ally, id)
+    return true if ally_ranged_weapon?(ally, id)
+    return true if ally_ranged_spell?(ally, id)
+    return true if ally_heal?(ally)
+    return true if ally_cure?(ally)
+    return false
+  end
+  #--------------------------------------------------------------------------
+  def ally_range_help(ally)
+    return if ally_heal?(ally)
+    return if ally_cure?(ally)
+  end
+end

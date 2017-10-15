@@ -1,0 +1,402 @@
+Este tutorial é de minha autoria, mas todos os créditos vão para RPG, por 
+seu excelente tutorial em inglês, RGSS for Dummies, e Philomortys, por seu 
+excelente tutorial em inglês, Creating a Custom Window. Se não fosse por 
+eles, eu não poderia criar este tutorial. Agora, chega de enrolação.
+
+Por onde eu começo? Para se criar uma janela, você deve saber de onde ela 
+"herdará" suas propriedades, ou seja, qual classe de Window será a classe 
+"pai". Essa classe "pai" é como um pai para a outra classe, Ou seja, se a 
+classe Janela_Filha for "filha" da classe Janela_Mãe, a Janela_Filha terá as 
+propriedades da Janela_Mãe, como métodos e variáveis. Ou seja, você não 
+precisará definir esses métodos e variáveis do zero, pois eles já foram 
+definidos na classe anterior. Está conseguindo entender?
+Para se criar uma janela(Window), você só precisa saber se ela herdará as 
+propriedades da classe Window_Base ou Window_Selectable. Se a janela for 
+destinada apenas à exibição de informações, a classe "pai" será a 
+Window_Base. Se for destinada à escolha de opções, a classe "pai" será a 
+Window_Selectable. Para se definir uma classe "pai", use o caractere Codigo:
+<
+
+. Quando chegarmos à parte prática, você entenderá como fazer isso, com uma 
+Window_Base.
+
+Exemplo:
+Codigo:
+class Window_Filhote < Window_Base
+
+
+Codigo:
+class Window_Cria < Window_Selectable
+
+
+Para continuar a criar a janela, você deve ter dois métodos: initialize e 
+refresh. O método initialize define o tamanho, posição, o "esqueleto" da 
+janela. O método refresh define o conteúdo, pode ser texto ou imagens. 
+Dependendo da complexidade da janela, pode haver outros métodos, mas isso 
+não é assunto para se abordar agora.
+
+Exemplo de método initialize:
+Codigo:
+def initialize
+    super(0, 0, 640, 480)
+    self.contents = Bitmap.new(width - 32, height - 32)
+    refresh
+  end
+
+
+
+Exemplo de método refresh:
+Codigo:
+def refresh
+  self.contents.clear
+  self.contents.draw_text(0, 0, 400, 32, "Insira")
+  self.contents.draw_text(0, 32, 400, 32, "seu")
+  self.contents.draw_text(0, 64, 400, 32, "texto")
+  self.contents.draw_text(0, 96, 400, 32, "aqui.")
+end
+
+
+
+
+Vou tentar explicar em detalhes cada linha do método initialize:
+Codigo:
+def initialize
+
+Aqui nós definimos o método initialize. Se você não definir um método usando 
+a palavra def, então nem adianta digitar código nenhum.
+Codigo:
+super(0, 0, 640, 480)
+
+Esta linha define o tamanho e a posição da janela. Use super para definir 
+estas propriedades como no exemplo. (0,0,640,480) quer dizer (posição 
+horizontal, posição vertical,largura,altura). Definindo a posição horiontal 
+e vertical em zero (0,0,640,480), a janela aparecerá no canto superior 
+esquerdo da tela. A largura e a altura (0,0,640,480) são as mesmas da tela 
+do RPGXP (640x480 de resolução), para dar a impressão de que a janela está 
+centralizada. O método super pertence à classe Window_Base, por isso eu 
+posso usá-lo na classe filha.
+Codigo:
+self.contents = Bitmap.new(width - 32, height - 32)
+
+
+Esta linha define o bitmap, a única parte que eu não entendi. Se alguém 
+souber, me avise. De qualquer forma, o bitmap parece ser a Windowskin usada, 
+deixe os números sempre em -32, para a janela não ficar muito grande.
+Codigo:
+refresh
+
+
+Esta linha chama o método refresh, que será definido depois. Se você não 
+chamar o método refresh, verá uma janela sem nada escrito ou desenhado.
+Codigo:
+end
+
+
+Indica o fim do método initialize. Se o método não tiver fim, o jogo não irá 
+rodar.
+
+Agora vamos ver o método refresh em detalhes:
+Codigo:
+def refresh
+
+
+Da mesma maneira que definimos o método initialize, definimos o método 
+refresh.
+Codigo:
+self.contents.clear
+
+self.contents indica o conteúdo da janela que você está criando agora. clear 
+Limpa qualquer coisa na janela (não sei a utilidade exata, mas parece que em 
+RGSS há muita coisa que você deve usar por obrigação, mas sem saber a 
+utilidade).
+Codigo:
+self.contents.draw_text(0,0,400,32,"Insira")
+
+O método draw_text é, como diz o nome, usado para "desenhar" texto, ou 
+escrever coisas na janela. O código (0,0,400,32,"Insira") indica o texto, o 
+tamanho da "linha" onde escrevemos o texto e a posição dele, sendo 
+(0=posição horizontal,0=posição 
+vertical,400=largura,32=altura,"Insira"=texto). O texto deve estar entre 
+aspas ("").
+Codigo:
+self.contents.draw_text(0, 32, 400, 32, "seu")
+
+Outra linha para escrever texto. Repare que nesta linha a posição vertical 
+foi definida em 32 (0,32,400,32). Isso porque, como você deve ter reparado, 
+a altura da linha anterior(0,0,400,32) está em 32 pixels. Se você colocar um 
+espaço muito pequeno entre as linhas, uma palavra aparecerá sobre a outra.
+Codigo:
+self.contents.draw_text(0, 64, 400, 32, "texto")
+
+
+Outro texto. Repare que a posição vertical agora está em 64, que equivale a 
+32 + 32.
+Codigo:
+self.contents.draw_text(0, 96, 400, 32, "aqui.")
+
+
+Novamente, a posição vertical está 32 pixels maior que a da linha anterior. 
+Lembre-se sempre de calcular a altura e a posição vertical das linhas.
+Codigo:
+end
+
+Fim do método refresh.
+
+Depois de terminar os dois métodos, lembre-se de colocar outro end, para 
+finalizar a classe Window_Filhote. O código ficará assim:
+Codigo:
+#===================Classe Window_Filhote==============================
+class Window_Filhote < Window_Base # Classe Window_Filhote pertence à classe 
+Window_Base
+def initialize # Método Initialize (define posição e tamanho da janela)
+    super (0,0,640,480) # posição e tamanho da janela (posição horizontal, 
+posição vertical, largura, altura, "texto")
+    self.contents = Bitmap.new(width - 32, height - 32) # Bitmap da janela
+    refresh # Chamar o método refresh
+  end # Fim do método initialize
+
+def refresh # método refresh (escreve  desenha coisas na janela
+  self.contents.clear # Limpar conteúdo
+  self.contents.draw_text(0, 0, 400, 32, "Insira") # Escrevendo texto
+  self.contents.draw_text(0, 32, 400, 32, "seu") # Use draw_text para 
+escrever
+  self.contents.draw_text(0, 64, 400, 32, "texto") # Defina tamanho, posição 
+e texto entre parênteses
+  self.contents.draw_text(0, 96, 400, 32, "aqui.") # (posição horizontal, 
+posição vertical, largura, altura, "texto")
+end # Fim do método refresh
+end # Fim da classe Window_Filhote
+
+
+
+Ehhh! Criamos nossa janela. Mas como você deve ter percebido, criar a janela 
+não é o suficiente para poder chamá-la durante o jogo. Você deve definir uma 
+condição para ela ser chamada, como pressionar uma tecla ou acessar uma 
+opção do menu. Só para testar, use um evento com o comando Script (último 
+comando da última página) e digite Window_Filhote.new. A janela vai 
+aparecer, mas você vai poder continuar andando pelo mapa enquanto ela é 
+exibida, e ela só desaparece sozinha, não adianta apertar Esc. É por isso 
+que devemos criar uma Cena (Scene).
+
+Para criar uma Scene, não precisamos definir classe "pai" e "heranças", 
+basta começar com a seguinte linha:
+
+Codigo:
+class Scene_Filhote
+
+
+Simples, não? Agora, assim como nas classes Window, as classes Scene 
+precisam de dois métodos básicos: o main e o update. O método main define o 
+loop principal da cena. Loop, para quem não sabe, é um comando que faz com 
+que tudo o que estiver no meio seja executado repetida e eternamente. É 
+claro que deve haver uma condição para o loop parar, ou a cena será 
+executada para sempre. O método update cuida da entrada de informações, em 
+outras palavras, as teclas que você aperta para fazer alguma coisa na tal 
+cena. Assim como nas Windows, as Scenes podem ter outros métodos, mas nós 
+vamos começar do começo aqui.
+
+Exemplo de método main:
+  Codigo:
+def main
+    @janela_filhote = Window_Filhote.new
+    Graphics.transition
+    loop do
+      Graphics.update
+      Input.update
+      update
+      if $scene != self
+        break
+      end
+    end
+    Graphics.freeze
+    @janela_filhote.dispose
+  end
+
+
+
+Exemplo de método update:
+  Codigo:
+def update
+    if Input.trigger? (Input::B)
+      $game_system.se_play($data_system.cancel_se)
+      $scene=Scene_Map.new
+    end
+  end
+
+
+
+Agora é a parte em que eu tento explicar cada linha do código. Primeiro o 
+método main:
+Codigo:
+def main
+
+
+Você já deve estar se acostumando com essa parte do código. Acabamos de 
+definir o método main.
+Codigo:
+@janela_filhote = Window_Filhote.new
+
+Isso que criamos agora é uma variável. Variáveis são essenciais para 
+qualquer linguagem de programação, seja Ruby, Visual Basic.net ou C++. 
+Variáveis servem para guardar valores. Pode ser um número, uma palavra, as 
+coordenadas atuais do mapa em que o personagem está ou, como neste caso, um 
+script de RGSS. Aqui eu defini a variável janela_filhote para representar a 
+classe Window_Filhote que acabamos de criar. Isso quer dizer que, sempre que 
+eu usar a variável @janela_filhote nesta classe estarei me referindo à 
+classe Window_Filhote.
+Codigo:
+Graphics.transition
+
+
+Executa a transição da janela.
+Codigo:
+loop do
+
+
+O loop da cena. Tudo o que estiver no loop será repetido continuamente, até 
+que seja encontradas uma condição para parar o loop.
+Codigo:
+Graphics.update
+
+
+Atualizar os gráficos no loop.
+Codigo:
+Input.update
+
+
+Atualizar a entrada de informações (teclas pressionadas) no loop.
+Codigo:
+update
+
+
+Chamar o método update.
+Codigo:
+if $scene != self
+
+
+Se a cena não for Scene_Filhote (em outras palavras, se você sair da 
+janela).
+Codigo:
+break
+
+Parar o loop (se não houver break o loop não terá fim e causará erros.
+Codigo:
+end
+
+Fim do último if (condição).
+Codigo:
+end
+
+
+Fim do loop.
+Codigo:
+Graphics.freeze
+
+
+Paralisa os gráficos para preparar a transição.
+Codigo:
+@janela_filhote.dispose
+
+
+Descartar (fechar) a janela_filhote
+Codigo:
+end
+
+
+Fim do método main
+
+Agora, o método update:
+Codigo:
+def update
+
+
+A essa altura, eu nem preciso dizer que estamos definindo o método update...
+Codigo:
+if Input.trigger? (Input::B)
+
+
+Se a tecla B (Esc, Num0 ou X) or pressionada
+Codigo:
+$game_system.se_play($data_system.cancel_se)
+
+
+Reproduzir efeito sonoro de cancelar (definido na aba Sistema do Banco de 
+Dados).
+Codigo:
+$scene=Scene_Map.new
+
+
+Ir para a cena do mapa (o mapa do jogo).
+Codigo:
+end
+
+
+Fim da condição (if)
+Codigo:
+end
+
+Fim do método.
+
+Novamente, coloque um end, para finalizar a classe. O código vai ficar 
+assim:
+
+Codigo:
+#======================Classe Scene_Filhote=======================
+class Scene_Filhote # Definindo a classe Scene Filhote
+  # Definimos o método main (principal).
+  # Este método controla o loop, a atualização dos gráficos e
+  # controles e chama o método update.
+  def main
+    # Criando uma variável para se referir à Window_Filhote.
+    @janela_filhote = Window_Filhote.new
+    # Executar uma transição
+    Graphics.transition
+    # Criando o loop. Se não houver loop para atualizar as informações,
+    # a janela abriria e fecharia na mesma hora.
+    loop do
+      # Atualizando os gráficos
+      Graphics.update
+      # Atualizando os controles
+      Input.update
+      # Chamando o método update (atualizar)
+      update
+      # Se a Scene atual não for Scene_Filhote
+      # (em outras palavras, se você fechou a janela filhote)
+      if $scene != self
+        # Sair do loop. Se você não sair do loop, a janela seria exibida
+        # para sempre (ou até que alguém apertasse Alt + F4 e saísse do 
+jogo.
+        break
+        # Fim do If (condição)
+      end
+      # Fim do loop
+    end
+    # Paralizar os gráficos (preparar para a transição)
+    Graphics.freeze
+    # Descartar a @janela_filhote (Window_Filhote)
+    @janela_filhote.dispose
+    # Fim do método main.
+  end
+  # Definir método update.
+  # Este método verifica se a tecla Esc (ou Num0, ou X) está apertada
+  # para sair da cena
+  def update
+    # Se a tecla B (Esc, Num0 ou X) for pressionada...
+    if Input.trigger? (Input::B)
+      # Reproduzir o SE de Cancelar, que você definiu no Banco de Dados
+      # Use $data_system.cancel_se para definir este efeito
+      # sonoro de acordo com o Banco de Dados
+      $game_system.se_play($data_system.cancel_se)
+      # Sair desta cena para Scene_Map (o mapa do jogo)
+      $scene=Scene_Map.new
+      # Fim da condição (If)
+    end
+    # Fim do método update
+  end
+  # Fim da classe Scene_Filhote
+end
+
+
+
+Agora, crie um evento e coloque o comando de evento script. Digite $scene = 
+Scene_Filhote.new e surgirá a verdadeira janela!

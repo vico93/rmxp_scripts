@@ -1,0 +1,475 @@
+Cria um script com nome loja 
+
+#==================================================================== 
+# 
+# Script Novo Shop v-Final Script por: Firewords 
+# 
+#==================================================================== 
+
+#==================================================================== 
+# Window_ShopCommand 
+#==================================================================== 
+class Window_ShopCommand < Window_Selectable 
+#------------------------------------------------------------------ 
+# Iniciando 
+#------------------------------------------------------------------ 
+def initialize 
+super(0, 64, 480, 64) 
+self.contents = Bitmap.new(width - 32, height - 32) 
+@item_max = 3 
+@column_max = 3 
+@commands = ["Comprar", "Vender", "Sair"] 
+refresh 
+self.index = 0 
+end 
+#------------------------------------------------------------------ 
+# Definindo janelas 
+#------------------------------------------------------------------ 
+def refresh 
+self.contents.clear 
+for i in 0...@item_max 
+draw_item(i) 
+end 
+end 
+#------------------------------------------------------------------ 
+# Definindo cursor 
+#------------------------------------------------------------------ 
+def draw_item(index) 
+x = 4 + index * 160 
+self.contents.draw_text(x, 0, 128, 32, @commands[index]) 
+end 
+end 
+
+#==================================================================== 
+# Window_ShopBuy 
+#==================================================================== 
+
+class Window_ShopBuy < Window_Selectable 
+#------------------------------------------------------------------ 
+# Iniciando 
+#------------------------------------------------------------------ 
+def initialize(shop_goods) 
+x=0 
+super(x-20, 128, 360, 277) 
+@shop_goods = shop_goods 
+refresh 
+self.index = 0 
+end 
+#------------------------------------------------------------------ 
+# Definindo numero de itens 
+#------------------------------------------------------------------ 
+def item 
+return @data[self.index] 
+end 
+#------------------------------------------------------------------ 
+# Desenhando janela 
+#------------------------------------------------------------------ 
+def refresh 
+if self.contents != nil 
+self.contents.dispose 
+self.contents = nil 
+end 
+@data = [] 
+for goods_item in @shop_goods 
+case goods_item[0] 
+when 0 
+item = $data_items[goods_item[1]] 
+when 1 
+item = $data_weapons[goods_item[1]] 
+when 2 
+item = $data_armors[goods_item[1]] 
+end 
+if item != nil 
+@data.push(item) 
+end 
+end 
+@item_max = @data.size 
+if @item_max > 0 
+self.contents = Bitmap.new(width - 32, row_max * 32) 
+for i in 0...@item_max 
+draw_item(i) 
+end 
+end 
+end 
+#------------------------------------------------------------------- 
+# Mostrando itens 
+#------------------------------------------------------------------- 
+def draw_item(index) 
+item = @data[index] 
+# 
+case item 
+when RPG::Item 
+number = $game_party.item_number(item.id) 
+when RPG::Weapon 
+number = $game_party.weapon_number(item.id) 
+when RPG::Armor 
+number = $game_party.armor_number(item.id) 
+end 
+if item.price <= $game_party.gold and number < 99 
+self.contents.font.color = normal_color 
+else 
+self.contents.font.color = disabled_color 
+end 
+x = 4 
+y = index * 32 
+rect = Rect.new(x, y, self.width - 32, 32) 
+self.contents.fill_rect(rect, Color.new(0, 0, 0, 0)) 
+bitmap = RPG::Cache.icon(item.icon_name) 
+opacity = self.contents.font.color == normal_color ? 255 : 128 
+self.contents.blt(x, y + 4, bitmap, Rect.new(0, 0, 24, 24), opacity) 
+self.contents.draw_text(x + 28, y, 212, 32, item.name, 0) 
+self.contents.draw_text(x + 240, y, 16, 32, ":", 1) 
+self.contents.draw_text(x + 230, y, 88, 32, item.price.to_s, 2) 
+end 
+#------------------------------------------------------------------- 
+# Mostrando definições na Help_window 
+#------------------------------------------------------------------- 
+def update_help 
+@help_window.set_text(self.item == nil ? "" : self.item.description) 
+end 
+end 
+
+#===================================================================== 
+# Window_ShopSell 
+#===================================================================== 
+
+class Window_ShopSell < Window_Selectable 
+#------------------------------------------------------------------- 
+# Iniciando 
+#------------------------------------------------------------------- 
+def initialize 
+super(0, 128, 640, 278) 
+@column_max = 2 
+refresh 
+self.index = 0 
+end 
+#------------------------------------------------------------------- 
+# Definindo quantidade de itens 
+#------------------------------------------------------------------- 
+def item 
+return @data[self.index] 
+end 
+#------------------------------------------------------------------- 
+# Desenhando janelas 
+#------------------------------------------------------------------- 
+def refresh 
+if self.contents != nil 
+self.contents.dispose 
+self.contents = nil 
+end 
+@data = [] 
+for i in 1...$data_items.size 
+if $game_party.item_number(i) > 0 
+@data.push($data_items[i]) 
+end 
+end 
+for i in 1...$data_weapons.size 
+if $game_party.weapon_number(i) > 0 
+@data.push($data_weapons[i]) 
+end 
+end 
+for i in 1...$data_armors.size 
+if $game_party.armor_number(i) > 0 
+@data.push($data_armors[i]) 
+end 
+end 
+@item_max = @data.size 
+if @item_max > 0 
+self.contents = Bitmap.new(width - 32, row_max * 32) 
+for i in 0...@item_max 
+draw_item(i) 
+end 
+end 
+end 
+#------------------------------------------------------------------- 
+# Mostrando itens 
+#------------------------------------------------------------------- 
+def draw_item(index) 
+item = @data[index] 
+case item 
+when RPG::Item 
+number = $game_party.item_number(item.id) 
+when RPG::Weapon 
+number = $game_party.weapon_number(item.id) 
+when RPG::Armor 
+number = $game_party.armor_number(item.id) 
+end 
+if item.price > 0 
+self.contents.font.color = normal_color 
+else 
+self.contents.font.color = disabled_color 
+end 
+x = 4 + index % 2 * (288 + 32) 
+y = index / 2 * 32 
+rect = Rect.new(x, y, self.width / @column_max - 32, 32) 
+self.contents.fill_rect(rect, Color.new(0, 0, 0, 0)) 
+bitmap = RPG::Cache.icon(item.icon_name) 
+opacity = self.contents.font.color == normal_color ? 255 : 128 
+self.contents.blt(x, y + 4, bitmap, Rect.new(0, 0, 24, 24), opacity) 
+self.contents.draw_text(x + 28, y, 212, 32, item.name, 0) 
+self.contents.draw_text(x + 240, y, 16, 32, ":", 1) 
+self.contents.draw_text(x + 256, y, 24, 32, number.to_s, 2) 
+end 
+#------------------------------------------------------------------- 
+# Mostrando informa?es na janela de window 
+#------------------------------------------------------------------- 
+def update_help 
+@help_window.set_text(self.item == nil ? "" : self.item.description) 
+end 
+end 
+
+#===================================================================== 
+# Window_ShopNumber 
+#===================================================================== 
+
+class Window_ShopNumber < Window_Base 
+#------------------------------------------------------------------- 
+# Iniciando 
+#------------------------------------------------------------------- 
+def initialize 
+x=0 
+super(x-20, 128, 360, 277) 
+self.contents = Bitmap.new(width - 32, height - 32) 
+@item = nil 
+@max = 1 
+@price = 0 
+@number = 1 
+end 
+#------------------------------------------------------------------- 
+# Definindo itens de acordo com o dinheiro 
+#------------------------------------------------------------------- 
+def set(item, max, price) 
+@item = item 
+@max = max 
+@price = price 
+
+@number = 1 
+refresh 
+end 
+#------------------------------------------------------------------- 
+# Verificando numeros atuais 
+#------------------------------------------------------------------- 
+def number 
+return @number 
+end 
+#------------------------------------------------------------------- 
+# Desenhando janela 
+#------------------------------------------------------------------- 
+def refresh 
+self.contents.clear 
+draw_item_name(@item, 60, 66) 
+self.contents.font.color = normal_color 
+self.contents.draw_text(162, 96, 32, 32, " ") 
+self.contents.draw_text(198, 96, 24, 32, @number.to_s, 2) 
+self.cursor_rect.set(195, 96, 32, 32) 
+domination = $data_system.words.gold 
+cx = contents.text_size(domination).width 
+total_price = @price * @number 
+self.contents.font.color = normal_color 
+self.contents.draw_text(-15, 210, 328-cx-2, 32, total_price.to_s, 2) 
+self.contents.font.color = system_color 
+self.contents.draw_text(332-cx-15, 210, cx, 32, domination, 2) 
+end 
+#------------------------------------------------------------------- 
+# Atualizando 
+#------------------------------------------------------------------- 
+def update 
+super 
+if self.active 
+if Input.repeat?(Input::RIGHT) and @number < @max 
+$game_system.se_play($data_system.cursor_se) 
+@number += 1 
+refresh 
+end 
+if Input.repeat?(Input::LEFT) and @number > 1 
+$game_system.se_play($data_system.cursor_se) 
+@number -= 1 
+refresh 
+end 
+if Input.repeat?(Input::UP) and @number < @max 
+$game_system.se_play($data_system.cursor_se) 
+@number = [@number + 10, @max].min 
+refresh 
+end 
+if Input.repeat?(Input::DOWN) and @number > 1 
+$game_system.se_play($data_system.cursor_se) 
+@number = [@number - 10, 1].max 
+refresh 
+end 
+end 
+end 
+end 
+
+#===================================================================== 
+# Window_ShopStatus 
+#===================================================================== 
+class Window_ShopStatus < Window_Base 
+#------------------------------------------------------------------- 
+# Iniciando 
+#------------------------------------------------------------------- 
+def initialize 
+super(398, 128, 281, 277) 
+self.contents = Bitmap.new(width - 32, height - 32) 
+self.contents.font.size = 18 
+@item = nil 
+refresh 
+end 
+#------------------------------------------------------------------- 
+# Desenhando janela 
+#------------------------------------------------------------------- 
+def refresh 
+self.contents.clear 
+if @item == nil 
+return 
+end 
+case @item 
+when RPG::Item 
+number = $game_party.item_number(@item.id) 
+when RPG::Weapon 
+number = $game_party.weapon_number(@item.id) 
+when RPG::Armor 
+number = $game_party.armor_number(@item.id) 
+end 
+self.contents.font.color = system_color 
+self.contents.draw_text(0, 0, 200, 32, "Obtidos") 
+self.contents.font.color = normal_color 
+self.contents.draw_text(204, 0, 32, 32, number.to_s, 2) 
+if @item.is_a?(RPG::Item) 
+return 
+end 
+for i in 0...$game_party.actors.size 
+actor = $game_party.actors[i] 
+char = 
+if actor.equippable?(@item) 
+self.contents.font.color = normal_color 
+else 
+self.contents.font.color = disabled_color 
+end 
+draw_actor_graphic(actor,10, 64 + 50 * i + 1  
+draw_actor_state(actor, x + 144, y) 
+draw_actor_exp(actor, x+ 144, y + 3  
+draw_actor_sp(actor, x, y + 5  
+bitmap.font.name = "Arial Black" 
+bitmap.font.size = 32 
+bitmap.font.color.set(0, 0, 0) 
+bitmap.draw_text(-1, 12-1, 160, 36, damage_string, 1) 
+bitmap.draw_text(+1, 12-1, 160, 36, damage_string, 1) 
+bitmap.draw_text(-1, 12+1, 160, 36, damage_string, 1) 
+bitmap.draw_text(+1, 12+1, 160, 36, damage_string, 1) 
+if value.is_a?(Numeric) and value < 0 
+bitmap.font.color.set(176, 255, 144) 
+else 
+bitmap.font.color.set(255, 255, 255) 
+end 
+bitmap.draw_text(0, 12, 160, 36, damage_string, 1) 
+if critical 
+bitmap.font.size = 20 
+bitmap.font.color.set(0, 0, 0) 
+bitmap.draw_text(-1, -1, 160, 20, "GRAVE", 1) 
+bitmap.draw_text(+1, -1, 160, 20, "GRAVE", 1) 
+bitmap.draw_text(-1, +1, 160, 20, "GRAVE", 1) 
+bitmap.draw_text(+1, +1, 160, 20, "GRAVE", 1) 
+bitmap.font.color.set(255, 255, 255) 
+bitmap.draw_text(0, 0, 160, 20, "GRAVE", 1) 
+end 
+@_damage_sprite = ::Sprite.new 
+@_damage_sprite.bitmap = bitmap 
+@_damage_sprite.ox = 80 + self.viewport.ox 
+@_damage_sprite.oy = 20 + self.viewport.oy 
+@_damage_sprite.x = self.x + self.viewport.rect.x 
+@_damage_sprite.y = self.y - self.oy / 2 + self.viewport.rect.y 
+@_damage_sprite.z = 3000 
+@_damage_duration = 40 
+end 
+def animation(animation, hit) 
+dispose_animation 
+@_animation = animation 
+return if @_animation == nil 
+@_animation_hit = hit 
+@_animation_duration = @_animation.frame_max 
+animation_name = @_animation.animation_name 
+animation_hue = @_animation.animation_hue 
+bitmap = RPG::Cache.animation(animation_name, animation_hue) 
+if @@_reference_count.include?(bitmap) 
+@@_reference_count[bitmap] += 1 
+else 
+@@_reference_count[bitmap] = 1 
+end 
+@_animation_sprites = [] 
+if @_animation.position != 3 or not @@_animations.include?(animation) 
+for i in 0..15 
+sprite = ::Sprite.new 
+sprite.bitmap = bitmap 
+sprite.visible = false 
+@_animation_sprites.push(sprite) 
+end 
+unless @@_animations.include?(animation) 
+@@_animations.push(animation) 
+end 
+end 
+update_animation 
+end 
+def loop_animation(animation) 
+return if animation == @_loop_animation 
+dispose_loop_animation 
+@_loop_animation = animation 
+return if @_loop_animation == nil 
+@_loop_animation_index = 0 
+animation_name = @_loop_animation.animation_name 
+animation_hue = @_loop_animation.animation_hue 
+bitmap = RPG::Cache.animation(animation_name, animation_hue) 
+if @@_reference_count.include?(bitmap) 
+@@_reference_count[bitmap] += 1 
+else 
+@@_reference_count[bitmap] = 1 
+end 
+@_loop_animation_sprites = [] 
+for i in 0..15 
+sprite = ::Sprite.new 
+sprite.bitmap = bitmap 
+sprite.visible = false 
+@_loop_animation_sprites.push(sprite) 
+end 
+update_loop_animation 
+end 
+def animation_set_sprites(sprites, cell_data, position) 
+for i in 0..15 
+sprite = sprites[i] 
+pattern = cell_data[i, 0] 
+if sprite == nil or pattern == nil or pattern == -1 
+sprite.visible = false if sprite != nil 
+next 
+end 
+sprite.visible = true 
+sprite.src_rect.set(pattern % 5 * 192, pattern / 5 * 192, 192, 192) 
+if position == 3 
+if self.viewport != nil 
+sprite.x = self.viewport.rect.width / 2 
+sprite.y = self.viewport.rect.height - 160 
+else 
+sprite.x = 320 
+sprite.y = 240 
+end 
+else 
+sprite.x = self.x + self.viewport.rect.x - 
+self.ox + self.src_rect.width / 2 
+sprite.y = self.y + self.viewport.rect.y - 
+self.oy + self.src_rect.height / 2 
+sprite.y -= self.src_rect.height / 4 if position == 0 
+sprite.y += self.src_rect.height / 4 if position == 2 
+end 
+sprite.x += cell_data[i, 1] 
+sprite.y += cell_data[i, 2] 
+sprite.z = 2000 
+sprite.ox = 96 
+sprite.oy = 96 
+sprite.zoom_x = cell_data[i, 3] / 100.0 
+sprite.zoom_y = cell_data[i, 3] / 100.0 
+sprite.angle = cell_data[i, 4] 
+sprite.mirror = (cell_data[i, 5] == 1) 
+sprite.opacity = cell_data[i, 6] * self.opacity / 255.0 
+sprite.blend_type = cell_data[i, 7] 
+end 
+end 
+end 
+end

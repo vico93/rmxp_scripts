@@ -1,0 +1,451 @@
+#==============================================================================
+# HP/SP/EXPゲージ表示スクリプト Ver 1.00
+# 配布元・サポートURL
+# http://members.jcom.home.ne.jp/cogwheel/
+
+#==============================================================================
+# ■ Game_Actor
+#------------------------------------------------------------------------------
+# 　アクターを扱うクラスです。このクラスは Game_Actors クラス ($game_actors)
+# の内部で使用され、Game_Party クラス ($game_party) からも参照されます。
+#==============================================================================
+
+class Game_Actor < Game_Battler
+ def now_exp
+   return @exp - @exp_list[@level]
+ end
+ def next_exp
+   return @exp_list[@level+1] > 0 ? @exp_list[@level+1] - @exp_list[@level] : 0
+ end
+end
+
+#==============================================================================
+# ■ Window_Base
+#------------------------------------------------------------------------------
+# 　ゲーム中のすべてのウィンドウのスーパークラスです。
+#==============================================================================
+
+class Window_Base < Window
+ #--------------------------------------------------------------------------
+ # ● HP ゲージの描画
+ #--------------------------------------------------------------------------
+ # オリジナルのHP描画を draw_actor_hp_original と名前変更
+ alias :draw_actor_hp_original :draw_actor_hp
+ def draw_actor_hp(actor, x, y, width = 144)
+   # 変数rateに 現在のHP/MHPを代入
+   if actor.maxhp != 0
+     rate = actor.hp.to_f / actor.maxhp
+   else
+     rate = 0
+   end
+   # plus_x:X座標の位置補正 rate_x:X座標の位置補正(%) plus_y:Y座標の位置補正
+   # plus_width:幅の補正 rate_width:幅の補正(%) height:縦幅
+   # align1:描画タイプ1 0:左詰め 1:中央揃え 2:右詰め
+   # align2:描画タイプ2 0:上詰め 1:中央揃え 2:下詰め
+   # align3:ゲージタイプ 0:左詰め 1:右詰め
+   plus_x = 0
+   rate_x = 0
+   plus_y = 25
+   plus_width = 0
+   rate_width = 50
+   height = 7
+   align1 = 0
+   align2 = 1
+   align3 = 0
+   # グラデーション設定 grade1:空ゲージ grade2:実ゲージ
+   # (0:横にグラデーション 1:縦にグラデーション 2:斜めにグラデーション(激重)）
+   grade1 = 1
+   grade2 = 0
+   # 色設定。color1:外枠，color2:中枠
+   # color3:空ゲージダークカラー，color4:空ゲージライトカラー
+   # color5:実ゲージダークカラー，color6:実ゲージライトカラー
+   color1 = Color.new(0, 0, 0, 192)
+   color2 = Color.new(255, 255, 192, 192)
+   color3 = Color.new(0, 0, 0, 192)
+   color4 = Color.new(64, 0, 0, 192)
+   color5 = Color.new(80 - 24 * rate, 80 * rate, 14 * rate, 192)
+   color6 = Color.new(240 - 72 * rate, 240 * rate, 62 * rate, 192)
+   # 変数spに描画するゲージの幅を代入
+   if actor.maxhp != 0
+     hp = (width + plus_width) * actor.hp * rate_width / 100 / actor.maxhp
+   else
+     hp = 0
+   end
+   # ゲージの描画
+   gauge_rect(x + plus_x + width * rate_x / 100, y + plus_y,
+               width, plus_width + width * rate_width / 100,
+               height, hp, align1, align2, align3,
+               color1, color2, color3, color4, color5, color6, grade1, grade2)
+   # オリジナルのHP描画処理を呼び出し
+   draw_actor_hp_original(actor, x, y, width)
+ end
+ #--------------------------------------------------------------------------
+ # ● SP ゲージの描画
+ #--------------------------------------------------------------------------
+ # オリジナルのSP描画を draw_actor_sp_original と名前変更
+ alias :draw_actor_sp_original :draw_actor_sp
+ def draw_actor_sp(actor, x, y, width = 144)
+   # 変数rateに 現在のSP/MSPを代入
+   if actor.maxsp != 0
+     rate = actor.sp.to_f / actor.maxsp
+   else
+     rate = 1
+   end
+   # plus_x:X座標の位置補正 rate_x:X座標の位置補正(%) plus_y:Y座標の位置補正
+   # plus_width:幅の補正 rate_width:幅の補正(%) height:縦幅
+   # align1:描画タイプ1 0:左詰め 1:中央揃え 2:右詰め
+   # align2:描画タイプ2 0:上詰め 1:中央揃え 2:下詰め
+   # align3:ゲージタイプ 0:左詰め 1:右詰め
+   plus_x = 0
+   rate_x = 0
+   plus_y = 25
+   plus_width = 0
+   rate_width = 50
+   height = 7
+   align1 = 0
+   align2 = 1
+   align3 = 0
+   # グラデーション設定 grade1:空ゲージ grade2:実ゲージ
+   # (0:横にグラデーション 1:縦にグラデーション 2:斜めにグラデーション(激重)）
+   grade1 = 1
+   grade2 = 0
+   # 色設定。color1:外枠，color2:中枠
+   # color3:空ゲージダークカラー，color4:空ゲージライトカラー
+   # color5:実ゲージダークカラー，color6:実ゲージライトカラー
+   color1 = Color.new(0, 0, 0, 192)
+   color2 = Color.new(255, 255, 192, 192)
+   color3 = Color.new(0, 0, 0, 192)
+   color4 = Color.new(0, 64, 0, 192)
+   color5 = Color.new(14 * rate, 80 - 24 * rate, 80 * rate, 192)
+   color6 = Color.new(62 * rate, 240 - 72 * rate, 240 * rate, 192)
+   # 変数spに描画するゲージの幅を代入
+   if actor.maxsp != 0
+     sp = (width + plus_width) * actor.sp * rate_width / 100 / actor.maxsp
+   else
+     sp = (width + plus_width) * rate_width / 100
+   end
+   # ゲージの描画
+   gauge_rect(x + plus_x + width * rate_x / 100, y + plus_y,
+               width, plus_width + width * rate_width / 100,
+               height, sp, align1, align2, align3,
+               color1, color2, color3, color4, color5, color6, grade1, grade2)
+   # オリジナルのSP描画処理を呼び出し
+   draw_actor_sp_original(actor, x, y, width)
+ end
+ #--------------------------------------------------------------------------
+ # ● EXP ゲージの描画
+ #--------------------------------------------------------------------------
+ # オリジナルのEXP描画を draw_actor_sp_original と名前変更
+ alias :draw_actor_exp_original :draw_actor_exp
+ def draw_actor_exp(actor, x, y, width = 204)
+   # 変数rateに 現在のexp/nextexpを代入
+   if actor.next_exp != 0
+     rate = actor.now_exp.to_f / actor.next_exp
+   else
+     rate = 1
+   end
+   # plus_x:X座標の位置補正 rate_x:X座標の位置補正(%) plus_y:Y座標の位置補正
+   # plus_width:幅の補正 rate_width:幅の補正(%) height:縦幅
+   # align1:描画タイプ1 0:左詰め 1:中央揃え 2:右詰め
+   # align2:描画タイプ2 0:上詰め 1:中央揃え 2:下詰め
+   # align3:ゲージタイプ 0:左詰め 1:右詰め
+   plus_x = 0
+   rate_x = 0
+   plus_y = 25
+   plus_width = 0
+   rate_width = 50
+   height = 7
+   align1 = 0
+   align2 = 1
+   align3 = 0
+   # グラデーション設定 grade1:空ゲージ grade2:実ゲージ
+   # (0:横にグラデーション 1:縦にグラデーション 2:斜めにグラデーション(激重)）
+   grade1 = 1
+   grade2 = 0
+   # 色設定。color1:外枠，color2:中枠
+   # color3:空ゲージダークカラー，color4:空ゲージライトカラー
+   # color5:実ゲージダークカラー，color6:実ゲージライトカラー
+   color1 = Color.new(0, 0, 0, 192)
+   color2 = Color.new(255, 255, 192, 192)
+   color3 = Color.new(0, 0, 0, 192)
+   color4 = Color.new(64, 0, 0, 192)
+   color5 = Color.new(80 * rate, 80 - 80 * rate ** 2, 80 - 80 * rate, 192)
+   color6 = Color.new(240 * rate, 240 - 240 * rate ** 2, 240 - 240 * rate, 192)
+   # 変数expに描画するゲージの幅を代入
+   if actor.next_exp != 0
+     exp = (width + plus_width) * actor.now_exp * rate_width /
+                                                         100 / actor.next_exp
+   else
+     exp = (width + plus_width) * rate_width / 100
+   end
+   # ゲージの描画
+   gauge_rect(x + plus_x + width * rate_x / 100, y + plus_y,
+               width, plus_width + width * rate_width / 100,
+               height, exp, align1, align2, align3,
+               color1, color2, color3, color4, color5, color6, grade1, grade2)
+   # オリジナルのEXP描画処理を呼び出し
+   draw_actor_exp_original(actor, x, y)
+ end
+ #--------------------------------------------------------------------------
+ # ● ゲージの描画
+ #--------------------------------------------------------------------------
+ def gauge_rect(x, y, rect_width, width, height, gauge, align1, align2, align3,
+               color1, color2, color3, color4, color5, color6, grade1, grade2)
+   case align1
+   when 1
+     x += (rect_width - width) / 2
+   when 2
+     x += rect_width - width
+   end
+   case align2
+   when 1
+     y -= height / 2
+   when 2
+     y -= height
+   end
+   # 枠描画
+   self.contents.fill_rect(x, y, width, height, color1)
+   self.contents.fill_rect(x + 1, y + 1, width - 2, height - 2, color2)
+   if align3 == 0
+     if grade1 == 2
+       grade1 = 3
+     end
+     if grade2 == 2
+       grade2 = 3
+     end
+   end
+   if (align3 == 1 and grade1 == 0) or grade1 > 0
+     color = color3
+     color3 = color4
+     color4 = color
+   end
+   if (align3 == 1 and grade2 == 0) or grade2 > 0
+     color = color5
+     color5 = color6
+     color6 = color
+   end
+   # 空ゲージの描画
+   self.contents.gradation_rect(x + 2, y + 2, width - 4, height - 4,
+                                 color3, color4, grade1)
+   if align3 == 1
+     x += width - gauge
+   end
+   # 実ゲージの描画
+   self.contents.gradation_rect(x + 2, y + 2, gauge - 4, height - 4,
+                                 color5, color6, grade2)
+ end
+end
+
+#------------------------------------------------------------------------------
+# 　Bitmapクラスに新たな機能を追加します。
+#==============================================================================
+
+class Bitmap
+ #--------------------------------------------------------------------------
+ # ● 矩形をグラデーション表示
+ #     color1 : スタートカラー
+ #     color2 : エンドカラー
+ #     align  :  0:横にグラデーション
+ #               1:縦にグラデーション
+ #               2:斜めにグラデーション（激重につき注意）
+ #--------------------------------------------------------------------------
+ def gradation_rect(x, y, width, height, color1, color2, align = 0)
+   if align == 0
+     for i in x...x + width
+       red   = color1.red + (color2.red - color1.red) * (i - x) / (width - 1)
+       green = color1.green +
+               (color2.green - color1.green) * (i - x) / (width - 1)
+       blue  = color1.blue +
+               (color2.blue - color1.blue) * (i - x) / (width - 1)
+       alpha = color1.alpha +
+               (color2.alpha - color1.alpha) * (i - x) / (width - 1)
+       color = Color.new(red, green, blue, alpha)
+       fill_rect(i, y, 1, height, color)
+     end
+   elsif align == 1
+     for i in y...y + height
+       red   = color1.red +
+               (color2.red - color1.red) * (i - y) / (height - 1)
+       green = color1.green +
+               (color2.green - color1.green) * (i - y) / (height - 1)
+       blue  = color1.blue +
+               (color2.blue - color1.blue) * (i - y) / (height - 1)
+       alpha = color1.alpha +
+               (color2.alpha - color1.alpha) * (i - y) / (height - 1)
+       color = Color.new(red, green, blue, alpha)
+       fill_rect(x, i, width, 1, color)
+     end
+   elsif align == 2
+     for i in x...x + width
+       for j in y...y + height
+         red   = color1.red + (color2.red - color1.red) *
+                 ((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+         green = color1.green + (color2.green - color1.green) *
+                 ((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+         blue  = color1.blue + (color2.blue - color1.blue) *
+                 ((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+         alpha = color1.alpha + (color2.alpha - color1.alpha) *
+                 ((i - x) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+         color = Color.new(red, green, blue, alpha)
+         set_pixel(i, j, color)
+       end
+     end
+   elsif align == 3
+     for i in x...x + width
+       for j in y...y + height
+         red   = color1.red + (color2.red - color1.red) *
+               ((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+         green = color1.green + (color2.green - color1.green) *
+               ((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+         blue  = color1.blue + (color2.blue - color1.blue) *
+               ((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+         alpha = color1.alpha + (color2.alpha - color1.alpha) *
+               ((x + width - i) / (width - 1.0) + (j - y) / (height - 1.0)) / 2
+         color = Color.new(red, green, blue, alpha)
+         set_pixel(i, j, color)
+       end
+     end
+   end
+ end
+end
+
+#==============================================================================
+# ■ Spriteモジュール
+#------------------------------------------------------------------------------
+# 　アニメーションの管理を行うモジュールです。
+#==============================================================================
+
+module RPG
+ class Sprite < ::Sprite
+   def damage(value, critical)
+     dispose_damage
+     if value.is_a?(Numeric)
+       damage_string = value.abs.to_s
+     else
+       damage_string = value.to_s
+     end
+     bitmap = Bitmap.new(160, 48)
+     bitmap.font.name = "Arial Black"
+     bitmap.font.size = 32
+     bitmap.font.color.set(0, 0, 0)
+     bitmap.draw_text(-1, 12-1, 160, 36, damage_string, 1)
+     bitmap.draw_text(+1, 12-1, 160, 36, damage_string, 1)
+     bitmap.draw_text(-1, 12+1, 160, 36, damage_string, 1)
+     bitmap.draw_text(+1, 12+1, 160, 36, damage_string, 1)
+     if value.is_a?(Numeric) and value < 0
+       bitmap.font.color.set(176, 255, 144)
+     else
+       bitmap.font.color.set(255, 255, 255)
+     end
+     bitmap.draw_text(0, 12, 160, 36, damage_string, 1)
+     if critical
+       bitmap.font.size = 20
+       bitmap.font.color.set(0, 0, 0)
+       bitmap.draw_text(-1, -1, 160, 20, "GRAVE", 1)
+       bitmap.draw_text(+1, -1, 160, 20, "GRAVE", 1)
+       bitmap.draw_text(-1, +1, 160, 20, "GRAVE", 1)
+       bitmap.draw_text(+1, +1, 160, 20, "GRAVE", 1)
+       bitmap.font.color.set(255, 255, 255)
+       bitmap.draw_text(0, 0, 160, 20, "GRAVE", 1)
+     end
+     @_damage_sprite = ::Sprite.new
+     @_damage_sprite.bitmap = bitmap
+     @_damage_sprite.ox = 80 + self.viewport.ox
+     @_damage_sprite.oy = 20 + self.viewport.oy
+     @_damage_sprite.x = self.x + self.viewport.rect.x
+     @_damage_sprite.y = self.y - self.oy / 2 + self.viewport.rect.y
+     @_damage_sprite.z = 3000
+     @_damage_duration = 40
+   end
+   def animation(animation, hit)
+     dispose_animation
+     @_animation = animation
+     return if @_animation == nil
+     @_animation_hit = hit
+     @_animation_duration = @_animation.frame_max
+     animation_name = @_animation.animation_name
+     animation_hue = @_animation.animation_hue
+     bitmap = RPG::Cache.animation(animation_name, animation_hue)
+     if @@_reference_count.include?(bitmap)
+       @@_reference_count[bitmap] += 1
+     else
+       @@_reference_count[bitmap] = 1
+     end
+     @_animation_sprites = []
+     if @_animation.position != 3 or not @@_animations.include?(animation)
+       for i in 0..15
+         sprite = ::Sprite.new
+         sprite.bitmap = bitmap
+         sprite.visible = false
+         @_animation_sprites.push(sprite)
+       end
+       unless @@_animations.include?(animation)
+         @@_animations.push(animation)
+       end
+     end
+     update_animation
+   end
+   def loop_animation(animation)
+     return if animation == @_loop_animation
+     dispose_loop_animation
+     @_loop_animation = animation
+     return if @_loop_animation == nil
+     @_loop_animation_index = 0
+     animation_name = @_loop_animation.animation_name
+     animation_hue = @_loop_animation.animation_hue
+     bitmap = RPG::Cache.animation(animation_name, animation_hue)
+     if @@_reference_count.include?(bitmap)
+       @@_reference_count[bitmap] += 1
+     else
+       @@_reference_count[bitmap] = 1
+     end
+     @_loop_animation_sprites = []
+     for i in 0..15
+       sprite = ::Sprite.new
+       sprite.bitmap = bitmap
+       sprite.visible = false
+       @_loop_animation_sprites.push(sprite)
+     end
+     update_loop_animation
+   end
+   def animation_set_sprites(sprites, cell_data, position)
+     for i in 0..15
+       sprite = sprites[i]
+       pattern = cell_data[i, 0]
+       if sprite == nil or pattern == nil or pattern == -1
+         sprite.visible = false if sprite != nil
+         next
+       end
+       sprite.visible = true
+       sprite.src_rect.set(pattern % 5 * 192, pattern / 5 * 192, 192, 192)
+       if position == 3
+         if self.viewport != nil
+           sprite.x = self.viewport.rect.width / 2
+           sprite.y = self.viewport.rect.height - 160
+         else
+           sprite.x = 320
+           sprite.y = 240
+         end
+       else
+         sprite.x = self.x + self.viewport.rect.x -
+                     self.ox + self.src_rect.width / 2
+         sprite.y = self.y + self.viewport.rect.y -
+                     self.oy + self.src_rect.height / 2
+         sprite.y -= self.src_rect.height / 4 if position == 0
+         sprite.y += self.src_rect.height / 4 if position == 2
+       end
+       sprite.x += cell_data[i, 1]
+       sprite.y += cell_data[i, 2]
+       sprite.z = 2000
+       sprite.ox = 96
+       sprite.oy = 96
+       sprite.zoom_x = cell_data[i, 3] / 100.0
+       sprite.zoom_y = cell_data[i, 3] / 100.0
+       sprite.angle = cell_data[i, 4]
+       sprite.mirror = (cell_data[i, 5] == 1)
+       sprite.opacity = cell_data[i, 6] * self.opacity / 255.0
+       sprite.blend_type = cell_data[i, 7]
+     end
+   end
+ end
+end

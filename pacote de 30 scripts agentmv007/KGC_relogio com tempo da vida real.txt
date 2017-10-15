@@ -1,0 +1,29 @@
+###################################################################
+#################### KGC_PlayTimeAlter ############################
+###################################################################
+#_Mostra o tempo do jogo e o tempo real da sua vida,hehehe ########
+###################################################################
+$imported["PlayTimeAlter"] = true
+
+#==============================================================================
+# ¦ Window_PlayTime
+#==============================================================================
+
+class Window_PlayTime < Window_Base
+  def refresh
+    self.contents.clear
+    self.contents.font.color = text_color(6)
+    time = Time.now
+    text = time.strftime("%x %X")
+    self.contents.draw_text(-28, 0, 152, 32, text, 2)
+    self.contents.font.color = system_color
+    self.contents.draw_text(4, 32, 40, 32, "Time")
+    @total_sec = Graphics.frame_count / Graphics.frame_rate
+    hour = @total_sec / 3600
+    min = @total_sec / 60 % 60
+    sec = @total_sec % 60
+    text = sprintf("%02d:%02d:%02d", hour, min, sec)
+    self.contents.font.color = normal_color
+    self.contents.draw_text(4, 32, 120, 32, text, 2)
+  end
+end

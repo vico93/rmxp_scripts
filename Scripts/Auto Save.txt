@@ -1,0 +1,244 @@
+#============================================================================== 
+# Autosave Script Offline 1.0 
+#------------------------------------------------------------------------------ 
+# Authors   Darklord, Blue Elf and Me™ 
+# Version   Offline 1.0 
+#------------------------------------------------------------------------------ 
+# This script aliases(a)/rewrites(r) in the folowwing classes and methods: 
+# 
+#  Game_Party  -> gain_gold  (a) , gain_item (a), gain_armor (a), gain_weapon (a) 
+#  add_actor (a), remove_actor (a) 
+#  Game_System -> initialize (a) 
+#  Scene_Save  -> initialize (a,r) , on_decision (a,r) 
+#  Scene_Map   -> transfer player (r) 
+#  Scene_Battle 1 -> battle_end (a) 
+#============================================================================== 
+
+
+#============================================================================== 
+# *** AutoSave 
+#------------------------------------------------------------------------------ 
+# This module handles the AutoSaving 
+#============================================================================== 
+module AutoSave 
+#-------------------------------------------------------------------------- 
+# * Saves File 
+#-------------------------------------------------------------------------- 
+def self.save 
+ begin 
+   #Saves the file to whatever $game_system.filename is 
+   file = File.open($game_system.filename, "wb") 
+   a = Scene_Save.new 
+   a.write_save_data(file) 
+ ensure 
+   file.close 
+ end 
+end 
+#-------------------------------------------------------------------------- 
+# * Deletes File 
+#-------------------------------------------------------------------------- 
+def self.deletesave 
+ begin 
+   if FileTest.exits?($game_system.filename) 
+     File.delete($game_system.filename) 
+   end  
+ end 
+end 
+end 
+#============================================================================== 
+
+#============================================================================== 
+# ** Scene_AutoSave 
+#------------------------------------------------------------------------------ 
+# This class performs save screen processing. 
+# This changes the autosave file 
+#============================================================================== 
+
+class Scene_AutoSave < Scene_File 
+ #-------------------------------------------------------------------------- 
+ # * Object Initialization 
+ #-------------------------------------------------------------------------- 
+ def initialize 
+   super("Which file would you like to Autosave to?") 
+ end 
+ #-------------------------------------------------------------------------- 
+ # * Decision Processing 
+ #-------------------------------------------------------------------------- 
+ def on_decision(filename) 
+   # Play save SE 
+   $game_system.se_play($data_system.save_se) 
+   $game_system.filename_c(filename) 
+   # If called from event 
+   if $game_temp.save_calling 
+     # Clear save call flag 
+     $game_temp.save_calling = false 
+     # Switch to map screen 
+     $scene = Scene_Map.new 
+     return 
+   end 
+   # Switch to menu screen 
+   $scene = Scene_Map.new 
+ end 
+ #-------------------------------------------------------------------------- 
+ # * Cancel Processing 
+ #-------------------------------------------------------------------------- 
+ def on_cancel 
+   # Play cancel SE 
+   $game_system.se_play($data_system.cancel_se) 
+   # If called from event 
+   if $game_temp.save_calling 
+     # Clear save call flag 
+     $game_temp.save_calling = false 
+     # Switch to map screen 
+     $scene = Scene_Map.new 
+     return 
+   end 
+   # Switch to menu screen 
+   $scene = Scene_Map.new 
+ end 
+end 
+
+#============================================================================== 
+# ** Game_System 
+#------------------------------------------------------------------------------ 
+#  This class handles data surrounding the system. Backround music, etc. 
+#  is managed here as well. Refer to "$game_system" for the instance of 
+#  this class. 
+#============================================================================== 
+class Game_System 
+#-------------------------------------------------------------------------- 
+# * Aliasing Objects 
+#-------------------------------------------------------------------------- 
+alias autosaveinit initialize 
+#-------------------------------------------------------------------------- 
+# * Initialize 
+#-------------------------------------------------------------------------- 
+def initialize 
+ autosaveinit 
+ @filename = "Save1.rxdata" 
+end 
+#-------------------------------------------------------------------------- 
+# * Filename -> Returns Autosave Filename 
+#-------------------------------------------------------------------------- 
+def filename 
+ if @filename != nil 
+   return @filename 
+ else 
+   return "Save1.rxdata" 
+ end  
+end 
+#-------------------------------------------------------------------------- 
+# * Filename_change -> Sets New Autosave Filename 
+#-------------------------------------------------------------------------- 
+def filename_c(newname) 
+ return if newname == "" or newname == nil 
+ @filename = newname 
+end 
+end 
+
+#============================================================================== 
+# ** Game_Party 
+#------------------------------------------------------------------------------ 
+# This class handles the party. It includes information on amount of gold 
+# and items. Refer to "$game_party" for the instance of this class. 
+#============================================================================== 
+class Game_Party 
+
+alias gainglod_autosave gain_gold 
+alias gainitem_autosave gain_item 
+alias gainweap_autosave gain_weapon 
+alias gainarmor_autosave gain_armor 
+alias add_actor_autosave add_actor 
+alias remove_actor_autosave remove_actor 
+#-------------------------------------------------------------------------- 
+# * Gain Gold (or lose) 
+# n : amount of gold 
+#-------------------------------------------------------------------------- 
+def gain_gold(n) 
+ gainglod_autosave(n) 
+ AutoSave.save 
+end 
+#-------------------------------------------------------------------------- 
+# * Gain Items (or lose) 
+# item_id : item ID 
+# n : quantity 
+#-------------------------------------------------------------------------- 
+def gain_item(item_id, n) 
+ gainitem_autosave(item_id, n) 
+ AutoSave.save 
+end 
+#-------------------------------------------------------------------------- 
+# * Gain Weapons (or lose) 
+# weapon_id : weapon ID 
+# n : quantity 
+#-------------------------------------------------------------------------- 
+def gain_weapon(weapon_id, n) 
+ gainweap_autosave(weapon_id, n) 
+ AutoSave.save 
+end 
+#-------------------------------------------------------------------------- 
+# * Gain Armor (or lose) 
+# armor_id : armor ID 
+# n : quantity 
+#-------------------------------------------------------------------------- 
+def gain_armor(armor_id, n) 
+ gainarmor_autosave(armor_id, n) 
+ AutoSave.save 
+end 
+#-------------------------------------------------------------------------- 
+# * Add an Actor 
+#     actor_id : actor ID 
+#-------------------------------------------------------------------------- 
+def add_actor(actor_id) 
+ add_actor_autosave(actor_id) 
+ AutoSave.save 
+end 
+#-------------------------------------------------------------------------- 
+# * Remove Actor 
+#     actor_id : actor ID 
+#-------------------------------------------------------------------------- 
+def remove_actor(actor_id) 
+ remove_actor_autosave(actor_id) 
+ AutoSave.save 
+end 
+end 
+#============================================================================== 
+# ** Scene_Map 
+#------------------------------------------------------------------------------ 
+#  This class performs map screen processing. 
+#============================================================================== 
+
+class Scene_Map 
+alias tp_autosave transfer_player 
+#-------------------------------------------------------------------------- 
+# * Player Place Move 
+#-------------------------------------------------------------------------- 
+def transfer_player 
+$game_map.map_id != $game_temp.player_new_map_id ? result = true : result = false 
+tp_autosave 
+AutoSave.save if result 
+end 
+end 
+#============================================================================== 
+# ** Scene_Battle (part 1) 
+#------------------------------------------------------------------------------ 
+#  This class performs battle screen processing. 
+#============================================================================== 
+class Scene_Battle 
+alias battle_end_autosave battle_end 
+ #-------------------------------------------------------------------------- 
+ # * Battle Ends 
+ #     result : results (0:win 1:lose 2:escape) 
+ #-------------------------------------------------------------------------- 
+ def battle_end(result) 
+  battle_end_autosave(result) 
+  AutoSave.save 
+end 
+end
+
+Manual de uso
+para começar o ciclo de auto-save 
+ponha em um chamar script
+
+Código:
+$scene = Scene_AutoSave.new e pronto , acada teleport voce salvara

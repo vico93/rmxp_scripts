@@ -1,0 +1,90 @@
+Esse foi um script criado pelo nosso colega Soundspawn do USA ,todos os creditos são para ele.
+Eu só estou colocando o script dele aqui e explicando como se usa.
+
+DEMO
+http://www.soundspawn.com/rgssmovie.zip
+Caso a Demo não rode ,tente instalar a versão em ingles do Maker(Japonês)
+
+Seus filmes devem ter o tamanho de 640x480 , caso contrario,você ira ver partes do seu mapa ,não que isso atrapalhe, mas...
+Entre no editor de Script.
+Acima do Main crie um novo script.
+
+######################################################
+
+class Scene_Movie
+
+def initialize(movie)
+@readini = Win32API.new 'kernel32', 'GetPrivateProfileStringA', %w(p p p p l p), 'l'
+@movie_name = Dir.getwd()+"\\Movies\\"+movie+".avi"
+main
+end
+
+def main
+
+game_name = "{TUTO_TUTORIAL}" * 256
+@readini.call('Game','Title','',game_name,255,".\\Game.ini")
+game_name.delete!("{TUTO_TUTORIAL}")
+@wnd = Win32API.new('user32','FindWindowEx','%w(l,l,p,p)','L')
+@temp = @wnd.call(0,0,nil,game_name).to_s
+movie = Win32API.new('winmm','mciSendString','%w(p,p,l,l)','V')
+movie.call("open \""+@movie_name+"\" alias FILE style 1073741824 parent " + @temp.to_s,0,0,0)
+@message = Win32API.new('user32','SendMessage','%w(l,l,l,l)','V')
+
+@detector = Win32API.new('user32','GetSystemMetrics','%w(l)','L')
+@width = @detector.call(0)
+if @width == 640
+fullscreen
+Graphics.update
+sleep(1)
+Graphics.update
+sleep(1)
+Graphics.update
+sleep(1)
+end
+
+status = " " * 255
+movie.call("play FILE",0,0,0)
+loop do
+sleep(0.1)
+@message.call(@temp.to_i,11,0,0)
+Graphics.update
+@message.call(@temp.to_i,11,1,0)
+Input.update
+movie.call("status FILE mode",status,255,0)
+true_status = status.unpack("aaaa")
+if true_status.to_s != "play"
+break
+end
+if Input.trigger?(Input::B)
+Input.update
+break
+end
+end
+movie.call("close FILE",0,0,0)
+bail
+end
+
+def bail
+if @width == 640
+fullscreen
+end
+end
+end
+
+def fullscreen()
+
+$full.call(18,0,0,0)
+$full.call(13,0,0,0)
+$full.call(18,0,2,0)
+$full.call(13,0,2,0)
+end
+$full = Win32API.new('user32','keybd_event','%w(l,l,l,l)','') 
+
+####################################################
+
+Crie um novo diretório chamado Movies, e coloque seus filmes ai,Dããã
+Para ver os seus filmes crie um evento , entre no EVENT COMMAND , acione o comando CALL SCRIPT. e coloque este comando.
+
+Scene_Movie.new(Nome do Arquivo)
+
+Ai está , seu game com filmes.

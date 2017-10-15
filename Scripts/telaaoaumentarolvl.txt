@@ -1,0 +1,288 @@
+Características.
+Adiciona uma janela de LV-UP, que apresenta em detalhes todos os atributos  
+modificados ao aumentar o level.
+
+Utilização.
+Procure estas linhas logo no começo do script.
+
+  Definição da posição da janela de LV-UP
+#-------------------------------------------------------
+  ALIGN = 0
+#-------------------------------------------------------
+
+Número de janelas de LV-UP por tela, que deve ser proporcional à quantidade 
+de Battlers.
+#-------------------------------------------------------
+  MAX = 4
+#-------------------------------------------------------
+
+Definição do som (SE) no momento do LV-UP, coloque o nome do arquivo de SE 
+dentro das aspas.
+#-------------------------------------------------------
+  LEVEL_UP_SE  = ""
+#-------------------------------------------------------
+
+Definição da música (ME) no momento do LV-UP, coloque o nome do arquivo de 
+ME dentro das aspas (no lugar do 007-Fanfare01).
+
+#-------------------------------------------------------
+  LEVEL_UP_ME  = "Audio/ME/007-Fanfare01"
+#-------------------------------------------------------
+
+Tempo de espera para apresentar a janela de LV-UP.
+#-------------------------------------------------------
+  PHASE5_WAIT_COUNT = 100
+#-------------------------------------------------------
+
+Definição do som (SE) no momento do LV-UP, coloque o nome do arquivo de SE 
+dentro das aspas, (no lugar do 106-Heal02).
+#-------------------------------------------------------
+  SKILLLEARN_SE = "Audio/SE/106-Heal02"
+#-------------------------------------------------------
+
+Codigo:
+#################################################################
+############################ XRXS ###############################
+#################################################################
+# Adiciona uma janela de LV-UP, que apresenta em detalhes todos os
+#atributos modificados ao aumentar o level.
+#################################################################
+module XRXS_BP10
+  #Definição da posição da janela de LV-UP
+  ALIGN = 0
+  # Numero de janelas de LV-UP por tela, que deve ser proporcional
+  #à quantidade de Battlers.
+  MAX = 4
+end
+class Scene_Battle
+  #Definição do som (SE) no momento do LV-UP.
+  LEVEL_UP_SE  = ""
+  #Definição da música (ME) no momento do LV-UP.
+  LEVEL_UP_ME  = "Audio/ME/007-Fanfare01"
+  #Tempo de espera para apresentar a janela de LV-UP.
+  PHASE5_WAIT_COUNT = 100
+end
+class Window_SkillLearning < Window_Base
+  #Definição do som (SE) no momento do LV-UP.
+  SKILLLEARN_SE = "Audio/SE/106-Heal02"
+end
+class Game_Actor < Game_Battler
+  def parameter_freeze
+    @freezed_maxhp = self.base_maxhp
+    @freezed_maxsp = self.base_maxsp
+    @parameter_freeze = true
+  end
+  def parameter_freeze_cancel
+    @parameter_freeze = nil
+    @freezed_maxhp = nil
+    @freezed_maxsp = nil
+  end
+  alias xrxs_bp10_base_maxhp base_maxhp
+  def base_maxhp
+    return (@parameter_freeze.nil? ? xrxs_bp10_base_maxhp : @freezed_maxhp)
+  end
+  alias xrxs_bp10_base_maxsp base_maxsp
+  def base_maxsp
+    return (@parameter_freeze.nil? ? xrxs_bp10_base_maxsp : @freezed_maxsp)
+  end
+end
+class Window_LevelUpWindow < Window_Base
+  def initialize(x, y, actor, last_lv, up_hp, up_sp, up_str, up_dex, up_agi, 
+up_int)
+    super(x, y, 160, 192)
+    self.contents = Bitmap.new(width - 32, height - 32)
+    self.visible = false
+    self.back_opacity = 160
+    refresh(actor, last_lv, up_hp, up_sp, up_str, up_dex, up_agi, up_int)
+  end
+  def refresh(actor, last_lv, up_hp, up_sp, up_str, up_dex, up_agi, up_int)
+    self.contents.clear
+    self.contents.font.color = system_color
+    self.contents.font.size = 14
+    self.contents.draw_text( 0,  0, 160, 24, "LEVEL UP!!")
+    self.contents.font.size = 18
+    self.contents.draw_text( 0,  28, 160, 24, $data_system.words.hp)
+    self.contents.draw_text( 0,  50, 160, 24, $data_system.words.sp)
+    self.contents.font.size = 14
+    self.contents.draw_text( 0,  72,  80, 24, $data_system.words.str)
+    self.contents.draw_text( 0,  94,  80, 24, $data_system.words.dex)
+    self.contents.draw_text( 0, 116,  80, 24, $data_system.words.agi)
+    self.contents.draw_text( 0, 138,  80, 24, $data_system.words.int)
+    self.contents.draw_text(92,  0, 128, 24, "UP")
+    self.contents.draw_text(76,  28, 128, 24, "=")
+    self.contents.draw_text(76,  50, 128, 24, "=")
+    self.contents.draw_text(76,  72, 128, 24, "=")
+    self.contents.draw_text(76,  94, 128, 24, "=")
+    self.contents.draw_text(76, 116, 128, 24, "=")
+    self.contents.draw_text(76, 138, 128, 24, "=")
+    self.contents.font.color = normal_color
+    self.contents.draw_text( 0,  0,  88, 24, last_lv.to_s, 2)
+    self.contents.draw_text( 0,  28,  72, 24, "+" + up_hp.to_s, 2)
+    self.contents.draw_text( 0,  50,  72, 24, "+" + up_sp.to_s, 2)
+    self.contents.draw_text( 0,  72,  72, 24, "+" + up_str.to_s, 2)
+    self.contents.draw_text( 0,  94,  72, 24, "+" + up_dex.to_s, 2)
+    self.contents.draw_text( 0, 116,  72, 24, "+" + up_agi.to_s, 2)
+    self.contents.draw_text( 0, 138,  72, 24, "+" + up_int.to_s, 2)
+    self.contents.font.size = 20
+    self.contents.draw_text( 0,  0, 128, 24, actor.level.to_s, 2)
+    self.contents.draw_text( 0,  26, 128, 24, actor.maxhp.to_s, 2)
+    self.contents.draw_text( 0,  48, 128, 24, actor.maxsp.to_s, 2)
+    self.contents.draw_text( 0,  70, 128, 24, actor.str.to_s, 2)
+    self.contents.draw_text( 0,  92, 128, 24, actor.dex.to_s, 2)
+    self.contents.draw_text( 0, 114, 128, 24, actor.agi.to_s, 2)
+    self.contents.draw_text( 0, 136, 128, 24, actor.int.to_s, 2)
+  end
+end
+class Window_SkillLearning < Window_Base
+  attr_reader  :learned
+  def initialize(actor, already_learned, last_lv)
+    super(160,  64, 320, 64)
+    self.contents = Bitmap.new(width - 32, height - 28)
+    self.visible  = false
+    self.back_opacity = 160
+    @learned      = false
+    refresh(actor, already_learned, last_lv)
+  end
+  def refresh(actor, already_learned, last_lv)
+    class_id = actor.class_id
+    now_lv  = actor.level
+    for i in 0...$data_classes[class_id].learnings.size
+      learn_lv = $data_classes[class_id].learnings[i].level
+      if learn_lv > last_lv and learn_lv <= now_lv
+        skill_id = $data_classes[class_id].learnings[i].skill_id
+        if already_learned.include?(skill_id)
+          next
+        end
+        @learned = true
+        if SKILLLEARN_SE != ""
+          Audio.se_play(SKILLLEARN_SE)
+        end
+        skill_name = $data_skills[skill_id].name
+        self.contents.clear
+        self.contents.draw_text(0,0,448,32,"Aprendeu!!! " + skill_name )
+        self.visible = true
+        loop do
+          Graphics.update
+          Input.update
+          update
+          break unless @learned
+        end
+      end
+    end
+  end
+  def update
+    if Input.trigger?(Input::C)
+      @learned = false
+      self.visible  = false
+    end
+  end
+end
+class Window_BattleStatus < Window_Base
+  attr_accessor :level_up_flags            # LEVEL UP!•\Ž¦
+end
+class Scene_Battle
+  alias xrxs_bp10_start_phase5 start_phase5
+  def start_phase5
+    @parameters = []
+    for actor in $game_party.actors
+      @parameters.push([actor.level, actor.skills.dup, nil, actor.str, 
+actor.dex, actor.agi, actor.int])
+      actor.parameter_freeze unless actor.cant_get_exp?
+    end
+    xrxs_bp10_start_phase5
+    @exp_gain_actor    = -1
+    @phase5_wait_count = PHASE5_WAIT_COUNT
+    @phase5_levelup_step_start = false
+  end
+  alias xrxs_bp10_update_phase5 update_phase5
+  def update_phase5
+    unless @phase5_levelup_step_start
+      if @phase5_wait_count > 0
+        xrxs_bp10_update_phase5
+        return
+      else
+        @phase5_levelup_step_start = true
+      end
+    end
+    @level_up_phase_done = false if @level_up_phase_done != true
+    if Input.trigger?(Input::C)
+      @levelup_window.visible = false if @levelup_window != nil
+      @status_window.level_up_flags[@exp_gain_actor] = false
+      if @levelup_window != nil
+        @levelup_window.dispose
+        @levelup_window = nil
+      end
+      @level_up_phase_done = phase5_next_levelup
+    end
+    if @level_up_phase_done
+      if @phase5_wait_count < 2
+        @result_window.opacity = 0
+        @result_window.back_opacity = 0
+        @result_window.contents_opacity = 0
+      end
+      battle_end(0)
+    end
+  end
+  def phase5_next_levelup
+    begin
+      @exp_gain_actor += 1
+      if @exp_gain_actor >= $game_party.actors.size
+        return true
+      end
+      actor = $game_party.actors[@exp_gain_actor]
+      unless actor.cant_get_exp?
+        last_level = @parameters[actor.index][0]
+        last_maxhp = actor.maxhp
+        last_maxsp = actor.maxsp
+        last_str = @parameters[actor.index][3]
+        last_dex = @parameters[actor.index][4]
+        last_agi = @parameters[actor.index][5]
+        last_int = @parameters[actor.index][6]
+        actor.parameter_freeze_cancel
+        if actor.level > last_level
+          @status_window.level_up(@exp_gain_actor)
+          @result_window.visible = false
+          if LEVEL_UP_SE != ""
+            Audio.se_play(LEVEL_UP_SE)
+          end
+          if LEVEL_UP_ME != ""
+            Audio.me_stop
+            Audio.me_play(LEVEL_UP_ME)
+          end
+          space = @status_window.width / XRXS_BP10::MAX
+          i = @exp_gain_actor
+          case XRXS_BP10::ALIGN
+          when 0
+            cx = i * space + 4
+          when 1
+            cx = (space * ((XRXS_BP10::MAX - $game_party.actors.size)/2.0 + 
+i)).floor
+          when 2
+            cx = (i + XRXS_BP10::MAX - $game_party.actors.size) * space + 4
+          end
+          cx += space/2
+          cx += @status_window.x
+          w = 80
+          x = [[cx, w].max, 640-w].min - w
+          y = 128
+          @levelup_window = Window_LevelUpWindow.new(x, y, actor, 
+last_level,
+            actor.maxhp - last_maxhp, actor.maxsp - last_maxsp, actor.str - 
+last_str,
+            actor.dex - last_dex, actor.agi - last_agi, actor.int - 
+last_int)
+          @levelup_window.visible = true
+          @status_window.refresh
+          @skilllearning_window = Window_SkillLearning.new(actor, 
+@parameters[actor.index][1], last_level)
+          @phase5_wait_count = 40
+          return false
+        end
+      end
+    end until false
+  end
+end
+
+
+
+

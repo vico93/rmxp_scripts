@@ -1,0 +1,497 @@
+#################################################################
+########################### XRXS ################################
+#################################################################
+#Adiciona o sistema de seleção de membros, na qual é possível
+#selecionar quais ou a quantidade de personagens que irão
+#para batalha. É necessário ter o modulo XRXS.
+#################################################################
+module XRXS26
+  FRONT_MEMBER_LIMIT    = 5 # Numero de membros da linha de frente.       
+  BACKWARD_MEMBER_LIMIT = 0 # Numero de membros na retaguarda.       
+  BACKWARD_EXP_GAINABLE = true #Membros da retaguarda ganharão EXP.   
+end
+module XRXS_BP21
+  ALIGN = 1 #Ajuste da janela do menu status de batalha.
+  MAX = 1   #Quantidade de Battlers que irão para batalha. 
+end
+#################################################################
+
+class Game_Party
+  include XRXS26
+  attr_reader   :backword_actors          
+  alias xrxs26_initialize initialize
+  def initialize
+    xrxs26_initialize
+    @backword_actors = []
+  end
+  def add_actor(actor_id)
+    actor = $game_actors[actor_id]
+    if not @actors.include?(actor)
+      if @actors.size < (FRONT_MEMBER_LIMIT + BACKWARD_MEMBER_LIMIT)
+        @actors.push(actor)
+        $game_player.refresh
+      end
+    end
+  end
+end
+class Spriteset_Battle
+  include XRXS26
+  alias xrxs26_initialize initialize
+  def initialize
+    xrxs26_initialize
+    actor_viewport = @actor_sprites[0].viewport
+    if FRONT_MEMBER_LIMIT > 4
+      for i in 5..FRONT_MEMBER_LIMIT
+        @actor_sprites.push(Sprite_Battler.new(actor_viewport))
+        @actor_sprites[i-1].battler = $game_party.actors[i-1]
+      end
+    end
+    actor_viewport.update
+  end
+  alias xrxs26_update update
+  def update
+    for i in 4...$game_party.actors.size
+      next if @actor_sprites.nil?
+      @actor_sprites.battler = $game_party.actors
+    end
+    xrxs26_update
+  end
+end
+class Scene_Battle
+  include XRXS26
+  alias xrxs26_main main
+  def main
+    $game_party.backword_actors[0,0] = $game_party.actors[FRONT_MEMBER_LIMIT, BACKWARD_MEMBER_LIMIT]
+    $game_party.actors[FRONT_MEMBER_LIMIT, BACKWARD_MEMBER_LIMIT] = nil
+    $game_party.actors.compact!
+    xrxs26_main
+    $game_party.actors[$game_party.actors.size,0] = $game_party.backword_actors
+    $game_party.backword_actors.clear
+  end
+  alias xrxs26_start_phase5 start_phase5
+  def start_phase5
+    if BACKWARD_EXP_GAINABLE and $game_party.backword_actors.size >= 1
+      $game_party.actors[$game_party.actors.size,0] = $game_party.backword_actors
+      $game_party.backword_actors.clear
+      xrxs26_start_phase5
+      $game_party.backword_actors[0,0] = $game_party.actors[FRONT_MEMBER_LIMIT, BACKWARD_MEMBER_LIMIT]
+      $game_party.actors[FRONT_MEMBER_LIMIT, BACKWARD_MEMBER_LIMIT] = nil
+      $game_party.actors.compact!
+    else
+      xrxs26_start_phase5
+    end
+  end
+end
+
+module XRXS26
+  MENU_STATUS_STRETCH   = true   
+end
+class Window_MenuStatus < Window_Selectable
+  COLUMN_MAX = 1
+  CURSOR_HEIGHT = 96
+  LINE_HEIGHT = 116
+end
+class Scene_Menu
+  MENU_MEMBER_CHANGE_KEY_GO    = Input::RIGHT 
+  MENU_MEMBER_CHANGE_KEY_END   = Input::LEFT  
+  MENU_MEMBER_CHANGE_INDEX_MIN = 0            
+  FORCETOBATTLE_ACTORS         = []           
+  UMBATTLABLE_ACTORS           = []          
+  UNMOVABLE_ACTORS             = []          
+end
+class Window_MenuStatus < Window_Selectable
+  include XRXS26
+  include XRXS_Cursor2
+  attr_reader   :column_max             
+  def initialize
+    h = 480
+    if MENU_STATUS_STRETCH
+      h = FRONT_MEMBER_LIMIT * 116 + 16
+    end
+    super(0, 0, 480, h)
+    h = ($game_party.actors.size - 1) * LINE_HEIGHT + CURSOR_HEIGHT
+    self.contents = Bitmap.new(width - 32, h)
+    refresh
+    self.active = false
+    self.index = -1
+  end
+  def page_row_max
+    if MENU_STATUS_STRETCH
+      return FRONT_MEMBER_LIMIT          
+    else
+      return [FRONT_MEMBER_LIMIT, 4].max 
+    end
+  end
+  def top_row
+    return self.oy / LINE_HEIGHT
+  end
+  def top_row=(row)
+    super
+    self.oy = self.oy/32 * LINE_HEIGHT
+  end
+  def update_cursor_rect
+    super
+    unless @index < 0
+      y = (self.cursor_rect.y + self.oy) * LINE_HEIGHT/32 - self.oy
+      self.cursor_rect.set(0, y, self.cursor_rect.width, CURSOR_HEIGHT)
+    end
+  end
+end
+class Scene_Menu
+  include XRXS26
+  alias xrxs26ax_update update
+  def update
+    @status_index = @status_window.index
+    xrxs26ax_update
+  end
+  alias xrxs26ax_update_command update_command
+  def update_command
+    xrxs26ax_update_command
+    if Input.trigger?(MENU_MEMBER_CHANGE_KEY_GO) and
+       @command_window.index >= MENU_MEMBER_CHANGE_INDEX_MIN
+      $game_system.se_play($data_system.decision_se)
+      @command_index_before_menu_member_change = @command_window.index
+      @command_window.active = false
+      @command_window.index = -1
+      @status_window.active = true
+      @status_window.index = 0
+    end
+  end
+  alias xrxs26ax_update_status update_status
+  def update_status
+    if @command_window.index != -1
+      xrxs26ax_update_status
+      return
+    end
+    if ((Input.trigger?(Input::B) or Input.trigger?(MENU_MEMBER_CHANGE_KEY_END)) and
+        @status_window.index2 == -1 and 
+        @status_index%@status_window.column_max == 0)
+      $game_system.se_play($data_system.cancel_se)
+      @command_window.active = true
+      @command_window.index = 0
+      @status_window.active = false
+      @status_window.index = -1
+      return
+    end
+    if Input.trigger?(Input::B) and @status_window.index2 >= 0
+      @status_window.index = @status_window.index2
+      @status_window.index2 = -1
+      return
+    end
+    if Input.trigger?(Input::C)
+      if @status_window.index2 == -1
+        if UNMOVABLE_ACTORS.include?($game_party.actors[@status_window.index].id)
+          $game_system.se_play($data_system.buzzer_se)
+          return
+        end
+        $game_system.se_play($data_system.decision_se)
+        @status_window.index2 = @status_window.index
+      else
+        if UNMOVABLE_ACTORS.include?($game_party.actors[@status_window.index].id)
+          $game_system.se_play($data_system.buzzer_se)
+          return
+        end
+        if (@status_window.index < FRONT_MEMBER_LIMIT or 
+            @status_window.index2 < FRONT_MEMBER_LIMIT) and
+           (UMBATTLABLE_ACTORS.include?($game_party.actors[@status_window.index].id) or
+            UMBATTLABLE_ACTORS.include?($game_party.actors[@status_window.index2].id))
+          $game_system.se_play($data_system.buzzer_se)
+          return
+        end
+        if (@status_window.index >= FRONT_MEMBER_LIMIT or 
+            @status_window.index2 >= FRONT_MEMBER_LIMIT) and
+           (FORCETOBATTLE_ACTORS.include?($game_party.actors[@status_window.index].id) or
+            FORCETOBATTLE_ACTORS.include?($game_party.actors[@status_window.index2].id))
+          $game_system.se_play($data_system.buzzer_se)
+          return
+        end
+        $game_system.se_play($data_system.decision_se)
+        actor2 = $game_party.actors[@status_window.index]
+        actor = $game_party.actors[@status_window.index2]
+        $game_party.actors[@status_window.index2] = actor2
+        $game_party.actors[@status_window.index] = actor
+        @status_window.index = @status_window.index2
+        @status_window.index2 = -1
+        $game_player.refresh
+        @status_window.refresh
+      end
+      return
+    end
+  end
+end
+class Window_MenuStatus < Window_Selectable
+  NO_PARAMETER_ACTORS = []
+end
+class Window_MenuStatus < Window_Selectable
+  include XRXS26
+  attr_reader   :newitem_window
+  attr_reader   :bottomkeyhelp_window
+  alias xrxs26bx_initialize initialize
+  def initialize
+    xrxs26bx_initialize
+    @bottomkeyhelp_window = Window_BottomKeyHelp.new
+    @bottomkeyhelp_window.visible = false
+    self.height   = 448
+    self.contents = Bitmap.new(width - 32, height - 32)
+    refresh
+  end
+  def refresh
+    self.contents.clear
+    @item_max = $game_party.actors.size
+    @column_max = 2
+    y = (FRONT_MEMBER_LIMIT+1)/2 * 72 + 28
+    self.contents.font.size = 16
+    self.contents.font.color = system_color
+    self.contents.draw_text(4, 0, 92, 28, "")
+    self.contents.draw_text(4, y, 92, 28, "")
+    for i in 0...$game_party.actors.size
+      x = 64 + i%2 * 224
+      y = i/2 *  72 + 24
+      actor = $game_party.actors
+      if i >= FRONT_MEMBER_LIMIT
+        y += 32
+        self.contents.font.color = disabled_color
+        self.contents.draw_text(x, y, 120, 32, actor.name)
+      else
+        draw_actor_name(actor   , x     , y     )
+      end
+      draw_actor_graphic(actor, x - 40, y + 64)
+      unless NO_PARAMETER_ACTORS.include?(actor.id)
+        draw_actor_level(actor  , x + 94, y     )
+        draw_actor_hp(actor     , x + 28, y + 16)
+        draw_actor_sp(actor     , x + 28, y + 32)
+        draw_actor_state(actor  , x + 28, y + 48)
+      end
+    end
+  end
+  def update
+    @bottomkeyhelp_window.update
+    super
+  end
+  def dispose
+    @bottomkeyhelp_window.dispose
+    super
+  end
+  def update_cursor_rect
+    if @index < 0
+      self.cursor_rect.empty
+    else
+      y = @index/2 * 72 + 28
+      if @index >= FRONT_MEMBER_LIMIT
+        y += 32
+      end
+      self.cursor_rect.set(@index%2 * 224, y, 224, 72)
+    end
+  end
+end
+class Scene_Menu
+  alias xrxs26bx_update update
+  def update
+    # “o˜^
+    if @bottomkeyhelp_window.nil?
+      @bottomkeyhelp_window = @status_window.bottomkeyhelp_window
+      @bottomkeyhelp_window.visible = true
+      set_keyhelp1
+    end
+    xrxs26bx_update
+  end
+  alias xrxs26bx_update_command update_command
+  def update_command
+    xrxs26bx_update_command
+    if @command_window.index == -1 and @status_window.active
+      set_keyhelp2
+    end
+  end
+  alias xrxs26bx_update_status update_status
+  def update_status
+    last_index = @status_window.index2
+    xrxs26bx_update_status
+    if last_index != @status_window.index2
+      if @status_window.index2 >= 0
+        set_keyhelp3
+      else
+        set_keyhelp2
+      end
+    end
+    unless @status_window.active
+      set_keyhelp1
+    end
+  end
+  def set_keyhelp1
+    @bottomkeyhelp_window.clear
+    @bottomkeyhelp_window.add("B","Sair")
+    @bottomkeyhelp_window.add("C","Acionar")
+    @bottomkeyhelp_window.add("","Menu Status")
+  end
+  def set_keyhelp2
+    @bottomkeyhelp_window.clear
+    @bottomkeyhelp_window.add("B","Cancelar")
+    @bottomkeyhelp_window.add("C","Selecionar")
+  end
+  def set_keyhelp3
+    @bottomkeyhelp_window.clear
+    @bottomkeyhelp_window.add("B","Cancelar")
+    @bottomkeyhelp_window.add("C","Trocar")
+  end
+end
+class Window_BottomKeyHelp < Window_Base
+  def initialize
+    super(0, 432, 640, 64)
+    self.contents = Bitmap.new(width - 32, height - 32)
+    self.opacity = 0
+    clear
+  end
+  def clear
+    self.contents.clear
+    @now_x = 608
+  end
+  def add(key, explanation)
+    self.contents.font.size = 20
+    x  = self.contents.text_size(key).width
+    self.contents.font.size = 16
+    x += self.contents.text_size(explanation).width + 8
+    @now_x -= x
+    self.contents.font.size = 20
+    self.contents.font.color = system_color
+    self.contents.draw_text(@now_x, 0, x, 32, key, 0)
+    self.contents.font.size = 16
+    self.contents.font.color = normal_color
+    self.contents.draw_text(@now_x, 0, x, 32, explanation, 2)
+    @now_x -= 32
+  end
+end
+
+
+class Window_MenuStatusTarget < Window_MenuStatus
+  attr_reader   :column_max            
+  attr_reader   :item_max               
+  def update_cursor_rect
+    if @index <= -2
+      @index += 10
+      super
+      @index -= 10
+    elsif @index == -1
+      self.cursor_rect.set(0, 0, self.width - 32, self.height - 32)
+    else
+      super
+    end
+  end
+end
+class Window_Target < Window_Selectable
+  alias xrxs_mp17_initialize initialize
+  def initialize
+    xrxs_mp17_initialize
+    @status_window = Window_MenuStatusTarget.new
+    @status_window.refresh
+    @column_max = @status_window.column_max
+    @item_max   = @status_window.item_max
+    self.opacity = 0
+    self.contents_opacity = 0
+    @status_window.visible = false
+    @status_window.x = 640 - @status_window.width
+    @status_window.z = 500
+  end
+  alias xrxs_mp17_refresh refresh
+  def refresh
+    xrxs_mp17_refresh
+    @status_window.refresh unless @status_window.nil?
+  end
+  def active=(bool)
+    super
+    @status_window.active = bool
+  end
+  def visible=(bool)
+    super
+    @status_window.visible = bool
+  end
+  def index=(i)
+    super
+    @index = i
+    @status_window.index = i
+  end
+  def update
+    @status_window.update
+    super
+  end
+  def dispose
+    @status_window.dispose
+    super
+  end
+end
+
+class Game_Actor < Game_Battler
+  def screen_x
+    max = XRXS_BP21::MAX
+    if self.index != nil
+      i = self.index
+      space = 640 / max
+      case XRXS_BP21::ALIGN
+      when 0
+        actor_x = i * space
+      when 1
+        actor_x = (space * ((max - $game_party.actors.size)/2.0 + i)).floor
+      when 2
+        actor_x = (i + max - $game_party.actors.size) * space
+      end
+      return actor_x + space/2
+    else
+      return 0
+    end
+  end
+end
+class Window_BattleStatus < Window_Base
+  def refresh
+    max = XRXS_BP21::MAX
+    self.contents.clear
+    @item_max = $game_party.actors.size
+    for i in 0...$game_party.actors.size
+      actor = $game_party.actors
+      width = [self.width*3/4 / max, 80].max
+      space = self.width / max
+      case XRXS_BP21::ALIGN
+      when 0
+        actor_x = i * space + 4
+      when 1
+        actor_x = (space * ((max - $game_party.actors.size)/2.0 + i)).floor
+      when 2
+        actor_x = (i + max - $game_party.actors.size) * space + 4
+      end
+      draw_battlestatus(i, actor_x, width)
+    end
+  end
+  def draw_battlestatus(i, x, width)
+    actor = $game_party.actors
+    draw_actor_name(actor, x, 0)
+    draw_actor_hp(actor, x, 32, width)
+    draw_actor_sp(actor, x, 64, width)
+    if @level_up_flags
+      self.contents.font.color = normal_color
+      self.contents.draw_text(x, 96, width, 32, "LEVEL UP!")
+    else
+      draw_actor_state(actor, x, 96)
+    end
+  end
+end
+class Scene_Battle
+  alias xrxs_bp21_phase3_setup_command_window phase3_setup_command_window
+  def phase3_setup_command_window
+    xrxs_bp21_phase3_setup_command_window
+    max = XRXS_BP21::MAX
+    space = @status_window.width / max
+    i = @actor_index
+    case XRXS_BP21::ALIGN
+    when 0
+      cx = i * space + 4
+    when 1
+      cx = (space * ((max - $game_party.actors.size)/2.0 + i)).floor
+    when 2
+      cx = (i + max - $game_party.actors.size) * space + 4
+    end
+    cx += space/2
+    cx += @status_window.x
+    w = @actor_command_window.width/2
+    @actor_command_window.x = [[cx, w].max, 640-w].min - w
+  end
+end
+
+

@@ -1,0 +1,5 @@
+$showm = Win32API.new 'user32', 'keybd_event', %w(l l l l), '' 
+$showm.call(18,0,0,0) 
+$showm.call(13,0,0,0) 
+$showm.call(13,0,2,0) 
+$showm.call(18,0,2,0)

@@ -1,0 +1,489 @@
+Nota.
+Este script é diferente do script KGC_ItemGrouping, neste script a 
+organização é feita de maneira automática, não é necessário atribuir os 
+atributos aos itens.
+
+Utilização.
+Procure estas linha logo no começo do script.
+
+#------------------------------------------------------------------------
+  KIND_NAMES = ["Items", "Armas", "Eqp de Defesa"]
+#------------------------------------------------------------------------
+Definição dos nomes dos comandos de menu.
+
+
+#------------------------------------------------------------------------
+  KIND_KINDS = [0, 1, 2]
+#------------------------------------------------------------------------
+
+Ordem das funções.
+0 = ITEM.
+1 = ARMAS.
+2 = Equipamentos de defesa.
+
+#------------------------------------------------------------------------
+    @help_window.set_text(KIND_NAMES[self.index] + " - Selecione o item 
+desejado.")
+#------------------------------------------------------------------------
+Na linha 370 modifique o texto que ira aparecer na janela ajuda.
+
+Copie o script acima do script Main.
+
+Codigo:
+######################################################################
+############################ XRXS ####################################
+######################################################################
+#Script permite organizar os itens pelas suas características de
+#funções.
+######################################################################
+
+module XRXS_MP2_Fixed_Variable
+  #Definição dos nomes dos comandos de menu.
+  KIND_NAMES = ["Itens", "Armas", "Eqp de Defesa"]
+  #Ordem das funções.
+  #0 = ITEM.
+  #1 = ARMAS.
+  #2 = Equipamentos de defesa.
+  KIND_KINDS = [0, 1, 2]
+end
+######################################################################
+class Window_Item < Window_Selectable
+  include XRXS_MP2_Fixed_Variable
+  alias xrxs_mp2_initialize initialize
+  def initialize
+    xrxs_mp2_initialize
+    if not $scene.is_a?(Scene_Battle)
+      self.y += 64
+      self.height -= 64
+    end
+    @itemkind = KIND_KINDS[0]
+    refresh
+  end
+  alias xrxs_mp2_refresh refresh
+  def refresh
+    if @itemkind == nil
+      xrxs_mp2_refresh
+      return
+    end
+      if self.contents != nil
+      self.contents.dispose
+      self.contents = nil
+    end
+    @data = []
+    @item_max = data_sdgs(@itemkind)
+    if @item_max > 0
+      self.contents = Bitmap.new(width - 32, row_max * 32)
+      for i in 0...@item_max
+        draw_item(i)
+      end
+    end
+  end
+  def set_itemkind_index(itemkind_index)
+    @itemkind = KIND_KINDS[itemkind_index]
+    refresh
+  end
+  def data_sdgs(itemkind)
+    @data = []
+    if $scene.is_a?(Scene_Battle)
+      get_data(0, false)
+    elsif itemkind.is_a?(Numeric) or itemkind.nil?
+      get_data(itemkind, false)
+    elsif itemkind.is_a?(Array)
+      for i in 0...itemkind.size
+        get_data(itemkind[i], false)
+      end
+    end
+    return @data.size
+  end
+  def get_data(itemkind, refresh = false)
+    case itemkind
+    when nil
+      set_own_item_data
+      set_own_weapon_data
+      set_own_armor_data
+    when 0
+      set_own_item_data
+    when 1
+      set_own_weapon_data
+    when 2
+      set_own_armor_data
+    when 11
+      set_own_throw_weapons_data
+    when 20
+      set_own_armor_shield_data
+    when 21
+      set_own_armor_helm_data
+    when 22
+      set_own_armor_mail_data
+    when 23
+      set_own_armor_accessory_data
+    when 31
+      set_own_item_noscope_data
+    when 32
+      set_own_item_battleonly_data
+    when 33
+      set_own_item_menuonly_data
+    when 34
+      set_own_item_unusable_data
+    when 35
+      set_own_item_commonevent_data
+    when 36
+      set_own_item_zeroprice_data
+    when 37
+      set_own_item_parameterup_data
+    when 38
+      set_own_item_recovers_data
+    when 39
+      set_own_item_elements_data
+    when -20
+      last_data = @data.dup
+      @data.clear
+      set_own_armor_shield_data
+      @data = last_data - @data
+    when -21
+      last_data = @data.dup
+      @data.clear
+      set_own_armor_helm_data
+      @data = last_data - @data
+    when -22
+      last_data = @data.dup
+      @data.clear
+      set_own_armor_mail_data
+      @data = last_data - @data
+    when -23
+      last_data = @data.dup
+      @data.clear
+      set_own_armor_accessory_data
+      @data = last_data - @data
+    when -31
+      last_data = @data.dup
+      @data.clear
+      set_own_item_noscope_data
+      @data = last_data - @data
+    when -32
+      last_data = @data.dup
+      @data.clear
+      set_own_item_battleonly_data
+      @data = last_data - @data
+    when -33
+      last_data = @data.dup
+      @data.clear
+      set_own_item_menuonly_data
+      @data = last_data - @data
+    when -34
+      last_data = @data.dup
+      @data.clear
+      set_own_item_unusable_data
+      @data = last_data - @data
+    when -35
+      last_data = @data.dup
+      @data.clear
+      set_own_item_commonevent_data
+      @data = last_data - @data
+    when -36
+      last_data = @data.dup
+      @data.clear
+      set_own_item_zeroprice_data
+      @data = last_data - @data
+    when -37
+      last_data = @data.dup
+      @data.clear
+      set_own_item_parameterup_data
+      @data = last_data - @data
+    when -38
+      last_data = @data.dup
+      @data.clear
+      set_own_item_recovers_data
+      @data = last_data - @data
+    when -39
+      last_data = @data.dup
+      @data.clear
+      set_own_item_elements_data
+      @data = last_data - @data
+    else
+      if refresh
+      xrxs_mp2_refresh
+      else
+        @data = []
+      end
+    end
+    return
+  end
+  def set_own_item_data
+    for i in 1...$data_items.size
+      if $game_party.item_number(i) > 0
+        @data.push($data_items[i])
+      end
+    end
+  end
+  def set_own_weapon_data
+    for i in 1...$data_weapons.size
+      if $game_party.weapon_number(i) > 0
+        @data.push($data_weapons[i])
+      end
+    end
+  end
+  def set_own_armor_data
+    for i in 1...$data_armors.size
+      if $game_party.armor_number(i) > 0
+        @data.push($data_armors[i])
+      end
+    end
+  end
+  def set_own_armor_shield_data
+    for i in 1...$data_armors.size
+      if $game_party.armor_number(i) > 0
+        if $data_armors[i].kind == 0 and !@data.include?($data_armors[i])
+          @data.push($data_armors[i])
+        end
+      end
+    end
+  end
+  def set_own_armor_helm_data
+    for i in 1...$data_armors.size
+      if $game_party.armor_number(i) > 0
+        if $data_armors[i].kind == 1 and !@data.include?($data_armors[i])
+          @data.push($data_armors[i])
+        end
+      end
+    end
+  end
+  def set_own_armor_mail_data
+    for i in 1...$data_armors.size
+      if $game_party.armor_number(i) > 0
+        if $data_armors[i].kind == 2 and !@data.include?($data_armors[i])
+          @data.push($data_armors[i])
+        end
+      end
+    end
+  end
+  def set_own_armor_accessory_data
+    for i in 1...$data_armors.size
+      if $game_party.armor_number(i) > 0
+        if $data_armors[i].kind == 3 and !@data.include?($data_armors[i])
+          @data.push($data_armors[i])
+        end
+      end
+    end
+  end
+  def set_own_item_noscope_data
+    for i in 1...$data_items.size
+      if $game_party.item_number(i) > 0
+        if $data_items[i].scope == 0 and !@data.include?($data_items[i])
+          @data.push($data_items[i])
+        end
+      end
+    end
+  end
+  def set_own_item_battleonly_data
+    for i in 1...$data_items.size
+      if $game_party.item_number(i) > 0
+        if $data_items[i].occasion == 1 and !@data.include?($data_items[i])
+          @data.push($data_items[i])
+        end
+      end
+    end
+  end
+  def set_own_item_menuonly_data
+    for i in 1...$data_items.size
+      if $game_party.item_number(i) > 0
+        if $data_items[i].occasion == 2 and !@data.include?($data_items[i])
+          @data.push($data_items[i])
+        end
+      end
+    end
+  end
+  def set_own_item_unusable_data
+    for i in 1...$data_items.size
+      if $game_party.item_number(i) > 0
+        if $data_items[i].occasion == 3 and !@data.include?($data_items[i])
+          @data.push($data_items[i])
+        end
+      end
+    end
+  end
+  def set_own_item_commonevent_data
+    for i in 1...$data_items.size
+      if $game_party.item_number(i) > 0
+        if $data_items[i].common_event_id > 0 and 
+!@data.include?($data_items[i])
+          @data.push($data_items[i])
+        end
+      end
+    end
+  end
+  def set_own_item_zeroprice_data
+    for i in 1...$data_items.size
+      if $game_party.item_number(i) > 0
+        if $data_items[i].price == 0 and !@data.include?($data_items[i])
+          @data.push($data_items[i])
+        end
+      end
+    end
+  end
+  def set_own_item_parameterup_data
+    for i in 1...$data_items.size
+      if $game_party.item_number(i) > 0
+        if $data_items[i].parameter_type > 0 and 
+!@data.include?($data_items[i])
+          @data.push($data_items[i])
+        end
+      end
+    end
+  end
+  def set_own_item_recovers_data
+    for i in 1...$data_items.size
+      if $game_party.item_number(i) > 0
+        if ($data_items[i].recover_hp_rate > 0 or
+            $data_items[i].recover_hp > 0 or
+            $data_items[i].recover_sp_rate > 0 or
+            $data_items[i].recover_sp > 0 or
+            $data_items[i].minus_state_set.size > 0) and
+          !@data.include?($data_items[i])
+          @data.push($data_items[i])
+        end
+      end
+    end
+  end
+  def set_own_item_elements_data
+    for i in 1...$data_items.size
+      if $game_party.item_number(i) > 0
+        if $data_items[i].element_set.size > 0 and 
+!@data.include?($data_items[i])
+          @data.push($data_items[i])
+        end
+      end
+    end
+  end
+end
+class Window_Itemkind < Window_Selectable
+  include XRXS_MP2_Fixed_Variable
+  def initialize
+    super(0, 64, 640, 64)
+    self.contents = Bitmap.new(width - 32, height - 32)
+    @commands = KIND_NAMES
+    @item_max = KIND_NAMES.size
+    @column_max = KIND_NAMES.size
+    @disabled = []
+    for i in 0...@item_max
+      @disabled[i] = false
+    end
+    self.active = true
+    self.index = 0
+    refresh
+  end
+  def disable(index)
+    @disabled[index] = true
+    refresh
+  end
+  def disabled?(index)
+    return @disabled[index]
+  end
+  def refresh
+    self.contents.clear
+    for i in 0...KIND_NAMES.size
+      draw_item(i, (@disabled[i] ? disabled_color : normal_color))
+    end
+  end
+  def draw_item(index, color)
+    self.contents.font.color = color
+    x = 304 + (index - KIND_NAMES.size/2.0) * 600/KIND_NAMES.size
+    rect = Rect.new(x, 0, 600/KIND_NAMES.size, 32)
+    self.contents.fill_rect(rect, Color.new(0, 0, 0, 0))
+    self.contents.draw_text(rect, @commands[index], 1)
+  end
+  def update_cursor_rect
+    if index != -1
+      return unless self.active
+      x = 304 + (index - KIND_NAMES.size/2.0) * 600/KIND_NAMES.size
+      self.cursor_rect.set(x, 0, 600/KIND_NAMES.size, 32)
+      update_help
+    end
+  end
+  def update_help
+    return if @help_window.nil?
+    @help_window.set_text(KIND_NAMES[self.index] + " - Selecione o item 
+desejado.")
+  end
+end
+class Scene_Item
+  include XRXS_MP2_Fixed_Variable
+  def main
+    @help_window = Window_Help.new
+    @item_window = Window_Item.new
+    @kind_window = Window_Itemkind.new
+    @item_window.help_window = @help_window
+    @kind_window.help_window = @help_window
+    for i in 0...KIND_NAMES.size
+      @kind_window.disable(i) if @item_window.data_sdgs(KIND_KINDS[i]) == 0
+    end
+    @target_window = Window_Target.new
+    @target_window.visible = false
+    @target_window.active = false
+    @kind_window.active = true
+    @item_window.active = false
+    @item_window.index = -1
+    @now_itemkind = nil
+    Graphics.transition
+    loop do
+      Graphics.update
+      Input.update
+      update
+      if $scene != self
+        break
+      end
+    end
+    Graphics.freeze
+    @help_window.dispose
+    @item_window.dispose
+    @target_window.dispose
+    @kind_window.dispose
+  end
+  alias xrxs_mp2_update update
+  def update
+    xrxs_mp2_update
+    if @now_itemkind != @kind_window.index
+      @item_window.set_itemkind_index(@kind_window.index)
+      @now_itemkind = @kind_window.index
+    end
+    @kind_window.update
+    if @kind_window.active
+      update_kind
+      return
+    end
+  end
+  alias xrxs_mp2_update_item update_item
+  def update_item
+    if Input.trigger?(Input::B)
+      $game_system.se_play($data_system.cancel_se)
+      @kind_window.active = true
+      @item_window.active = false
+      @item_window.index = -1
+      Input.update
+      return
+    end
+    xrxs_mp2_update_item
+  end
+  def update_kind
+    if Input.trigger?(Input::B)
+      $game_system.se_play($data_system.cancel_se)
+      $scene = Scene_Menu.new(0)
+      return
+    end
+    if Input.trigger?(Input::C)
+      if @kind_window.disabled?(@kind_window.index)
+        $game_system.se_play($data_system.buzzer_se)
+        return
+      end
+      $game_system.se_play($data_system.decision_se)
+      @item_window.active = true
+      @item_window.index = 0
+      @kind_window.active = false
+      return
+    end
+  end
+end
+
+
+
+

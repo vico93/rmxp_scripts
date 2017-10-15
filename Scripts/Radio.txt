@@ -1,0 +1,267 @@
+#=============================================================
+# <> Radio Program *Deluxe*
+# ==> You can delete all the comments except the copyright and creator info. Thanks.
+# ==> Do not rip, repost or any other way of reproducing without proper credit. Thanks.
+# ==> What? Those names of radio networks? They're just testings.
+# ShadowClan Technologies © 2003-2005 - All rights reserved. X-RPG/Asylum rules :-)
+#--------------------------------------------------------------------------------------------------------------------------
+#
+# * BEFORE YOU THINK OF USING THIS SCRIPT ==> READ THIS FIRST!!!!!!!!!
+# This is NO internet radio like Window Media Player's radio. That would beat all :-P
+# No, this is, just like you are making a FAKE story, a FAKE radio program.
+# You cannot hear the channels LIVE or even search REAL channels.
+# !! THIS IS JUST A SCRIPT !!
+# Why do I tell this? There are smart-asses around here that just don't get it.
+# ONE MORE THING:
+# When using this, in the scene before the Radio, you MUST use
+# $game_system.bgm_memorize before calling the Scene_Radio.new
+# OR ELSE YOU WON'T HEAR YOUR BGM OF THE PREVIOUS SCENE!!!
+# So when you exit radio, your bgm of the previous scene will be restored.
+# Thanks for readin'. Ciao~
+#
+# * Can I make my own channels?
+# Yes. Scroll down to the 'def search' and
+# put in another 'elsif hz == (your hertz nr)' and
+# define your channel like in the examples.
+# That should play it when searching.
+#
+# * How to search channels on my radio?
+# Hold your LEFT or RIGHT button pressed and the little pointer
+# goes from one end to another. While you search, just
+# see if the channel name appears in the window next to it.
+#
+# * It looks so empty! Just two windows?
+# Well, you're allowed to fill it up, there is nothing against that you know.
+# You may even change the colors used by the radio display.
+# As long as people know I made it. Don't be ripping my stuff okay?
+#
+# * Something added:
+# - You can see the map instead of a black screen. It also updates the events
+# like when using events that walk, that they also keep walking.
+# Screen update is also needed when used with tinting or flashing.
+#
+# That would end the little explaining for now. I -really- hope you like this script.
+#--------------------------------------------------------------------------------------------------------------------------
+# * Suggestions? ==> Post a message on the RPGXP catagory in the Radio Program topic
+# * Created by: GoldenShadow a.k.a ?
+# * Credits: Use of names :-P => X-RPG, RMXP.net, Dubealex, Ryughen, Torama, Vash and Deke
+# * Bugs: Actually none... try and find one huh, I double dare ya!
+#=============================================================
+
+
+module SC
+RXSC_RADI = "Radio Program: Version 1 DX"
+end
+
+class Radio
+
+def play(channel) # Plays a song as if its a channel
+if channel == "none"
+$chan_name = "Nemhum Canal De Radio"
+else
+Audio.bgm_play("Audio/BGM/" + channel, 100, 100)
+end
+end
+
+def search(hz) # identifies the channels + plays assigned songs
+if hz == 1
+$chan_name = "Radio Games" # Name of channel
+Audio.bgm_stop # Stops any active music
+play("023-Town01")# Plays channel file
+elsif hz == 5
+$chan_name = "RMXP.net Radio Network"
+Audio.bgm_stop
+play("020-Field03")
+elsif hz == 10
+$chan_name = "Dubealex Radio Network"
+Audio.bgm_stop
+play("003-Battle03")
+elsif hz == 15
+$chan_name = "Ryughen Radio Network"
+Audio.bgm_stop
+play("004-Battle04")
+elsif hz == 20
+$chan_name = "Deke's Radio Network"
+Audio.bgm_stop
+play("005-Boss01")
+elsif hz == 25
+$chan_name = "Torama's Radio Network"
+Audio.bgm_stop
+play("006-Boss02")
+elsif hz == 30
+$chan_name = "Vash's Radio Network"
+Audio.bgm_stop
+play("007-Boss03")
+elsif hz == 101
+$chan_name = "Radio Neno FM"
+Audio.bgm_stop
+play("034-Heaven01")
+# elsif hz == (your Hertz number)
+# $chan_name = "Your channel name"
+# Audio.bgm_stop
+# play("Your file in the BGM directory to play")
+else
+Audio.bgm_stop
+play("none")
+end
+end
+end
+
+class Window_RadioScreen < Window_Base
+
+def initialize
+super(0, 0, 320, 64)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.name = $fontface
+self.contents.font.size = $fontsize
+refresh
+end
+
+def refresh
+self.contents.clear
+rect1 = Rect.new(0, 0, 304, 64)
+rect2 = Rect.new(0, 16, 304, 1)
+rect3 = Rect.new($x, 8, 1, 16)
+self.contents.fill_rect(rect1, Color.new(0, 0, 0))
+self.contents.fill_rect(rect2, Color.new(255, 0, 0))
+self.contents.fill_rect(rect3, Color.new(0, 0, 255))
+self.contents.draw_text(0, 0, self.width - 40, 32, $x.to_s + " FM", 1)
+end
+end
+
+class Window_RadioName < Window_Base
+
+def initialize
+super(320, 0, 320, 64)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.name = $fontface
+self.contents.font.size = $fontsize
+refresh
+end
+
+def refresh
+self.contents.clear
+if $chan_name != nil
+self.contents.draw_text(0, 0, self.width - 40, 32, $chan_name, 1)
+else
+self.contents.draw_text(0, 0, self.width - 40, 32, "Nemhum Canal De Radio", 1)
+end
+end
+end
+
+class Scene_Radio
+
+def main
+$x = 0
+@sprite = Spriteset_Map.new
+@radio_window = Window_RadioScreen.new
+@name_window = Window_RadioName.new
+Graphics.transition
+loop do
+Graphics.update
+Input.update
+update
+if $scene != self
+break
+end
+end
+Graphics.freeze
+@radio_window.dispose
+@name_window.dispose
+@sprite.dispose
+end
+
+def update
+$game_map.update
+$game_system.map_interpreter.update
+# if you want to be able to move while you search,
+# remove the '#' sign before $game_player.update
+# When doing that, change stuff marked with ##^
+#$game_player.update
+$game_system.update 
+$game_screen.update
+if Input.repeat?(Input::RIGHT) ##^ (This would be changed to R instead of RIGHT)
+if $x == 287
+$x = 0
+else
+$x += 1
+end
+$radio.search($x)
+end
+if Input.repeat?(Input::LEFT) ##^ (This would be changed to L instead of Left)
+if $x < 1
+$x = 287
+else
+$x -= 1
+end
+$radio.search($x)
+end
+if Input.trigger?(Input::B) #Esc Para Fechar a janela De Radio.
+$game_system.se_play($data_system.cancel_se)
+$scene = Scene_Map.new
+end
+@radio_window.refresh
+@radio_window.update
+@name_window.refresh
+@name_window.update
+end
+end
+
+class Scene_Title
+alias ra_title_command_new_game command_new_game
+def command_new_game
+ra_title_command_new_game
+$radio = Radio.new
+end
+end
+
+class Scene_Save
+
+def write_save_data(file)
+characters = []
+for i in 0...$game_party.actors.size
+actor = $game_party.actors
+characters.push([actor.character_name, actor.character_hue])
+end
+Marshal.dump(characters, file)
+Marshal.dump(Graphics.frame_count, file)
+$game_system.save_count += 1
+$game_system.magic_number = $data_system.magic_number
+Marshal.dump($game_system, file)
+Marshal.dump($game_switches, file)
+Marshal.dump($game_variables, file)
+Marshal.dump($game_self_switches, file)
+Marshal.dump($game_screen, file)
+Marshal.dump($game_actors, file)
+Marshal.dump($game_party, file)
+Marshal.dump($game_troop, file)
+Marshal.dump($game_map, file)
+Marshal.dump($game_player, file)
+Marshal.dump($radio, file)
+end
+end
+class Scene_Load
+def read_save_data(file)
+characters = Marshal.load(file)
+Graphics.frame_count = Marshal.load(file)
+$game_system = Marshal.load(file)
+$game_switches = Marshal.load(file)
+$game_variables = Marshal.load(file)
+$game_self_switches = Marshal.load(file)
+$game_screen = Marshal.load(file)
+$game_actors = Marshal.load(file)
+$game_party = Marshal.load(file)
+$game_troop = Marshal.load(file)
+$game_map = Marshal.load(file)
+$game_player = Marshal.load(file)
+$radio = Marshal.load(file)
+if $game_system.magic_number != $data_system.magic_number
+$game_map.setup($game_map.map_id)
+$game_player.center($game_player.x, $game_player.y)
+end
+$game_party.refresh
+end
+end
+
+#============================================================
+# FINAL UPDATE: 17:44, May 20th 2005 [Please leave this unchanged and undeleted] (SID:002) 

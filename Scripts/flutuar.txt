@@ -1,0 +1,17 @@
+UTILIZAÇÃO.
+- Para fazer o personagem flutuar, crie um status com o nome de:
+----------------------
+Flutuar
+----------------------
+- A animação da arma corresponde ao ícone da arma.
+- Habilidades com parâmetros de força vão até o alvo inimigo e acionam a 
+animação.
+
+No script "Side Battle System"procure estas linhas para definir a posição 
+dos heróis na batalha.
+----------------------------------
+  PARTY_X = 480
+  PARTY_Y = 180
+----------------------------------
+X é a posição na horizontal.
+Y é a posição na vertical.

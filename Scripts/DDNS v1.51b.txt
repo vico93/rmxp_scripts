@@ -1,0 +1,521 @@
+#:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=
+# Dynamic Day and Night System (DDNS) by Blizzard
+# Version: 1.51b
+# Date: 27.06.2006
+# Date v1.1b: 29.06.2006
+# Date v1.2b: 08.09.2006
+# Date v1.3b: 11.09.2006
+# Date v1.4b: 23.2.2007
+# Date v1.43b: 25.3.2007
+# Date v1.5b: 23.10.2007
+# Date v1.51b: 5.11.2007
+#:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=
+#
+# Compatibility:
+#
+#   99% chance of full compatibility with SDK, not tested altough. Can cause
+#   incompatibilty issues with other DNS-es. WILL corrupt old savegames. If
+#   used with an old savegame, it could cause problems. Please start a new game
+#   if you use this to avoid incompatibilty issues.
+#
+#
+# Features:
+#
+#   - complete control over the DDNS
+#   - easy switching from day to night and night to day
+#   - possibility for dynamic length of night and/or day
+#   - easy manipulating through events with the "Call script" commands
+#   - 3 possible states: interiors, exteriors, dark interiors
+#   - display a clock or don´t display a clock
+#   - uses 5 switches and 2 variables, so the user can easily access the DDNS
+#     to e.g. connect it with event based systems and/or enhance it with events
+#
+# new in v1.1b:
+#   - a fatal glitch was fixed, but it had its price, old savegames need to
+#     turn on the DDNS to clear an issue
+#
+# new in v1.2b:
+#   - shorter, more simple code and less lag
+#
+# new in v1.3b:
+#   - improved code
+#
+# new in v1.4b:
+#   - now compatible with Tons of Add-ons
+#
+# new in v1.43b:
+#   - fixed a bug, improved code and changed a little bit
+#
+# new in v1.5b:
+#   - rewritten conditions using classic syntax to avoid RGSS conditioning bug
+#   - improved coding
+#   - fixed an issue with Tons of Add-ons v5.x and higher
+#
+# new in v1.51b:
+#   - fixed tpying mistakes that caused bugs
+#
+#
+# Instructions:
+#
+# - Explanation:
+#
+#   This Dynamic Day and Night System will make your game have daytime and
+#   nighttime periods. You can set up the length and variation intervals if you
+#   want to use it dynamically. Other features are explained below. Please be
+#   sure to configure this system appropriately.
+#
+# - Configuration:
+#
+#   DAY        - set this value to the switch ID you want to use for control
+#                over the day
+#   NIGHT      - set this value to the switch ID you want to use for control
+#                over the night
+#   INSIDE     - set this value to the switch ID you want to use to determine
+#                if the player is inside
+#   OUTSIDE    - set this value to the switch ID you want to use to determine
+#                if the player is outside
+#   INSIDEDARK - set this value to the switch ID you want to use to determine
+#                if the player is inside a dark place
+#   DAY_VAR    - set this value to the variable ID you want to use as the
+#                seconds counter for the day
+#   NIGHT_VAR  - set this value to the variable ID you want to use as the
+#                seconds counter for the night
+#   MAX_DAY    - set this value to the duration of a day in seconds
+#   MAX_NIGHT  - set this value to the duration of a night in seconds
+#   DYN_DAY    - set this value to true if you want a dynamic day that has a
+#                variating length, otherwise to false
+#   DYN_NIGHT  - set this value to true if you want a dynamic night that has a
+#                variating length, otherwise to false
+#   DAY_INT    - set this value to the variation a day might have in seconds
+#                (i.e. 30 will make a day be MAX_DAY ± 30 seconds of length)
+#   NIGHT_INT  - set this value to the variation a night might have in seconds
+#                (i.e. 5 will make a night be MAX_NIGHT ± 5 seconds of length)
+#   MINUTES    - set this value to true if you want the clock to use a precise
+#                minute display, please also see IMPORTANT NOTES for further
+#                reference, otherwise to false
+#   SHOW_CLOCK - set this value to false to if you want to remove the clock
+#                from the map, otherwise to true
+#
+# - Basic manipulation of the DDNS:
+#
+#   This system is based upon your eventing. It will work basically if you
+#   want, but with a little bit of using the "Call Script" event command you
+#   are able to have 3 different states of the DDNS (interior, exterior, dark
+#   interior). Interiors and dark interior will never get dark during night.
+#   Also dark interiors are always a little bit tinted. Here are the
+#   instructions how to do so. Please also note, use this syntax with the "Call
+#   Script" event command
+#  
+#     $game_ddns.go_inside
+#  
+#   This command will set up everything to enter an interior.
+#  
+#     $game_ddns.go_outside
+#  
+#   This command will set up everything to leave any interior.
+#  
+#     $game_ddns.go_inside_dark_place
+#  
+#   This command will set up everything to enter a dark tinted interior.
+#  
+#     $game_ddns.turn_off
+#  
+#   This command will turn off the DDNS if you want to tint the screen for
+#   during a cutscene or something else related to screen tinting as DDNS is
+#   dominant and will cause all of your event based screen tinting to reset the
+#   next time day and night switch or the player changes the map. Day and night
+#   will freeze during this period. To turn it on again, just use following
+#   command:
+#  
+#     $game_ddns.turn_on = false
+#  
+#   AND one of the three commands above to determine where the player is.
+#  
+#     $game_ddns.make_it_day
+#  
+#   This command will set every counter to zero and start a new day. You can
+#   use this together with an item, that calls a common event to execute this
+#   code.
+#  
+#     $game_ddns.make_it_night
+#  
+#   This command will set every counter to zero and start a new night. You can
+#   use this together with an item, that calls a common event to execute this
+#   code.
+#
+#   Also note, that the last 2 commands will ONLY work if the DDNS is NOT
+#   turned off. To check if it´s turned off, just check the state of the
+#   INSIDE, OUTSIDE and INSIDEDARK switches. All the switches are off if the
+#   DNSS is turned off.
+#
+# - Direct manipulation of the DDNS:
+#
+#   You can directly operate the switches WHICH IS NOT RECOMMENED to further
+#   manipulate the system. An example is to change the values in the variables
+#   which are used as second counter for the day and night.
+#  
+#     $game_system.show_clock = true
+#     $game_system.show_clock = false
+#  
+#   You can use this syntax if you want to show/hide the clock during e.g. the
+#   appearance of a countdown timer. Version 1.41b and higher even saves this
+#   setting.
+#
+# - Enhancement hints:
+#
+#   If you wish to implement the DDNS further into your game and e.g. allow
+#   different behavious of monsters during day and night, you only need to
+#   check the the state of the appropriate switch. e.g. If NIGHT is
+#   turned on inflict "Sleep" on one enemy.
+#
+#
+# Additional info:
+#
+#   The predecessor event based version of this script was tested a lot and the
+#   result was the optimal tint during night, so the player can see the screen,
+#   but also has the feeling, it is actually night in the game.
+#
+#
+# IMPORTANT NOTES:
+#
+#   Make DAY_INT or $night_intervals at least by 2 smaller than MAX_DAY
+#   or MAX_NIGHT
+#   - do NOT use odd numbers for these variables, only even ones! (2, 4, 6...)
+#     otherwise the clock WILL glitch
+#   - if you use different lengths for day and night and do not use any dynamic
+#     time, it is recommened, that you don´t show the minutes, because the
+#     player can easily notice that one period is faster than the other
+#   - there is NO timeflow during battle, menu etc., only in the map
+#   - due to glitching the DDNS is initially turned off now
+#
+#
+# If you find any bugs, please report them here:
+# http://www.chaosproject.co.nr
+#:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=:=
+
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# START Configuration
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+DAY = 1 # switch ID of the "day" switch
+NIGHT = 2 # switch ID of the "night" switch
+INSIDE = 3 # switch ID of the "inside" switch
+OUTSIDE = 4 # switch ID of the "outside" switch
+INSIDEDARK = 5 # switch ID of the "inside dark places" switch
+DAY_VAR = 1 # variable ID of the "day counter"
+NIGHT_VAR = 2 # variable ID of the "night counter"
+MAX_DAY = 120 # duration of a day in seconds
+MAX_NIGHT = 90 # duration of a night in seconds
+DYN_DAY = false # allow dynamic shortening and prolongening of day
+DYN_NIGHT = false # allow dynamic shortening and prolongening of night
+DAY_INT = 3 # variation of day in seconds
+NIGHT_INT = 2 # variation of night in seconds
+MINUTES = true # if dynamic day and night are turned off show minutes on clock
+SHOW_CLOCK = true # set to false to remove the clock from the map
+
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# END Configuration
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+#==============================================================================
+# Game_System
+#==============================================================================
+
+class Game_System
+ 
+ attr_accessor :ddns_off
+ attr_accessor :show_clock
+ 
+ alias init initialize
+ def initialize
+   init
+   @ddns_off = false
+   @show_clock = SHOW_CLOCK
+ end
+
+end
+
+#==============================================================================
+# Game_DDNS
+#==============================================================================
+
+class Game_DDNS
+ 
+ attr_reader   :dyn_day
+ attr_reader   :dyn_night
+ attr_reader   :dynamic_day
+ attr_reader   :dynamic_night
+ attr_reader   :minutes
+ attr_accessor :off
+ 
+ def initialize
+   @minutes = MINUTES
+   @day_intervals, @night_intervals = DAY_INT, NIGHT_INT
+   @max_day, @max_night = MAX_DAY, MAX_NIGHT
+   @dyn_day, @dyn_night = DYN_DAY, DYN_NIGHT
+   @dynamic_day, @dynamic_night = @max_day, @max_night
+   dynamize_day
+   @off = true
+ end
+ 
+ def go_inside
+   unless @off
+     $game_switches[INSIDE] = true
+     $game_switches[INSIDEDARK] = $game_switches[OUTSIDE] = false
+   end
+   return
+ end
+ 
+ def go_outside
+   unless @off
+     $game_switches[OUTSIDE] = true
+     $game_switches[INSIDE] = $game_switches[INSIDEDARK] = false
+   end
+   return
+ end
+ 
+ def go_inside_dark_place
+   unless @off
+     $game_switches[INSIDEDARK] = true
+     $game_switches[INSIDE] = $game_switches[OUTSIDE] = false
+   end
+   return
+ end
+ 
+ def turn_off
+   $game_switches[INSIDE] = $game_switches[INSIDEDARK] =
+   $game_switches[OUTSIDE] = false
+   @off = $game_system.ddns_off = true
+   return
+ end
+ 
+ def turn_on
+   @off = $game_system.ddns_off = false
+   return
+ end
+ 
+ def make_it_day
+   if $game_switches[INSIDE] || $game_switches[OUTSIDE] ||
+      $game_switches[INSIDEDARK]
+     $game_switches[DAY] = true
+     $game_switches[NIGHT] = false
+     $game_variables[DAY_VAR] = $game_variables[NIGHT_VAR] = 0
+     if $game_switches[OUTSIDE]
+       $game_screen.start_tone_change(Tone.new(0, 0, 0, 0), 160)
+     end
+     dynamize_day
+   end
+   $game_map.need_refresh = true
+ end
+ 
+ def make_it_night
+   if $game_switches[INSIDE] || $game_switches[OUTSIDE] ||
+      $game_switches[INSIDEDARK]
+     $game_switches[DAY] = false
+     $game_switches[NIGHT] = true
+     $game_variables[DAY_VAR] = $game_variables[NIGHT_VAR] = 0
+     if $game_switches[OUTSIDE]
+       $game_screen.start_tone_change(Tone.new(-100, -100, 0, 0), 160)
+     end
+     dynamize_night
+   end
+   $game_map.need_refresh = true
+ end
+ 
+ def dynamize_day
+   @dynamic_day = @max_day
+   @dynamic_day -= @day_intervals + rand((2*@day_intervals)) if @dyn_day
+   return
+ end
+ 
+ def dynamize_night
+   @dynamic_night = @max_night
+   @dynamic_day -= @day_intervals + rand((2*@day_intervals)) if @dyn_night
+   return
+ end
+ 
+end
+
+#==============================================================================
+# Bitmap
+#==============================================================================
+
+class Bitmap
+
+ def draw_time(x, y, w, h, string, a)
+   font.size = 26
+   save_color = font.color.clone
+   font.color = Color.new(0, 0, 0, 192)
+   if $tons_version != nil && $tons_version >= 3.71 &&
+       $game_system != nil && $game_system.SHADED_TEXT
+     draw_text_shaded_text_later(x+1, y+1, w, h, string, a)
+     draw_text_shaded_text_later(x-1, y+1, w, h, string, a)
+     draw_text_shaded_text_later(x-1, y-1, w, h, string, a)
+     draw_text_shaded_text_later(x+1, y-1, w, h, string, a)
+   else
+     draw_text(x+1, y+1, w, h, string, a)
+     draw_text(x-1, y+1, w, h, string, a)
+     draw_text(x-1, y-1, w, h, string, a)
+     draw_text(x+1, y-1, w, h, string, a)
+   end
+   font.color = save_color
+   draw_text(x, y, w, h, string, a)
+ end
+ 
+ if $tons_version == nil || $tons_version < 3.71
+ alias draw_text_shaded_text_later draw_text
+ def draw_text(x2, y2, w2 = 0, h2 = 0, text2 = "", a2 = 0)
+   if x2.is_a?(Rect)
+     x, y, w, h, text, a = x2.x, x2.y, x2.width, x2.height, y2, w2
+   else
+     x, y, w, h, text, a = x2, y2, w2, h2, text2, a2
+   end
+   save_color = self.font.color.clone
+   self.font.color = Color.new(0, 0, 0, 255)
+   draw_text_shaded_text_later(x+1, y+1, w, h, text, a)
+   self.font.color = save_color
+   draw_text_shaded_text_later(x, y, w, h, text, a)
+ end
+ end
+ 
+end
+
+#==============================================================================
+# Clock
+#==============================================================================
+
+class Clock < Sprite
+ 
+ def initialize
+   super
+   self.x, self.y, self.z = 480, 8, 5000
+   self.bitmap = Bitmap.new(128, 32)
+   if $fontface != nil
+     self.bitmap.font.name = $fontface
+     self.bitmap.font.size = $fontsize
+   elsif $defaultfonttype != nil
+     self.bitmap.font.name = $defaultfonttype
+     self.bitmap.font.size = $defaultfontsize
+   end
+   @odd = 0
+   draw unless $game_ddns.off
+ end
+ 
+ def draw
+   self.bitmap.clear
+   hours = minutes = 0
+   if $game_switches[DAY]
+     hours = (12*$game_variables[DAY_VAR]/$game_ddns.dynamic_day+8)%24
+     minutes = (60*12*$game_variables[DAY_VAR]/$game_ddns.dynamic_day)%60
+   elsif $game_switches[NIGHT]
+     hours = (12*$game_variables[NIGHT_VAR]/$game_ddns.dynamic_night+20)%24
+     minutes = (60*12*$game_variables[NIGHT_VAR]/$game_ddns.dynamic_night)%60
+   end
+   if ($game_switches[DAY] || $game_switches[NIGHT]) && @odd % 2 == 0
+     if !$game_ddns.minutes || $game_ddns.dyn_day || $game_ddns.dyn_night
+       self.bitmap.draw_time(0, 0, 128, 32, sprintf('%d 00', hours), 2)
+     else
+       self.bitmap.draw_time(0, 0, 128, 32, sprintf('%d %02d', hours, minutes), 2)
+     end
+   elsif !$game_ddns.minutes || $game_ddns.dyn_day || $game_ddns.dyn_night
+     self.bitmap.draw_time(0, 0, 128, 32, sprintf('%d:00', hours), 2)
+   else
+     self.bitmap.draw_time(0, 0, 128, 32, sprintf('%d:%02d', hours, minutes), 2)
+   end
+   @odd = (@odd + 1) % 2
+ end
+   
+end
+
+#==============================================================================
+# Scene_Title
+#==============================================================================
+
+class Scene_Title
+ 
+ alias main_ddns_later main
+ def main
+   main_ddns_later
+   $game_ddns = Game_DDNS.new
+ end
+ 
+end
+
+#==============================================================================
+# Scene_Map
+#==============================================================================
+
+class Scene_Map
+ 
+ attr_accessor :timer
+ 
+ alias main_ddns_later main
+ def main
+   @clock = Clock.new if $game_system.show_clock
+   @timer = Graphics.frame_count / Graphics.frame_rate * 2
+   main_ddns_later
+   @clock.dispose unless @clock == nil
+ end
+ 
+ alias update_ddns_later update
+ def update
+   if $game_system.show_clock
+     @clock = Clock.new if @clock == nil
+   elsif @clock != nil
+     @clock.dispose
+     @clock = nil
+   end
+   $game_ddns.off = $game_system.ddns_off
+   if @timer != Graphics.frame_count / Graphics.frame_rate * 2
+     update_ddns
+     @timer = Graphics.frame_count / Graphics.frame_rate * 2
+     @clock.draw if $game_system.show_clock
+   end
+   update_ddns_later
+ end
+ 
+ def update_ddns
+   if $game_switches[DAY]
+     $game_variables[DAY_VAR] += 1 unless $game_ddns.off
+     if $game_variables[DAY_VAR] == $game_ddns.dynamic_day
+       if $game_switches[OUTSIDE]
+         $game_screen.start_tone_change(Tone.new(-100, -100, 0, 0), 160)
+       end
+       $game_switches[DAY] = false
+       $game_switches[NIGHT] = true
+       $game_ddns.dynamize_night
+       $game_variables[DAY_VAR] = $game_variables[NIGHT_VAR] = 0
+       $game_map.need_refresh = true
+     end
+   elsif $game_switches[NIGHT]
+     $game_variables[NIGHT_VAR] += 1 unless $game_ddns.off
+     if $game_variables[NIGHT_VAR] == $game_ddns.dynamic_night
+       if $game_switches[OUTSIDE]
+         $game_screen.start_tone_change(Tone.new(0, 0, 0, 0), 160)
+       end
+       $game_switches[DAY] = true
+       $game_switches[NIGHT] = false
+       $game_ddns.dynamize_day
+       $game_variables[DAY_VAR] = $game_variables[NIGHT_VAR] = 0
+       $game_map.need_refresh = true
+     end
+   end
+ end
+ 
+ alias transfer_player_ddns_later transfer_player
+ def transfer_player
+   if $game_switches[INSIDE]
+     $game_screen.start_tone_change(Tone.new(0, 0, 0, 0), 0)
+   elsif $game_switches[OUTSIDE]
+     if $game_switches[DAY]
+       $game_screen.start_tone_change(Tone.new(0, 0, 0, 0), 0)
+     elsif $game_switches[NIGHT]
+       $game_screen.start_tone_change(Tone.new(-100, -100, 0, 0), 0)
+     end
+   elsif $game_switches[INSIDEDARK]
+     $game_screen.start_tone_change(Tone.new(-40, -40, 0, 0), 0)
+   end
+   transfer_player_ddns_later
+ end
+ 
+end

@@ -1,0 +1,640 @@
+Ring Menu
+Este é um menu bem diferente do tradicional
+que acompanha o Xp. Este menu é giratório
+que mostra cada comando com ícones, e este
+ícones aparecem em volta do herói principal.
+Os créditos vão para a versão original de
+MaKi e edição de Dubealex.
+
+Crie uma nova classe acima do main, com
+qualquer nome e cole o script abaixo:
+
+
+
+
+#===================================================
+# ¦ Ring Menu - Show Player Location - Release #1 (Edited By Dubealex)
+#===================================================
+# For more infos and update, visit:
+# rmxp.dubealex.com [OR] X-RPG V2 Forum
+#
+# Original Ring Menu by: ?? (From XRXS)
+# Original Edit and Fix by: Maki
+# Show Player Location Version by: Dubealex
+#
+# You can customize this script at line #35 - Have fun !!
+# If you want to show more stuff, its easy to do, just ask, and I will 
+release
+# new version of this edited script !
+#
+# alex@dubealex.com
+#===================================================
+
+
+#===================================================
+# ? CLASS Scene_Menu Begins
+#===================================================
+
+class Scene_Menu
+#--------------------------------------------------------------------------
+# ?œ ƒIƒuƒWƒFƒNƒg?‰Šú‰»
+# menu_index : ƒRƒ}ƒ“ƒh‚ÌƒJ?[ƒ\ƒ‹?‰ŠúˆÊ’u
+#--------------------------------------------------------------------------
+def initialize(menu_index = 0)
+@menu_index = menu_index
+$location_text=[]
+$window_size=[]
+$ring_menu_text=[]
+$chara_select=[]
+@window_opacity=[]
+@chara_select=[]
+@window_position=[]
+
+#------------------------------------------------------------------------------------------
+# ¦ Ring Menu Customization Section: (By Dubealex)
+#------------------------------------------------------------------------------------------
+# Those variables defines how the script will act.
+# Simply change the value by those you want.
+# Remember that changing the font size has its limitation due to text space 
+allocation.
+#
+# ? TEXT SETTINGS FOR SHOW PLAYER LOCATION WINDOW:
+$location_text[0]="Tahoma" # Font Type
+$location_text[1]=22 # Font Size
+$location_text[2]=6 # Location Title Color
+$location_text[4]=0 # Map Name Color
+$location_text[3]="Localização:" # Customize the "Location" Title Text
+
+# ? SHOW LOCATION WINDOW SETTINS:
+@show_location_window=true #Set to false to not use it !
+@window_opacity[0]=255 # Border Opacity
+@window_opacity[1]=130 # Background Opacity
+$window_location_skin="001-Blue01" # Window Skin
+@window_position[0]=20 # X Axis Position
+@window_position[1]=20 # Y Axis Position
+$window_size[0]=160 # Lengh
+$window_size[1]=96 # Heigh
+
+# ? TEXT SETTINGS FOR INSIDE THE RING MENU:
+$ring_menu_text[0]="Tahoma" # Font Type
+$ring_menu_text[7]=0 # Font Color
+$ring_menu_text[8]=22 # Font Size
+$ring_menu_text[1]="Items" # Items Menu Text
+$ring_menu_text[2]="Habilidades" # Skills Menu Text
+$ring_menu_text[3]="Equipamento" # Equip Menu Text
+$ring_menu_text[4]="Status" # Stats Menu Text
+$ring_menu_text[5]="Salvar" # Save Menu Text
+$ring_menu_text[6]="Sair" # Quit Menu Text
+
+# ? CHARACTER SELECTION WINDOW SETTINGS :
+@chara_select[0]=400 # X Axis Position
+@chara_select[1]=0 # Y Axis Position
+$chara_select[0]="Tahoma" # Font Type
+$chara_select[1]=0 # Font Color
+$chara_select[5]=22 # Font Size
+$chara_select[2]=255 # Window Border Opacity
+$chara_select[3]=130 # Window Background Opacity
+$chara_select[4]="001-Blue01" # Window Skin to use
+#--------------------------------------------------------------------------------------------------
+
+end
+#--------------------------------------------------------------------------
+# ?œ ƒ?ƒCƒ“?ˆ—?
+#--------------------------------------------------------------------------
+def main
+
+# Show Player Location Feature:
+if @show_location_window==true
+@window_location = Window_Location.new
+@window_location.x = @window_position[0]
+@window_location.y = @window_position[1]
+@window_location.opacity = @window_opacity[0]
+@window_location.back_opacity = @window_opacity[1]
+end
+#End of Show Player Location
+
+# ƒXƒvƒ‰ƒCƒgƒZƒbƒg‚ð?ì?¬
+@spriteset = Spriteset_Map.new
+# ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ð?ì?¬
+px = $game_player.screen_x - 15
+py = $game_player.screen_y - 24
+@command_window = Window_RingMenu.new(px,py)
+@command_window.index = @menu_index
+# ƒp?[ƒeƒB?l?”‚ª 0 ?l‚Ì?ê?‡
+if $game_party.actors.size == 0
+# ƒAƒCƒeƒ€?AƒXƒLƒ‹?A‘•”õ?AƒXƒe?[ƒ^ƒX‚ð–³Œø‰»
+@command_window.disable_item(0)
+@command_window.disable_item(1)
+@command_window.disable_item(2)
+@command_window.disable_item(3)
+end
+@command_window.z = 100
+# ƒZ?[ƒu‹ÖŽ~‚Ì?ê?‡
+if $game_system.save_disabled
+# ƒZ?[ƒu‚ð–³Œø‚É‚·‚é
+@command_window.disable_item(4)
+end
+# ƒXƒe?[ƒ^ƒXƒEƒBƒ“ƒhƒE‚ð?ì?¬
+@status_window = Window_RingMenuStatus.new
+@status_window.x = @chara_select[0]
+@status_window.y = @chara_select[1]
+@status_window.z = 200
+@status_window.opacity=$chara_select[2]
+@status_window.back_opacity=$chara_select[3]
+@status_window.visible = false
+# ƒgƒ‰ƒ“ƒWƒVƒ‡ƒ“ŽÀ?s
+Graphics.transition
+# ƒ?ƒCƒ“ƒ‹?[ƒv
+loop do
+# ƒQ?[ƒ€‰æ–Ê‚ð?X?V
+Graphics.update
+# “ü—Í?î•ñ‚ð?X?V
+Input.update
+# ƒtƒŒ?[ƒ€?X?V
+update
+# ‰æ–Ê‚ª?Ø‚è‘Ö‚í‚Á‚½‚çƒ‹?[ƒv‚ð’†’f
+if $scene != self
+break
+end
+end
+# ƒgƒ‰ƒ“ƒWƒVƒ‡ƒ“?€”õ
+Graphics.freeze
+# ƒXƒvƒ‰ƒCƒgƒZƒbƒg‚ð‰ð•ú
+@spriteset.dispose
+# ƒEƒBƒ“ƒhƒE‚ð‰ð•ú
+if @show_location_window==true
+@window_location.dispose
+end
+@command_window.dispose
+@status_window.dispose
+end
+#--------------------------------------------------------------------------
+# ?œ ƒtƒŒ?[ƒ€?X?V
+#--------------------------------------------------------------------------
+def update
+# ƒEƒBƒ“ƒhƒE‚ð?X?V
+if @show_location_window==true
+@window_location.update
+end
+@command_window.update
+@status_window.update
+# ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ªƒAƒNƒeƒBƒu‚Ì?ê?‡: update_command ‚ðŒÄ‚Ô
+if @command_window.active
+update_command
+return
+end
+# ƒXƒe?[ƒ^ƒXƒEƒBƒ“ƒhƒE‚ªƒAƒNƒeƒBƒu‚Ì?ê?‡: update_status ‚ðŒÄ‚Ô
+if @status_window.active
+update_status
+return
+end
+end
+#--------------------------------------------------------------------------
+# ?œ ƒtƒŒ?[ƒ€?X?V (ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ªƒAƒNƒeƒBƒu‚Ì?ê?‡)
+#--------------------------------------------------------------------------
+def update_command
+# B ƒ{ƒ^ƒ“‚ª‰Ÿ‚³‚ê‚½?ê?‡
+if Input.trigger?(Input::B)
+# ƒLƒƒƒ“ƒZƒ‹ SE ‚ð‰‰‘t
+$game_system.se_play($data_system.cancel_se)
+# ƒ}ƒbƒv‰æ–Ê‚É?Ø‚è‘Ö‚¦
+$scene = Scene_Map.new
+return
+end
+# C ƒ{ƒ^ƒ“‚ª‰Ÿ‚³‚ê‚½?ê?‡
+if Input.trigger?(Input::C)
+# ƒp?[ƒeƒB?l?”‚ª 0 ?l‚Å?AƒZ?[ƒu?AƒQ?[ƒ€?I—¹ˆÈŠO‚ÌƒRƒ}ƒ“ƒh‚Ì?ê?‡
+if $game_party.actors.size == 0 and @command_window.index < 4
+# ƒuƒU?[ SE ‚ð‰‰‘t
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+# ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ÌƒJ?[ƒ\ƒ‹ˆÊ’u‚Å•ªŠò
+case @command_window.index
+when 0 # ƒAƒCƒeƒ€
+# Œˆ’è SE ‚ð‰‰‘t
+$game_system.se_play($data_system.decision_se)
+# ƒAƒCƒeƒ€‰æ–Ê‚É?Ø‚è‘Ö‚¦
+$scene = Scene_Item.new
+when 1 # ƒXƒLƒ‹
+# Œˆ’è SE ‚ð‰‰‘t
+$game_system.se_play($data_system.decision_se)
+# ƒXƒe?[ƒ^ƒXƒEƒBƒ“ƒhƒE‚ðƒAƒNƒeƒBƒu‚É‚·‚é
+@command_window.active = false
+@status_window.active = true
+@status_window.visible = true
+@status_window.index = 0
+when 2 # ‘•”õ
+# Œˆ’è SE ‚ð‰‰‘t
+$game_system.se_play($data_system.decision_se)
+# ƒXƒe?[ƒ^ƒXƒEƒBƒ“ƒhƒE‚ðƒAƒNƒeƒBƒu‚É‚·‚é
+@command_window.active = false
+@status_window.active = true
+@status_window.visible = true
+@status_window.index = 0
+when 3 # ƒXƒe?[ƒ^ƒX
+# Œˆ’è SE ‚ð‰‰‘t
+$game_system.se_play($data_system.decision_se)
+# ƒXƒe?[ƒ^ƒXƒEƒBƒ“ƒhƒE‚ðƒAƒNƒeƒBƒu‚É‚·‚é
+@command_window.active = false
+@status_window.active = true
+@status_window.visible = true
+@status_window.index = 0
+when 4 # ƒZ?[ƒu
+# ƒZ?[ƒu‹ÖŽ~‚Ì?ê?‡
+if $game_system.save_disabled
+# ƒuƒU?[ SE ‚ð‰‰‘t
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+# Œˆ’è SE ‚ð‰‰‘t
+$game_system.se_play($data_system.decision_se)
+# ƒZ?[ƒu‰æ–Ê‚É?Ø‚è‘Ö‚¦
+$scene = Scene_Save.new
+when 5 # ƒQ?[ƒ€?I—¹
+# Œˆ’è SE ‚ð‰‰‘t
+$game_system.se_play($data_system.decision_se)
+# ƒQ?[ƒ€?I—¹‰æ–Ê‚É?Ø‚è‘Ö‚¦
+$scene = Scene_End.new
+end
+return
+end
+# ƒAƒjƒ??[ƒVƒ‡ƒ“’†‚È‚çƒJ?[ƒ\ƒ‹‚Ì?ˆ—?‚ð?s‚í‚È‚¢
+return if @command_window.animation?
+# ?ªor?© ƒ{ƒ^ƒ“‚ª‰Ÿ‚³‚ê‚½?ê?‡
+if Input.press?(Input::UP) or Input.press?(Input::LEFT)
+$game_system.se_play($data_system.cursor_se)
+@command_window.setup_move_move(Window_RingMenu::MODE_MOVEL)
+return
+end
+# ?«or?¨ ƒ{ƒ^ƒ“‚ª‰Ÿ‚³‚ê‚½?ê?‡
+if Input.press?(Input::DOWN) or Input.press?(Input::RIGHT)
+$game_system.se_play($data_system.cursor_se)
+@command_window.setup_move_move(Window_RingMenu::MODE_MOVER)
+return
+end
+end
+#--------------------------------------------------------------------------
+# ?œ ƒtƒŒ?[ƒ€?X?V (ƒXƒe?[ƒ^ƒXƒEƒBƒ“ƒhƒE‚ªƒAƒNƒeƒBƒu‚Ì?ê?‡)
+#--------------------------------------------------------------------------
+def update_status
+# B ƒ{ƒ^ƒ“‚ª‰Ÿ‚³‚ê‚½?ê?‡
+if Input.trigger?(Input::B)
+# ƒLƒƒƒ“ƒZƒ‹ SE ‚ð‰‰‘t
+$game_system.se_play($data_system.cancel_se)
+# ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ðƒAƒNƒeƒBƒu‚É‚·‚é
+@command_window.active = true
+@status_window.active = false
+@status_window.visible = false
+@status_window.index = -1
+return
+end
+# C ƒ{ƒ^ƒ“‚ª‰Ÿ‚³‚ê‚½?ê?‡
+if Input.trigger?(Input::C)
+# ƒRƒ}ƒ“ƒhƒEƒBƒ“ƒhƒE‚ÌƒJ?[ƒ\ƒ‹ˆÊ’u‚Å•ªŠò
+case @command_window.index
+when 1 # ƒXƒLƒ‹
+# ‚±‚ÌƒAƒNƒ^?[‚Ì?s“®?§ŒÀ‚ª 2 ˆÈ?ã‚Ì?ê?‡
+if $game_party.actors[@status_window.index].restriction >= 2
+# ƒuƒU?[ SE ‚ð‰‰‘t
+$game_system.se_play($data_system.buzzer_se)
+return
+end
+# Œˆ’è SE ‚ð‰‰‘t
+$game_system.se_play($data_system.decision_se)
+# ƒXƒLƒ‹‰æ–Ê‚É?Ø‚è‘Ö‚¦
+$scene = Scene_Skill.new(@status_window.index)
+when 2 # ‘•”õ
+# Œˆ’è SE ‚ð‰‰‘t
+$game_system.se_play($data_system.decision_se)
+# ‘•”õ‰æ–Ê‚É?Ø‚è‘Ö‚¦
+$scene = Scene_Equip.new(@status_window.index)
+when 3 # ƒXƒe?[ƒ^ƒX
+# Œˆ’è SE ‚ð‰‰‘t
+$game_system.se_play($data_system.decision_se)
+# ƒXƒe?[ƒ^ƒX‰æ–Ê‚É?Ø‚è‘Ö‚¦
+$scene = Scene_Status.new(@status_window.index)
+end
+return
+end
+end
+end
+
+#===================================================
+# ? CLASS Scene_Menu Ends
+#===================================================
+
+
+#===================================================
+# ? CLASS Window_RingMenu Begins
+#===================================================
+class Window_RingMenu < Window_Base
+#--------------------------------------------------------------------------
+# ?› ƒNƒ‰ƒX’è?”
+#--------------------------------------------------------------------------
+STARTUP_FRAMES = 20
+MOVING_FRAMES = 5
+RING_R = 64
+ICON_ITEM = RPG::Cache.icon("034-Item03")
+ICON_SKILL = RPG::Cache.icon("044-Skill01")
+ICON_EQUIP = RPG::Cache.icon("001-Weapon01")
+ICON_STATUS = RPG::Cache.icon("050-Skill07")
+ICON_SAVE = RPG::Cache.icon("038-Item07")
+ICON_EXIT = RPG::Cache.icon("046-Skill03")
+ICON_DISABLE= RPG::Cache.icon("")
+SE_STARTUP = "056-Right02"
+MODE_START = 1
+MODE_WAIT = 2
+MODE_MOVER = 3
+MODE_MOVEL = 4
+#--------------------------------------------------------------------------
+# ?› ƒAƒNƒZƒT
+#--------------------------------------------------------------------------
+attr_accessor :index
+#--------------------------------------------------------------------------
+# ?œ ƒIƒuƒWƒFƒNƒg?‰Šú‰»
+#--------------------------------------------------------------------------
+def initialize( center_x, center_y )
+super(0, 0, 640, 480)
+self.contents = Bitmap.new(width-32, height-32)
+self.contents.font.name = $ring_menu_text[0]
+self.contents.font.color = text_color($ring_menu_text[7])
+self.contents.font.size = $ring_menu_text[8]
+self.opacity = 0
+self.back_opacity = 0
+s1 = $ring_menu_text[1]
+s2 = $ring_menu_text[2]
+s3 = $ring_menu_text[3]
+s4 = $ring_menu_text[4]
+s5 = $ring_menu_text[5]
+s6 = $ring_menu_text[6]
+@commands = [ s1, s2, s3, s4, s5, s6 ]
+@item_max = 6
+@index = 0
+@items = [ ICON_ITEM, ICON_SKILL, ICON_EQUIP, ICON_STATUS, ICON_SAVE, 
+ICON_EXIT ]
+@disabled = [ false, false, false, false, false, false ]
+@cx = center_x - 16
+@cy = center_y - 16
+setup_move_start
+refresh
+end
+#--------------------------------------------------------------------------
+# ?œ ƒtƒŒ?[ƒ€?X?V
+#--------------------------------------------------------------------------
+def update
+super
+refresh
+end
+#--------------------------------------------------------------------------
+# ?œ ‰æ–Ê?Ä•`‰æ
+#--------------------------------------------------------------------------
+def refresh
+self.contents.clear
+# ƒAƒCƒRƒ“‚ð•`‰æ
+case @mode
+when MODE_START
+refresh_start
+when MODE_WAIT
+refresh_wait
+when MODE_MOVER
+refresh_move(1)
+when MODE_MOVEL
+refresh_move(0)
+end
+# ƒAƒNƒeƒBƒu‚ÈƒRƒ}ƒ“ƒh–¼•\Ž¦
+rect = Rect.new(@cx - 272, @cy + 24, self.contents.width-32, 32)
+self.contents.draw_text(rect, @commands[@index],1)
+end
+#--------------------------------------------------------------------------
+# ?› ‰æ–Ê?Ä•`‰æ(?‰Šú‰»Žž)
+#--------------------------------------------------------------------------
+def refresh_start
+d1 = 2.0 * Math::PI / @item_max
+d2 = 1.0 * Math::PI / STARTUP_FRAMES
+r = RING_R - 1.0 * RING_R * @steps / STARTUP_FRAMES
+for i in 0...@item_max
+j = i - @index
+d = d1 * j + d2 * @steps
+x = @cx + ( r * Math.sin( d ) ).to_i
+y = @cy - ( r * Math.cos( d ) ).to_i
+draw_item(x, y, i)
+end
+@steps -= 1
+if @steps < 1
+@mode = MODE_WAIT
+end
+end
+#--------------------------------------------------------------------------
+# ?› ‰æ–Ê?Ä•`‰æ(‘Ò‹@Žž)
+#--------------------------------------------------------------------------
+def refresh_wait
+d = 2.0 * Math::PI / @item_max
+for i in 0...@item_max
+j = i - @index
+x = @cx + ( RING_R * Math.sin( d * j ) ).to_i
+y = @cy - ( RING_R * Math.cos( d * j ) ).to_i
+draw_item(x, y, i)
+end
+end
+#--------------------------------------------------------------------------
+# ?› ‰æ–Ê?Ä•`‰æ(‰ñ“]Žž)
+# mode : 0=”½ŽžŒv‰ñ‚è 1=ŽžŒv‰ñ‚è
+#--------------------------------------------------------------------------
+def refresh_move( mode )
+d1 = 2.0 * Math::PI / @item_max
+d2 = d1 / MOVING_FRAMES
+d2 *= -1 if mode != 0
+for i in 0...@item_max
+j = i - @index
+d = d1 * j + d2 * @steps
+x = @cx + ( RING_R * Math.sin( d ) ).to_i
+y = @cy - ( RING_R * Math.cos( d ) ).to_i
+draw_item(x, y, i)
+end
+@steps -= 1
+if @steps < 1
+@mode = MODE_WAIT
+end
+end
+#--------------------------------------------------------------------------
+# ?œ ?€–Ú‚Ì•`‰æ
+# x :
+# y :
+# i : ?€–Ú”Ô?†
+#--------------------------------------------------------------------------
+def draw_item(x, y, i)
+#p "x=" + x.to_s + " y=" + y.to_s + " i=" + @items[i].to_s
+rect = Rect.new(0, 0, @items[i].width, @items[i].height)
+if @index == i
+self.contents.blt( x, y, @items[i], rect )
+if @disabled[@index]
+self.contents.blt( x, y, ICON_DISABLE, rect )
+end
+else
+self.contents.blt( x, y, @items[i], rect, 128 )
+if @disabled[@index]
+self.contents.blt( x, y, ICON_DISABLE, rect, 128 )
+end
+end
+end
+#--------------------------------------------------------------------------
+# ?œ ?€–Ú‚ð–³Œø‚É‚·‚é
+# index : ?€–Ú”Ô?†
+#--------------------------------------------------------------------------
+def disable_item(index)
+@disabled[index] = true
+end
+#--------------------------------------------------------------------------
+# ?› ?‰Šú‰»ƒAƒjƒ??[ƒVƒ‡ƒ“‚Ì?€”õ
+#--------------------------------------------------------------------------
+def setup_move_start
+@mode = MODE_START
+@steps = STARTUP_FRAMES
+if SE_STARTUP != nil and SE_STARTUP != ""
+Audio.se_play("Audio/SE/" + SE_STARTUP, 80, 100)
+end
+end
+#--------------------------------------------------------------------------
+# ?› ‰ñ“]ƒAƒjƒ??[ƒVƒ‡ƒ“‚Ì?€”õ
+#--------------------------------------------------------------------------
+def setup_move_move(mode)
+if mode == MODE_MOVER
+@index -= 1
+@index = @items.size - 1 if @index < 0
+elsif mode == MODE_MOVEL
+@index += 1
+@index = 0 if @index >= @items.size
+else
+return
+end
+@mode = mode
+@steps = MOVING_FRAMES
+end
+#--------------------------------------------------------------------------
+# ?› ƒAƒjƒ??[ƒVƒ‡ƒ“’†‚©‚Ç‚¤‚©
+#--------------------------------------------------------------------------
+def animation?
+return @mode != MODE_WAIT
+end
+end
+
+#===================================================
+# ? CLASS Window_RingMenu Ends
+#===================================================
+
+
+#===================================================
+# ? CLASS Window_RingMenuStatus Begins
+#===================================================
+
+class Window_RingMenuStatus < Window_Selectable
+#--------------------------------------------------------------------------
+# ?œ ƒIƒuƒWƒFƒNƒg?‰Šú‰»
+#--------------------------------------------------------------------------
+def initialize
+super(204, 64, 232, 352)
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.size = $chara_select[5]
+refresh
+self.active = false
+self.index = -1
+end
+#--------------------------------------------------------------------------
+# ?œ ƒŠƒtƒŒƒbƒVƒ…
+#--------------------------------------------------------------------------
+def refresh
+self.contents.clear
+self.windowskin = RPG::Cache.windowskin($chara_select[4])
+self.contents.font.name = $chara_select[0]
+self.contents.font.color = text_color($chara_select[1])
+@item_max = $game_party.actors.size
+for i in 0...$game_party.actors.size
+x = 80
+y = 80 * i
+actor = $game_party.actors[i]
+draw_actor_graphic(actor, x - 40, y + 80)
+draw_actor_name(actor, x, y + 24)
+end
+end
+#--------------------------------------------------------------------------
+# ?œ ƒJ?[ƒ\ƒ‹‚Ì‹éŒ`?X?V
+#--------------------------------------------------------------------------
+def update_cursor_rect
+if @index < 0
+self.cursor_rect.empty
+else
+self.cursor_rect.set(0, @index * 80, self.width - 32, 80)
+end
+end
+end
+#===================================================
+# ? CLASS Window_RingMenuStatus Ends
+#===================================================
+
+
+#===================================================
+# ? CLASS Game_Map Additional Code Begins
+#===================================================
+class Game_Map
+
+#Dubealex Addition (from XRXS) to show Map Name on screen
+def name
+$map_infos[@map_id]
+end
+end
+
+#===================================================
+# ? CLASS Game_Map Additional Code Ends
+#===================================================
+
+
+#===================================================
+# ? CLASS Scene_Title Additional Code Begins
+#===================================================
+class Scene_Title
+
+#Dubealex Addition (from XRXS) to show Map Name on screen
+$map_infos = load_data("Data/MapInfos.rxdata")
+for key in $map_infos.keys
+$map_infos[key] = $map_infos[key].name
+end
+end
+
+#===================================================
+# ? CLASS Scene_Title Additional Code Ends
+#===================================================
+
+
+#===================================================
+# ? CLASS Window_Location Begins
+#===================================================
+
+class Window_Location < Window_Base
+
+def initialize
+super(0, 0, $window_size[0], $window_size[1])
+self.contents = Bitmap.new(width - 32, height - 32)
+self.contents.font.name = $location_text[0]
+self.contents.font.size = $location_text[1]
+refresh
+end
+
+def refresh
+self.contents.clear
+self.windowskin = RPG::Cache.windowskin($window_location_skin)
+self.contents.font.color = text_color($location_text[2])
+self.contents.draw_text(4, 0, 120, 32, $location_text[3])
+self.contents.font.color = text_color($location_text[4])
+self.contents.draw_text(4, 32, 120, 32, $game_map.name, 2)
+end
+end
+#===================================================
+# ? CLASS Window_Location Ends
+#===================================================
+
+#===================================================
+# ? Ring Menu - Show Player Location R1 - Ends
+#===================================================
+
+
